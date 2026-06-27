@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.32",
+  version: "0.1.33",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -207,8 +207,17 @@ function registerCommandEndpoint() {
 
       var commandName = payload.name || "unknown";
       var requestId = payload.requestId || "unknown";
-      var profileMode = await getProfileMode();
-      var testProfileMarkerPresent = await isTestProfileMarkerPresent();
+      var profileMode;
+      var testProfileMarkerPresent;
+      try {
+        profileMode = await getProfileMode();
+        testProfileMarkerPresent = await isTestProfileMarkerPresent();
+      } catch (error) {
+        return jsonCommandResponse(error.status || 500, commandName, requestId, undefined, {
+          code: error.code || "COMMAND_CONTEXT_FAILED",
+          message: error.message || "Failed to read Zotero Codex Bridge command context"
+        });
+      }
 
       if (ZoteroCodexBridgeProfileWriteCommands[commandName] && !ZoteroCodexBridgeSafetyStateCommands[commandName]) {
         try {
@@ -1062,9 +1071,7 @@ function trimString(value) {
 
 async function getProfileMode() {
   var preferenceMode = (function () {
-    var pref = Zotero && Zotero.Prefs && Zotero.Prefs.get
-      ? Zotero.Prefs.get(REAL_PROFILE_PREFERENCE_MODE)
-      : undefined;
+    var pref = getPreferenceValue(REAL_PROFILE_PREFERENCE_MODE);
 
     if (pref === "readonly" || pref === "test" || pref === "real-locked" || pref === "real-unlocked") {
       return pref;
@@ -3507,7 +3514,7 @@ function resolveBridgeRuntimeRoot() {
     return explicitEnv;
   }
 
-  var explicitPreference = Zotero.Prefs.get("extensions.zotero-codex-bridge.runtimeRoot");
+  var explicitPreference = getPreferenceValue("extensions.zotero-codex-bridge.runtimeRoot");
   if (explicitPreference && typeof explicitPreference === "string" && explicitPreference.trim().length > 0) {
     return explicitPreference;
   }
@@ -3565,6 +3572,18 @@ function getEnvironmentValue(name) {
 
   try {
     return Components.classes["@mozilla.org/process/environment;1"].getService(Components.interfaces.nsIEnvironment).get(name);
+  } catch (error) {
+    return undefined;
+  }
+}
+
+function getPreferenceValue(name) {
+  if (typeof Zotero === "undefined" || !Zotero.Prefs || !Zotero.Prefs.get) {
+    return undefined;
+  }
+
+  try {
+    return Zotero.Prefs.get(name);
   } catch (error) {
     return undefined;
   }
