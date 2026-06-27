@@ -741,3 +741,94 @@ await Zotero.Items.trashTx([attachment.id]);
 
 - `attachment.undoAdded` 可以通过 Zotero 内部 `Items.trashTx()` 实现受控撤销，不直接写 SQLite。
 - 该命令只对本项目可证明创建的附件开放；普通既有附件、缺少审计证据的附件和已在 trash 的附件均拒绝。
+
+## `item.trash` / `attachment.trash`
+
+执行计划使用：
+
+```js
+await Zotero.Items.trashTx(itemIDs);
+```
+
+源码依据：
+
+- Zotero 9.0.5 `items.js:983-1055` 定义 `Zotero.Items.trash(ids)`，在 Zotero transaction 内设置 deleted/trash 状态，写入 `deletedItems`，刷新 parent child items，并触发 `trash`/`refresh` notifier。
+- Zotero 9.0.5 `items.js:1058-1061` 定义 `Zotero.Items.trashTx(ids)`，用 `Zotero.DB.executeTransaction()` 包装 `trash(ids)`。
+- Zotero 9.0.5 `dataObject.js:1316-1319` 定义 `eraseTx()` 是永久 erase 包装；本项目 `item.trash` / `attachment.trash` 不调用该路径。
+
+预校验规则：
+
+- `item.trash` 接受 `zoteroItemKeys`，最多 50 个；不接受 attachment item，attachment 必须使用 `attachment.trash`。
+- `attachment.trash` 接受 `attachmentKeys`，最多 50 个。
+- 目标必须在 local user library 且未处于 trash。
+- dry-run 返回目标 key、摘要、相关 attachment/file path 和高风险提示。
+- execute 必须验证 dry-run confirmation；只移入 Zotero trash，不清空 trash，不永久删除 storage 文件。
+
+结论：
+
+- item 与 attachment 的受控删除第一片应定义为 Zotero trash 操作，而非永久删除。
+- 该能力满足“通过 Zotero 插件内部命令实现”，不使用 Web API，不直接写 SQLite。
+
+## `collection.trash`
+
+执行计划使用：
+
+```js
+collection.deleted = true;
+await collection.saveTx({ deleteItems: false });
+```
+
+源码依据：
+
+- Zotero 9.0.5 `collection.js:593-663` 定义 `Collection.prototype.trash(env)`，会将 collection 和 descendant collections 写入 `deletedCollections`。
+- `collection.js:616-634` 显示只有传入 `deleteItems` 时才会额外 trash/delete descendant items；本项目默认 `trashDescendentItems: false`。
+- `collection.js:670-678` 与 `_eraseData` 说明永久 erase 会在 trash 之后继续完全删除；本项目不调用 `_eraseData()` 或 `eraseTx()`。
+
+预校验规则：
+
+- `collectionKey` 必须指向 local user library 中未在 trash 的 collection。
+- 默认只 trash collection/subcollection，不 trash descendant items。
+- 只有显式 `trashDescendentItems: true` 时才移动 descendant items 到 Zotero trash。
+- dry-run 必须列出 descendant collection keys 和可能受影响的 item keys。
+
+结论：
+
+- collection 删除第一片应走 Zotero collection trash 状态，不永久 erase。
+- descendant item 删除必须显式开启，避免把“删除 collection”误解为“删除条目”。
+
+## `duplicates.find` / `duplicates.merge`
+
+查找计划使用：
+
+```js
+var duplicates = new Zotero.Duplicates(Zotero.Libraries.userLibraryID);
+var search = await duplicates.getSearchObject();
+var itemIDs = await search.search();
+```
+
+合并计划使用：
+
+```js
+await Zotero.Items.merge(masterItem, duplicateItems);
+```
+
+源码依据：
+
+- Zotero 9.0.5 `duplicates.js:26-94` 定义 `Zotero.Duplicates`、`getSearchObject()` 和 `getSetItemsByItemID()`，用于得到 duplicates view 对应的搜索和同组 item。
+- Zotero 9.0.5 `items.js:975-980` 定义兼容包装 `Zotero.Items.merge(item, otherItems)`，内部导入 `mergeItems.mjs`。
+- Zotero 9.0.5 `mergeItems.mjs:3-76` 定义 `mergeItems(item, otherItems)`，在 transaction 中移动 notes、relations、collections、tags 和 attachments，并将非 master item 标记为 deleted/trash。
+- `mergeItems.mjs:18` 要求被合并 items 位于同一 library。
+
+预校验规则：
+
+- 第一片只支持 local user library 的 regular item。
+- `duplicates.find` 是只读命令，返回 duplicate set、item keys 和摘要。
+- `duplicates.merge` 必须指定 `masterZoteroItemKey` 和 `duplicateZoteroItemKeys`。
+- master 和 duplicates 不能在 trash，不能跨 library，不能包含 attachment 或非 regular item。
+- dry-run 必须列出 master、被合并项、字段冲突、attachment/collection/tag 影响和恢复限制。
+- execute 必须验证 dry-run confirmation；合并后非 master item 进入 Zotero trash，不做永久 erase。
+
+结论：
+
+- duplicate merge 可以复用 Zotero 官方内部 merge API。
+- 本项目不自行重造合并算法，只负责命令表、dry-run、confirmation、审计和结果包装。

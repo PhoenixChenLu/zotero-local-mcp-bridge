@@ -92,13 +92,13 @@
 
 ## 五、当前功能缺口（公开版本待实现）
 
-- item 创建与完整元数据编辑（创建、更新、字段级更新、creator 管理）
-- BibTeX / RIS / CSL 导入导出
-- PDF annotation 读取与写入
-- 高级搜索、保存搜索、引用格式输出
+- item 创建与完整元数据编辑已完成第一批 runtime 验收，仍需公开发布级字段兼容矩阵。
+- BibTeX / RIS / CSL 导入导出已完成第一批 runtime 验收，仍需 duplicate/update 导入策略。
+- PDF annotation 读取与写入已完成第一批 runtime 验收，仍需 EPUB/HTML、image/ink、删除等扩展。
+- 高级搜索、保存搜索、引用格式输出已完成第一批 runtime 验收。
 - 真实主库解锁能力（含显式解锁流程、风险回显与回退）
 - Codex 专用 skill
-- 删除与 merge duplicates
+- 删除与 merge duplicates 已进入受控 trash/merge 第一片实现，仍需 runtime 验收和公开发布安全说明。
 
 ## 六、文档与审核一致性要求
 

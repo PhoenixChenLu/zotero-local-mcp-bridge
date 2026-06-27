@@ -14,7 +14,7 @@
 - 支持本地 user library 的 collection/subcollection 创建、层级移动、重命名、查询与 item 归档关系管理。
 - 支持 item 加入/移出 collection、tag 添加/移除、创建 child note。
 - 支持附件写入、附件移动、附件重命名、调用 Zotero 内置附件自动重命名能力。
-- 第一版禁止删除、merge duplicates、直接写 SQLite、Web API 写入和 group library。
+- 第一版禁止永久删除、清空 Zotero trash、直接删除既有附件文件、直接写 SQLite、Web API 写入和 group library；本阶段允许受控 trash 与 duplicates merge。
 
 最终方向是尽量完整覆盖 Zotero 本地管理能力，但必须分阶段开放高风险写操作。
 
@@ -247,7 +247,7 @@ type ZoteroLocalCommandResult<T> = {
 - **输出能力范围**：
   - 2026-06-27 起，公开发布准备、边缘发布文件与 Codex 专用 skill 全部后置。
   - 在进入发布准备前，必须先完成并测试通过：item 创建/完整元数据编辑、BibTeX/RIS/CSL 导入导出、PDF annotation 读取/写入、高级搜索/保存搜索/引用格式输出。
-  - 删除、trash、merge duplicates 仍作为后续高风险阶段，不阻塞上述四组核心功能的下一步开发。
+  - 删除、trash、merge duplicates 作为高风险阶段开放，必须继续强制 dry-run + confirmation，不允许永久 erase 或清空 trash。
 - **分发边界**：
   - MCP Registry 仅声明与元数据；不会托管 artifact。
   - 插件更新依赖 update manifest 与 release artifact 的可追溯公开发布逻辑。
@@ -384,14 +384,14 @@ async function createCollection(input: CollectionCreateInput): Promise<{
   - 引入新依赖。
   - 改变插件通信机制。
   - 增加自动下载 PDF、联网补全附件等能力。
-  - 增加真实删除、trash、merge duplicates、批量重构 collection tree。
+  - 增加永久删除、清空 trash、批量重构 collection tree。
   - 从参考 `introfini/mcp-server-zotero-dev` 的思路升级为复用其代码或依赖。
 
 - Never：
   - 使用 Zotero Web API 写入。
   - 要求或保存 `ZOTERO_API_KEY`。
   - 直接写 `zotero.sqlite`。
-  - 第一版删除 item、删除 collection、删除既有 attachment 文件、merge duplicates。
+  - 永久删除 item、collection 或 attachment，清空 Zotero trash，直接删除既有 attachment 文件。
   - 支持 group library。
   - 把审计日志写入 Zotero profile、Zotero data directory 或附件目录。
   - 向普通管理 MCP tool 暴露任意 Zotero JS eval。

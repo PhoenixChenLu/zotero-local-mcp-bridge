@@ -47,7 +47,7 @@ The unlock state is valid only when:
 
 - Unlock state is never written to the Zotero profile, Zotero data directory, linked attachment root, or Zotero attachment storage.
 - Unlocking does not bypass dry-run and execute confirmation for ordinary write commands.
-- Unlocking does not enable group libraries, item/collection deletion, existing attachment deletion, or merge duplicates.
+- Unlocking does not enable group libraries, permanent deletion, empty-trash operations, direct attachment-file deletion, or direct SQLite writes. Trash and duplicate-merge commands remain high-risk dry-run/confirmation operations.
 - Unlocking does not introduce Zotero Web API writes or direct `zotero.sqlite` writes.
 
 ## Audit And Recovery

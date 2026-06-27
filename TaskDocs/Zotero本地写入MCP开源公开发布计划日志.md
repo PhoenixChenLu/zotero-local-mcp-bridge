@@ -71,7 +71,7 @@
 - 还没有高级搜索、保存搜索、引用格式输出等更完整 Zotero 能力。
 - 还没有真实主库解锁流程。
 - 还没有 Codex 专用 skill。
-- 还没有删除/merge duplicates，这些是第一版明确暂不做。
+- 删除/merge duplicates 已进入受控 trash/merge 阶段；仍禁止永久 erase、清空 Zotero trash 或直接删除既有附件文件。
 
 这些能力必须在不破坏项目硬边界的前提下逐步实现：所有真实写操作仍必须通过 Zotero 插件内部命令表执行，不使用 Web API 写入，不直接写 SQLite，不暴露任意 JS eval，不支持 group library，除非后续单独设计 group library 阶段。
 
@@ -673,11 +673,24 @@
   - 文档明确风险和不可逆边界。
 
 执行：
-- 开始时间：未开始
-- 结束时间：未开始
-- 操作内容：未开始
-- 测试结果：未开始
-- 备注：第一版明确暂不做，公开发布完整版本阶段才进入。
+- 开始时间：2026-06-27
+- 结束时间：进行中
+- 操作内容：
+  - 根据用户要求修改边界：项目目标是功能尽可能齐全，因此删除、trash 与 merge duplicates 不再作为永久禁区；但仍必须作为高风险能力受控开放。
+  - 新增共享命令：`item.trash`、`collection.trash`、`attachment.trash`、`duplicates.find`、`duplicates.merge`。
+  - MCP dry-run 将 trash 与 `duplicates.merge` 标记为 `high` risk，并支持提取 `masterZoteroItemKey`、`duplicateZoteroItemKeys`、`attachmentKeys`。
+  - 插件运行时新增 direct HTTP 分支：
+    - `item.trash`：最多 50 个 item key，调用 `Zotero.Items.trashTx()`，不永久 erase。
+    - `attachment.trash`：最多 50 个 attachment key，调用 `Zotero.Items.trashTx()`，不删除 storage 文件。
+    - `collection.trash`：默认只 trash collection/subcollection，不 trash descendant items；显式 `trashDescendentItems: true` 时才移动 descendant items 到 Zotero trash。
+    - `duplicates.find`：使用 `Zotero.Duplicates` 返回 duplicate sets。
+    - `duplicates.merge`：使用 `Zotero.Items.merge(master, duplicateItems)`，dry-run 返回字段冲突、master、duplicates、attachment/collection/tag 影响和恢复限制。
+  - 更新 `AGENTS.md`、`README.md`、`docs/spec-zotero-local-write-mcp.md`、`docs/production-profile-unlock.md`，将旧“禁止删除/merge”边界改为“允许受控 trash/merge，禁止永久 erase、清空 trash、直接删除既有附件文件”。
+  - 更新 `docs/zotero-api-source-audit.md`，记录 Zotero 9.0.5 源码依据：`Items.trashTx()`、`Collection.prototype.trash()`、`Zotero.Duplicates`、`Zotero.Items.merge()` / `mergeItems.mjs`。
+- 测试结果：
+  - 针对性单元测试已通过：`npm run test -- tests/unit/shared/commands.test.ts tests/unit/mcp-server/toolRegistry.test.ts tests/unit/zotero-plugin/pluginPackage.test.ts`。
+  - 完整自动验证、XPI 打包和 Zotero test profile runtime 验收待执行。
+- 备注：本步骤第一片只实现 Zotero trash 和 duplicates merge，不实现永久删除、清空 trash、group library 或直接文件删除。
 
 ### 步骤 14 - Codex 专用 skill
 

@@ -187,11 +187,11 @@ export class McpToolRegistry {
         this.undoManager.createUndoPlan({
           operationId: `${pluginResult.requestId}:${collectionKey}`,
           commandName,
-          reversible: false,
+          reversible: true,
           backupAvailable: true,
-          warnings: ["Collection deletion is disabled in the first release, so this operation is not automatically undoable."],
+          warnings: ["Collection can be moved to Zotero trash after dry-run confirmation; restore must be done from Zotero trash UI."],
           reverseCommand: {
-            name: "collection.deleteCreated.disabled",
+            name: "collection.trash",
             input: { collectionKey }
           }
         })
@@ -212,6 +212,10 @@ function toToolDescriptor(definition: CommandDefinition): McpToolDescriptor {
 }
 
 function riskForCommand(commandName: CommandName): CreatedDryRunPlan["riskLevel"] {
+  if (commandName.endsWith(".trash") || commandName === "duplicates.merge") {
+    return "high";
+  }
+
   if (commandName.startsWith("attachment.")) {
     return "medium";
   }
@@ -222,9 +226,9 @@ function riskForCommand(commandName: CommandName): CreatedDryRunPlan["riskLevel"
 function resolveTargets(input: unknown): CreatedDryRunPlan["resolvedTargets"] {
   const object = asObject(input);
   return {
-    zoteroItemKeys: stringsFrom(object, "zoteroItemKey", "zoteroItemKeys", "targetZoteroItemKey"),
+    zoteroItemKeys: stringsFrom(object, "zoteroItemKey", "zoteroItemKeys", "targetZoteroItemKey", "masterZoteroItemKey", "duplicateZoteroItemKeys"),
     collectionKeys: stringsFrom(object, "collectionKey", "collectionKeys", "parentCollectionKey"),
-    attachmentKeys: stringsFrom(object, "attachmentKey"),
+    attachmentKeys: stringsFrom(object, "attachmentKey", "attachmentKeys"),
     filePaths: stringsFrom(object, "filePath"),
     tags: stringsFrom(object, "tags", "addTags", "removeTags")
   };

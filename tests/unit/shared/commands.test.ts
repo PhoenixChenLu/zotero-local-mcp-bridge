@@ -31,6 +31,7 @@ describe("shared command definitions", () => {
       "item.updateCreators",
       "item.setCollections",
       "item.updateTags",
+      "item.trash",
       "import.bibtex",
       "import.ris",
       "import.cslJson",
@@ -48,6 +49,7 @@ describe("shared command definitions", () => {
       "attachment.rename",
       "attachment.runZoteroRename",
       "attachment.undoAdded",
+      "attachment.trash",
       "attachment.renamePreferences.get",
       "attachment.renamePreferences.set",
       "backup.settings.get",
@@ -55,6 +57,9 @@ describe("shared command definitions", () => {
       "backup.snapshot.list",
       "backup.snapshot.restore",
       "backup.snapshot.prune",
+      "collection.trash",
+      "duplicates.find",
+      "duplicates.merge",
       "audit.list",
       "safety.getProfileStatus",
       "safety.unlockRealProfile",
@@ -77,6 +82,7 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("attachment.get")).toBe(false);
     expect(isWriteCommand("attachment.renamePreferences.get")).toBe(false);
     expect(isWriteCommand("backup.snapshot.list")).toBe(false);
+    expect(isWriteCommand("duplicates.find")).toBe(false);
     expect(isWriteCommand("audit.list")).toBe(false);
     expect(isWriteCommand("safety.getProfileStatus")).toBe(false);
     expect(isWriteCommand("collection.create")).toBe(true);
@@ -89,6 +95,7 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("item.updateFields")).toBe(true);
     expect(isWriteCommand("item.updateCreators")).toBe(true);
     expect(isWriteCommand("item.setCollections")).toBe(true);
+    expect(isWriteCommand("item.trash")).toBe(true);
     expect(isWriteCommand("savedSearch.create")).toBe(true);
     expect(isWriteCommand("savedSearch.update")).toBe(true);
     expect(isWriteCommand("import.bibtex")).toBe(true);
@@ -96,6 +103,9 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("import.cslJson")).toBe(true);
     expect(isWriteCommand("annotation.create")).toBe(true);
     expect(isWriteCommand("annotation.update")).toBe(true);
+    expect(isWriteCommand("attachment.trash")).toBe(true);
+    expect(isWriteCommand("collection.trash")).toBe(true);
+    expect(isWriteCommand("duplicates.merge")).toBe(true);
     expect(isWriteCommand("safety.unlockRealProfile")).toBe(true);
     expect(isWriteCommand("safety.lockRealProfile")).toBe(true);
   });

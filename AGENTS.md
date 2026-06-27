@@ -14,7 +14,7 @@
 - 不支持 group library。
 - 不向普通管理 MCP tool 暴露任意 JavaScript eval。
 - 第一阶段不连接真实主库执行写操作。
-- 第一版不删除 item、collection 或既有 attachment 文件，不做 merge duplicates。
+- 本阶段允许受控 `item.trash`、`collection.trash`、`attachment.trash` 和 `duplicates.merge`；禁止永久 `eraseTx()`、清空 Zotero trash 或直接删除既有附件文件。
 - 不把审计日志或 backup 写入 Zotero profile、Zotero data directory、Zotero linked attachment root 或附件目录。
 
 ## Test Profile

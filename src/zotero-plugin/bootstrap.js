@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.41",
+  version: "0.1.42",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -48,13 +48,16 @@ var ZoteroCodexBridgeProfileWriteCommands = {
   "collection.move": true,
   "collection.addItems": true,
   "collection.removeItems": true,
+  "collection.trash": true,
   "item.create": true,
   "item.updateFields": true,
   "item.updateCreators": true,
   "item.setCollections": true,
   "item.updateTags": true,
+  "item.trash": true,
   "savedSearch.create": true,
   "savedSearch.update": true,
+  "duplicates.merge": true,
   "import.bibtex": true,
   "import.ris": true,
   "import.cslJson": true,
@@ -66,6 +69,7 @@ var ZoteroCodexBridgeProfileWriteCommands = {
   "attachment.rename": true,
   "attachment.runZoteroRename": true,
   "attachment.undoAdded": true,
+  "attachment.trash": true,
   "attachment.renamePreferences.set": true,
   "backup.settings.set": true,
   "backup.snapshot.restore": true,
@@ -78,13 +82,16 @@ var ZoteroCodexBridgeWriteCommands = {
   "collection.move": true,
   "collection.addItems": true,
   "collection.removeItems": true,
+  "collection.trash": true,
   "item.create": true,
   "item.updateFields": true,
   "item.updateCreators": true,
   "item.setCollections": true,
   "item.updateTags": true,
+  "item.trash": true,
   "savedSearch.create": true,
   "savedSearch.update": true,
+  "duplicates.merge": true,
   "import.bibtex": true,
   "import.ris": true,
   "import.cslJson": true,
@@ -96,6 +103,7 @@ var ZoteroCodexBridgeWriteCommands = {
   "attachment.rename": true,
   "attachment.runZoteroRename": true,
   "attachment.undoAdded": true,
+  "attachment.trash": true,
   "attachment.renamePreferences.set": true,
   "backup.settings.set": true,
   "backup.snapshot.restore": true,
@@ -434,6 +442,33 @@ function registerCommandEndpoint() {
         }
       }
 
+      if (commandName === "collection.trash") {
+        try {
+          if (payload.mode === "execute") {
+            var trashedCollection = await executeCollectionTrash(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              trashedCollection,
+              undefined,
+              {
+                collectionKeys: trashedCollection.collectionKeys,
+                zoteroItemKeys: trashedCollection.trashedDescendentItemKeys
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createCollectionTrashDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "COLLECTION_TRASH_FAILED",
+            message: error.message || "Failed to move Zotero collection to trash"
+          });
+        }
+      }
+
       if (commandName === "item.get") {
         try {
           var itemDetails = readItemDetails(payload.input || {});
@@ -574,6 +609,49 @@ function registerCommandEndpoint() {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "CITATION_FORMAT_FAILED",
             message: error.message || "Failed to format Zotero citation"
+          });
+        }
+      }
+
+      if (commandName === "duplicates.find") {
+        try {
+          var duplicateSets = await findDuplicateItems(payload.input || {});
+          return jsonCommandResponse(200, commandName, requestId, duplicateSets, undefined, {
+            zoteroItemKeys: duplicateSets.sets.reduce(function (keys, set) {
+              return keys.concat(set.zoteroItemKeys);
+            }, [])
+          });
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "DUPLICATES_FIND_FAILED",
+            message: error.message || "Failed to find Zotero duplicate items"
+          });
+        }
+      }
+
+      if (commandName === "duplicates.merge") {
+        try {
+          if (payload.mode === "execute") {
+            var mergeResult = await executeDuplicatesMerge(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              mergeResult,
+              undefined,
+              {
+                zoteroItemKeys: [mergeResult.masterZoteroItemKey].concat(mergeResult.mergedZoteroItemKeys),
+                attachmentKeys: mergeResult.attachmentKeys
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, await createDuplicatesMergeDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "DUPLICATES_MERGE_FAILED",
+            message: error.message || "Failed to merge Zotero duplicate items"
           });
         }
       }
@@ -750,6 +828,30 @@ function registerCommandEndpoint() {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "ITEM_UPDATE_TAGS_FAILED",
             message: error.message || "Failed to update Zotero item tags"
+          });
+        }
+      }
+
+      if (commandName === "item.trash") {
+        try {
+          if (payload.mode === "execute") {
+            var trashedItems = await executeItemTrash(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              trashedItems,
+              undefined,
+              { zoteroItemKeys: trashedItems.trashedZoteroItemKeys },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createItemTrashDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ITEM_TRASH_FAILED",
+            message: error.message || "Failed to move Zotero items to trash"
           });
         }
       }
@@ -1026,6 +1128,33 @@ function registerCommandEndpoint() {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "ATTACHMENT_UNDO_ADDED_FAILED",
             message: error.message || "Failed to undo Zotero attachment added by this bridge"
+          });
+        }
+      }
+
+      if (commandName === "attachment.trash") {
+        try {
+          if (payload.mode === "execute") {
+            var trashedAttachments = await executeAttachmentTrash(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              trashedAttachments,
+              undefined,
+              {
+                zoteroItemKeys: trashedAttachments.parentZoteroItemKeys,
+                attachmentKeys: trashedAttachments.trashedAttachmentKeys
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, await createAttachmentTrashDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ATTACHMENT_TRASH_FAILED",
+            message: error.message || "Failed to move Zotero attachments to trash"
           });
         }
       }
@@ -2215,6 +2344,210 @@ function resolveCitationStyle(styleIDOrURL) {
   return style;
 }
 
+async function findDuplicateItems(input) {
+  var limit = normalizeBoundedInteger(input && input.limit !== undefined ? input.limit : 20, 1, 100, "duplicates.find limit", "DUPLICATES_FIND_LIMIT_INVALID");
+  var duplicates = new Zotero.Duplicates(Zotero.Libraries.userLibraryID);
+  var search = await duplicates.getSearchObject();
+  var itemIDs = await search.search();
+  var seenSets = {};
+  var sets = [];
+
+  for (var i = 0; i < itemIDs.length && sets.length < limit; i += 1) {
+    var setIDs = duplicates.getSetItemsByItemID(itemIDs[i]).sort(function (a, b) {
+      return a - b;
+    });
+    if (setIDs.length < 2) {
+      continue;
+    }
+    var setKey = setIDs.join(",");
+    if (seenSets[setKey]) {
+      continue;
+    }
+    seenSets[setKey] = true;
+    var items = [];
+    var keys = [];
+    for (var j = 0; j < setIDs.length; j += 1) {
+      var item = Zotero.Items.get(setIDs[j]);
+      if (item && item.libraryID === Zotero.Libraries.userLibraryID && item.key && !(item.isInTrash && item.isInTrash())) {
+        keys.push(item.key);
+        items.push(itemSummaryRecord(item));
+      }
+    }
+    if (keys.length >= 2) {
+      sets.push({
+        setId: "duplicate_set_" + sets.length,
+        zoteroItemKeys: keys,
+        items: items
+      });
+    }
+  }
+
+  return {
+    limit: limit,
+    setCount: sets.length,
+    sets: sets
+  };
+}
+
+async function createDuplicatesMergeDryRun(input) {
+  var normalized = await normalizeDuplicatesMergeInput(input);
+  return createWriteDryRunPlan(
+    "duplicates.merge",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [normalized.masterZoteroItemKey].concat(normalized.duplicateZoteroItemKeys),
+      collectionKeys: normalized.affectedCollectionKeys,
+      attachmentKeys: normalized.affectedAttachmentKeys,
+      filePaths: [],
+      tags: normalized.affectedTags
+    },
+    [{
+      code: "DUPLICATES_MERGE_HIGH_RISK",
+      message: "Zotero will merge duplicate metadata, move notes/attachments/tags/collections to the master item, and move duplicate items to trash"
+    }],
+    {
+      master: normalized.master,
+      duplicates: normalized.duplicates,
+      fieldConflicts: normalized.fieldConflicts
+    },
+    {
+      action: "merge",
+      masterZoteroItemKey: normalized.masterZoteroItemKey,
+      mergedZoteroItemKeys: normalized.duplicateZoteroItemKeys,
+      restoration: "Restore merged duplicate items from Zotero trash when possible; metadata conflict choices are not automatically reversible by this bridge"
+    },
+    "high"
+  );
+}
+
+async function executeDuplicatesMerge(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = await normalizeDuplicatesMergeInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var master = getLocalUserItem(normalized.masterZoteroItemKey);
+  var duplicateItems = normalized.duplicateZoteroItemKeys.map(function (itemKey) {
+    return getLocalUserItem(itemKey);
+  });
+  await Zotero.Items.merge(master, duplicateItems);
+  var mergedRecord = readItemDetails({ zoteroItemKey: normalized.masterZoteroItemKey });
+
+  return {
+    masterZoteroItemKey: normalized.masterZoteroItemKey,
+    mergedZoteroItemKeys: normalized.duplicateZoteroItemKeys,
+    attachmentKeys: uniqueStrings((mergedRecord.attachmentKeys || []).concat(normalized.affectedAttachmentKeys)),
+    collectionKeys: uniqueStrings((mergedRecord.collectionKeys || []).concat(normalized.affectedCollectionKeys)),
+    tags: uniqueStrings((mergedRecord.tags || []).concat(normalized.affectedTags)),
+    master: mergedRecord,
+    trashedDuplicateItems: true,
+    erased: false
+  };
+}
+
+async function normalizeDuplicatesMergeInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "duplicates.merge input must be an object", 400);
+  }
+
+  var master = normalizeItemTarget(input.masterZoteroItemKey);
+  if (!master.isRegularItem || !master.isRegularItem()) {
+    throw commandError("DUPLICATES_MASTER_INVALID", "duplicates.merge master must be a regular Zotero item", 400);
+  }
+  if (master.isInTrash && master.isInTrash()) {
+    throw commandError("DUPLICATES_MASTER_TRASHED", "duplicates.merge master is already in Zotero trash", 409);
+  }
+
+  var duplicateKeys = normalizeStringArray(input.duplicateZoteroItemKeys, "duplicateZoteroItemKeys", "DUPLICATE_ITEM_KEYS_REQUIRED");
+  var seen = {};
+  var duplicateItems = [];
+  for (var i = 0; i < duplicateKeys.length; i += 1) {
+    var item = normalizeItemTarget(duplicateKeys[i]);
+    if (item.key === master.key) {
+      throw commandError("DUPLICATES_MERGE_SELF", "duplicateZoteroItemKeys must not include the master item", 400);
+    }
+    if (seen[item.key]) {
+      continue;
+    }
+    if (!item.isRegularItem || !item.isRegularItem()) {
+      throw commandError("DUPLICATES_ITEM_INVALID", "duplicates.merge only supports regular Zotero items", 400);
+    }
+    if (item.libraryID !== master.libraryID) {
+      throw commandError("DUPLICATES_LIBRARY_MISMATCH", "All duplicate items must be in the same library", 400);
+    }
+    if (item.isInTrash && item.isInTrash()) {
+      throw commandError("DUPLICATES_ITEM_TRASHED", "Duplicate item is already in Zotero trash: " + item.key, 409);
+    }
+    seen[item.key] = true;
+    duplicateItems.push(item);
+  }
+
+  if (duplicateItems.length === 0) {
+    throw commandError("DUPLICATE_ITEM_KEYS_REQUIRED", "duplicates.merge requires at least one duplicate item", 400);
+  }
+  if (duplicateItems.length + 1 > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", "duplicates.merge item count exceeds limit 50", 400);
+  }
+
+  return {
+    masterZoteroItemKey: master.key,
+    duplicateZoteroItemKeys: duplicateItems.map(function (item) { return item.key; }),
+    master: itemSummaryRecord(master),
+    duplicates: duplicateItems.map(function (item) { return itemSummaryRecord(item); }),
+    fieldConflicts: duplicateFieldConflicts(master, duplicateItems),
+    affectedAttachmentKeys: duplicateItems.reduce(function (keys, item) {
+      return keys.concat(item.getAttachments(true).map(function (attachmentID) {
+        var attachment = Zotero.Items.get(attachmentID);
+        return attachment && attachment.key ? attachment.key : undefined;
+      }).filter(Boolean));
+    }, []),
+    affectedCollectionKeys: uniqueStrings(master.getCollections().concat(duplicateItems.reduce(function (keys, item) {
+      return keys.concat(item.getCollections());
+    }, [])).map(function (collectionID) {
+      var collection = Zotero.Collections.get(collectionID);
+      return collection && collection.key ? collection.key : undefined;
+    }).filter(Boolean)),
+    affectedTags: uniqueStrings(master.getTags().concat(duplicateItems.reduce(function (tags, item) {
+      return tags.concat(item.getTags());
+    }, [])).map(function (tag) {
+      return tag.tag;
+    }).filter(Boolean))
+  };
+}
+
+function duplicateFieldConflicts(master, duplicateItems) {
+  var fields = ["title", "date", "DOI", "url", "publicationTitle", "publisher", "ISBN", "ISSN"];
+  var conflicts = [];
+  fields.forEach(function (fieldName) {
+    var values = {};
+    var masterValue = getItemFieldValue(master, fieldName);
+    if (masterValue) {
+      values[master.key] = masterValue;
+    }
+    duplicateItems.forEach(function (item) {
+      var value = getItemFieldValue(item, fieldName);
+      if (value) {
+        values[item.key] = value;
+      }
+    });
+    if (uniqueStrings(Object.keys(values).map(function (key) { return values[key]; })).length > 1) {
+      conflicts.push({
+        fieldName: fieldName,
+        valuesByZoteroItemKey: values
+      });
+    }
+  });
+  return conflicts;
+}
+
+function getItemFieldValue(item, fieldName) {
+  try {
+    var value = item.getField(fieldName);
+    return typeof value === "string" ? value.trim() : "";
+  } catch (error) {
+    return "";
+  }
+}
+
 function createCollectionCreateDryRun(input) {
   var normalized = normalizeCollectionCreateInput(input);
   var resolvedTargets = {
@@ -2231,7 +2564,7 @@ function createCollectionCreateDryRun(input) {
   });
 }
 
-function createWriteDryRunPlan(operation, normalizedInput, resolvedTargets, warnings, before, after) {
+function createWriteDryRunPlan(operation, normalizedInput, resolvedTargets, warnings, before, after, riskLevel) {
   var inputHash = hashInput(normalizedInput);
   var expiresAt = new Date(Date.now() + ZoteroCodexBridge.dryRunTtlMs).toISOString();
   var planId = "plan_" + randomId();
@@ -2248,7 +2581,7 @@ function createWriteDryRunPlan(operation, normalizedInput, resolvedTargets, warn
     plan: {
       planId: planId,
       operation: operation,
-      riskLevel: "low",
+      riskLevel: riskLevel || "low",
       inputHash: inputHash,
       resolvedTargets: resolvedTargets,
       warnings: warnings || [],
@@ -2553,6 +2886,99 @@ function normalizeCollectionItemMembershipInput(input, operation) {
     zoteroItemKeys: itemKeys,
     existingItemKeys: existingItemKeys,
     toChangeItemKeys: toChangeItemKeys
+  };
+}
+
+function createCollectionTrashDryRun(input) {
+  var normalized = normalizeCollectionTrashInput(input);
+  return createWriteDryRunPlan(
+    "collection.trash",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: normalized.trashDescendentItems ? normalized.descendentItemKeys : [],
+      collectionKeys: [normalized.collectionKey].concat(normalized.descendentCollectionKeys),
+      attachmentKeys: [],
+      filePaths: [],
+      tags: []
+    },
+    [{
+      code: normalized.trashDescendentItems ? "COLLECTION_TRASH_WITH_ITEMS" : "COLLECTION_TRASH_COLLECTIONS_ONLY",
+      message: normalized.trashDescendentItems
+        ? "Collection and descendant items will be moved to Zotero trash; no permanent erase is performed"
+        : "Collection and descendant collections will be moved to Zotero trash; contained items are not trashed"
+    }],
+    {
+      collectionKey: normalized.collectionKey,
+      name: normalized.currentName,
+      parentCollectionKey: normalized.currentParentCollectionKey,
+      descendentCollectionKeys: normalized.descendentCollectionKeys,
+      descendentItemKeys: normalized.descendentItemKeys
+    },
+    {
+      action: "trash",
+      trashDescendentItems: normalized.trashDescendentItems,
+      collectionKeys: [normalized.collectionKey].concat(normalized.descendentCollectionKeys),
+      trashedDescendentItemKeys: normalized.trashDescendentItems ? normalized.descendentItemKeys : []
+    },
+    "high"
+  );
+}
+
+async function executeCollectionTrash(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeCollectionTrashInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var collection = getLocalUserCollection(normalized.collectionKey);
+  collection.deleted = true;
+  await collection.saveTx({
+    deleteItems: normalized.trashDescendentItems
+  });
+
+  return {
+    collectionKey: normalized.collectionKey,
+    collectionKeys: [normalized.collectionKey].concat(normalized.descendentCollectionKeys),
+    trashedDescendentItemKeys: normalized.trashDescendentItems ? normalized.descendentItemKeys : [],
+    trashed: true,
+    erased: false,
+    trashDescendentItems: normalized.trashDescendentItems
+  };
+}
+
+function normalizeCollectionTrashInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "collection.trash input must be an object", 400);
+  }
+
+  var collection = normalizeCollectionTarget(input.collectionKey);
+  if (collection.deleted) {
+    throw commandError("COLLECTION_ALREADY_TRASHED", "Collection is already in Zotero trash", 409);
+  }
+
+  var descendentCollectionKeys = [];
+  var descendentItemKeys = [];
+  var descendents = collection.getDescendents(false, null, false);
+  for (var i = 0; i < descendents.length; i += 1) {
+    if (descendents[i].type === "collection") {
+      var childCollection = Zotero.Collections.get(descendents[i].id);
+      if (childCollection && childCollection.key) {
+        descendentCollectionKeys.push(childCollection.key);
+      }
+    } else {
+      var childItem = Zotero.Items.get(descendents[i].id);
+      if (childItem && childItem.key && !(childItem.isInTrash && childItem.isInTrash())) {
+        descendentItemKeys.push(childItem.key);
+      }
+    }
+  }
+
+  return {
+    collectionKey: collection.key,
+    trashDescendentItems: input.trashDescendentItems === true,
+    currentName: collection.name,
+    currentParentCollectionKey: collection.parentKey || undefined,
+    descendentCollectionKeys: uniqueStrings(descendentCollectionKeys),
+    descendentItemKeys: uniqueStrings(descendentItemKeys)
   };
 }
 
@@ -3051,6 +3477,81 @@ function normalizeItemUpdateTagsInput(input) {
   };
 }
 
+function createItemTrashDryRun(input) {
+  var normalized = normalizeItemTrashInput(input);
+  return createWriteDryRunPlan(
+    "item.trash",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: normalized.zoteroItemKeys,
+      collectionKeys: [],
+      attachmentKeys: normalized.attachmentKeys,
+      filePaths: [],
+      tags: []
+    },
+    [{
+      code: "ITEM_TRASH_ONLY",
+      message: "Items will be moved to Zotero trash and not permanently erased"
+    }],
+    { items: normalized.items },
+    {
+      action: "trash",
+      zoteroItemKeys: normalized.zoteroItemKeys,
+      attachmentKeys: normalized.attachmentKeys
+    },
+    "high"
+  );
+}
+
+async function executeItemTrash(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeItemTrashInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  await Zotero.Items.trashTx(normalized.itemIDs);
+  return {
+    trashedZoteroItemKeys: normalized.zoteroItemKeys,
+    attachmentKeys: normalized.attachmentKeys,
+    trashed: true,
+    erased: false
+  };
+}
+
+function normalizeItemTrashInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "item.trash input must be an object", 400);
+  }
+
+  var itemKeys = normalizeStringArray(input.zoteroItemKeys, "zoteroItemKeys", "ZOTERO_ITEM_KEYS_REQUIRED");
+  var itemIDs = [];
+  var items = [];
+  var attachmentKeys = [];
+  for (var i = 0; i < itemKeys.length; i += 1) {
+    var item = normalizeItemTarget(itemKeys[i]);
+    if (item.isAttachment && item.isAttachment()) {
+      throw commandError("ITEM_TRASH_ATTACHMENT_UNSUPPORTED", "Use attachment.trash for attachment items", 400);
+    }
+    if (item.isInTrash && item.isInTrash()) {
+      throw commandError("ITEM_ALREADY_TRASHED", "Item is already in Zotero trash: " + item.key, 409);
+    }
+    itemIDs.push(item.id);
+    items.push(itemSummaryRecord(item));
+    if (item.isRegularItem && item.isRegularItem()) {
+      attachmentKeys = attachmentKeys.concat(item.getAttachments(false).map(function (attachmentID) {
+        var attachment = Zotero.Items.get(attachmentID);
+        return attachment && attachment.key ? attachment.key : undefined;
+      }).filter(Boolean));
+    }
+  }
+
+  return {
+    zoteroItemKeys: itemKeys,
+    itemIDs: itemIDs,
+    items: items,
+    attachmentKeys: uniqueStrings(attachmentKeys)
+  };
+}
+
 function normalizeTagArray(value, fieldName) {
   if (!Array.isArray(value)) {
     throw commandError("TAGS_INVALID", fieldName + " must be an array", 400);
@@ -3071,6 +3572,37 @@ function normalizeTagArray(value, fieldName) {
   });
 
   return tags;
+}
+
+function normalizeStringArray(value, fieldName, missingCode) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw commandError(missingCode, fieldName + " must be a non-empty array", 400);
+  }
+
+  if (value.length > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", fieldName + " count exceeds limit 50", 400);
+  }
+
+  var strings = [];
+  value.forEach(function (item) {
+    if (typeof item !== "string" || item.trim().length === 0) {
+      throw commandError("STRING_ARRAY_INVALID", fieldName + " must contain non-empty strings", 400);
+    }
+    strings.push(item.trim());
+  });
+  return uniqueStrings(strings);
+}
+
+function uniqueStrings(values) {
+  var seen = {};
+  var result = [];
+  values.forEach(function (value) {
+    if (typeof value === "string" && value.length > 0 && !seen[value]) {
+      seen[value] = true;
+      result.push(value);
+    }
+  });
+  return result;
 }
 
 function normalizeItemTarget(itemKey) {
@@ -3312,6 +3844,81 @@ async function executeAttachmentUndoAdded(input, confirmation) {
     erased: false,
     sourceAuditRequestId: normalized.sourceAuditRequestId,
     sourceAuditPlanId: normalized.sourceAuditPlanId
+  };
+}
+
+async function createAttachmentTrashDryRun(input) {
+  var normalized = await normalizeAttachmentTrashInput(input);
+  return createWriteDryRunPlan(
+    "attachment.trash",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: normalized.parentZoteroItemKeys,
+      collectionKeys: [],
+      attachmentKeys: normalized.attachmentKeys,
+      filePaths: normalized.filePaths,
+      tags: []
+    },
+    [{
+      code: "ATTACHMENT_TRASH_ONLY",
+      message: "Attachments will be moved to Zotero trash and attachment files will not be permanently erased"
+    }],
+    { attachments: normalized.attachments },
+    {
+      action: "trash",
+      attachmentKeys: normalized.attachmentKeys
+    },
+    "high"
+  );
+}
+
+async function executeAttachmentTrash(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = await normalizeAttachmentTrashInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  await Zotero.Items.trashTx(normalized.attachmentIDs);
+  return {
+    trashedAttachmentKeys: normalized.attachmentKeys,
+    parentZoteroItemKeys: normalized.parentZoteroItemKeys,
+    filePaths: normalized.filePaths,
+    trashed: true,
+    erased: false
+  };
+}
+
+async function normalizeAttachmentTrashInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "attachment.trash input must be an object", 400);
+  }
+
+  var attachmentKeys = normalizeStringArray(input.attachmentKeys, "attachmentKeys", "ATTACHMENT_KEYS_REQUIRED");
+  var attachmentIDs = [];
+  var parentZoteroItemKeys = [];
+  var filePaths = [];
+  var attachments = [];
+  for (var i = 0; i < attachmentKeys.length; i += 1) {
+    var attachment = normalizeAttachmentTarget(attachmentKeys[i]);
+    if (attachment.isInTrash && attachment.isInTrash()) {
+      throw commandError("ATTACHMENT_ALREADY_TRASHED", "Attachment is already in Zotero trash: " + attachment.key, 409);
+    }
+    var record = await attachmentRecord(attachment);
+    attachmentIDs.push(attachment.id);
+    if (attachment.parentKey) {
+      parentZoteroItemKeys.push(attachment.parentKey);
+    }
+    if (record.filePath) {
+      filePaths.push(record.filePath);
+    }
+    attachments.push(record);
+  }
+
+  return {
+    attachmentKeys: attachmentKeys,
+    attachmentIDs: attachmentIDs,
+    parentZoteroItemKeys: uniqueStrings(parentZoteroItemKeys),
+    filePaths: uniqueStrings(filePaths),
+    attachments: attachments
   };
 }
 
@@ -3901,18 +4508,6 @@ async function findDuplicateAttachments(parentItem, filePath, filename, attachme
   return uniqueStrings(duplicateKeys);
 }
 
-function uniqueStrings(values) {
-  var seen = {};
-  var result = [];
-  values.forEach(function (value) {
-    if (!seen[value]) {
-      seen[value] = true;
-      result.push(value);
-    }
-  });
-  return result;
-}
-
 async function attachmentRecord(attachment) {
   var filePath = false;
   try {
@@ -4407,7 +5002,21 @@ function stripRuntimeFields(input) {
     sourceAuditTimestamp: true,
     annotation: true,
     fields: true,
-    search: true
+    search: true,
+    itemIDs: true,
+    items: true,
+    attachmentIDs: true,
+    attachments: true,
+    collectionKeysToTrash: true,
+    descendentCollectionKeys: true,
+    descendentItemKeys: true,
+    parentZoteroItemKeys: true,
+    master: true,
+    duplicates: true,
+    fieldConflicts: true,
+    affectedAttachmentKeys: true,
+    affectedCollectionKeys: true,
+    affectedTags: true
   };
   Object.keys(input).forEach(function (key) {
     if (key.indexOf("current") !== 0 && !runtimeFields[key]) {

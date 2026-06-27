@@ -195,7 +195,7 @@ describe("McpToolRegistry", () => {
     expect(sent).toEqual([{ name: "collection.rename", input }]);
   });
 
-  it("writes audit and returns a disabled undo plan for collection.create execute", async () => {
+  it("writes audit and returns a trash undo plan for collection.create execute", async () => {
     const projectRoot = await mkdtemp(path.join(tmpdir(), "zotero-bridge-audit-tool-"));
     try {
       const registry = new McpToolRegistry({
@@ -240,9 +240,9 @@ describe("McpToolRegistry", () => {
       expect(executed.undoPlans).toHaveLength(1);
       expect(executed.undoPlans[0]).toMatchObject({
         commandName: "collection.create",
-        reversible: false,
+        reversible: true,
         reverseCommand: {
-          name: "collection.deleteCreated.disabled",
+          name: "collection.trash",
           input: { collectionKey: "COLL_CREATED" }
         }
       });
@@ -263,5 +263,27 @@ describe("McpToolRegistry", () => {
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
     }
+  });
+
+  it("marks trash and duplicate merge operations as high risk dry-runs", async () => {
+    const registry = new McpToolRegistry({ pluginClient: new ZoteroPluginClient({ transport: async (command) => okResult(command.name) }) });
+
+    const trashPlan = await registry.callTool({
+      commandName: "item.trash",
+      input: { zoteroItemKeys: ["ITEM1"] }
+    });
+    const mergePlan = await registry.callTool({
+      commandName: "duplicates.merge",
+      input: { masterZoteroItemKey: "ITEM1", duplicateZoteroItemKeys: ["ITEM2"] }
+    });
+
+    expect(trashPlan.mode).toBe("dry-run");
+    expect(mergePlan.mode).toBe("dry-run");
+    if (trashPlan.mode !== "dry-run" || mergePlan.mode !== "dry-run") {
+      throw new Error("Expected dry-run results");
+    }
+    expect(trashPlan.plan.riskLevel).toBe("high");
+    expect(mergePlan.plan.riskLevel).toBe("high");
+    expect(mergePlan.plan.resolvedTargets.zoteroItemKeys).toEqual(["ITEM1", "ITEM2"]);
   });
 });

@@ -35,7 +35,7 @@ describe("Zotero plugin package", () => {
   it("registers Zotero connector server health and command endpoints", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.41"');
+    expect(bootstrap).toContain('version: "0.1.42"');
     expect(bootstrap).toContain('"zotero-codex-bridge ok " + ZoteroCodexBridge.version');
     expect(bootstrap).toContain('healthPath: "/zotero-codex-bridge/health"');
     expect(bootstrap).toContain('commandPath: "/zotero-codex-bridge/command"');
@@ -47,6 +47,7 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "collection.getItems"');
     expect(bootstrap).toContain('commandName === "collection.addItems"');
     expect(bootstrap).toContain('commandName === "collection.removeItems"');
+    expect(bootstrap).toContain('commandName === "collection.trash"');
     expect(bootstrap).toContain('commandName === "item.get"');
     expect(bootstrap).toContain('commandName === "item.search"');
     expect(bootstrap).toContain('commandName === "search.advanced"');
@@ -55,6 +56,8 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "savedSearch.create"');
     expect(bootstrap).toContain('commandName === "savedSearch.update"');
     expect(bootstrap).toContain('commandName === "citation.format"');
+    expect(bootstrap).toContain('commandName === "duplicates.find"');
+    expect(bootstrap).toContain('commandName === "duplicates.merge"');
     expect(bootstrap).toContain('commandName === "import.bibtex"');
     expect(bootstrap).toContain('commandName === "import.ris"');
     expect(bootstrap).toContain('commandName === "import.cslJson"');
@@ -69,6 +72,7 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "item.updateCreators"');
     expect(bootstrap).toContain('commandName === "item.setCollections"');
     expect(bootstrap).toContain('commandName === "item.updateTags"');
+    expect(bootstrap).toContain('commandName === "item.trash"');
     expect(bootstrap).toContain('commandName === "note.createChild"');
     expect(bootstrap).toContain('commandName === "attachment.get"');
     expect(bootstrap).toContain('commandName === "attachment.getForItem"');
@@ -77,6 +81,7 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "attachment.rename"');
     expect(bootstrap).toContain('commandName === "attachment.runZoteroRename"');
     expect(bootstrap).toContain('commandName === "attachment.undoAdded"');
+    expect(bootstrap).toContain('commandName === "attachment.trash"');
     expect(bootstrap).toContain('commandName === "attachment.renamePreferences.get"');
     expect(bootstrap).toContain('commandName === "attachment.renamePreferences.set"');
     expect(bootstrap).toContain('commandName === "backup.settings.get"');
@@ -147,6 +152,9 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("Zotero.Attachments.importFromFile");
     expect(bootstrap).toContain("Zotero.Attachments.linkFromFile");
     expect(bootstrap).toContain("Zotero.Items.trashTx");
+    expect(bootstrap).toContain("Zotero.Duplicates");
+    expect(bootstrap).toContain("Zotero.Items.merge");
+    expect(bootstrap).toContain("collection.deleted = true");
     expect(bootstrap).toContain("findBridgeAttachmentAddAudit");
     expect(bootstrap).toContain("attachment.parentKey = normalized.targetZoteroItemKey");
     expect(bootstrap).toContain('return PathUtils.join(appData || localAppData || home || "", "zotero-codex-bridge");');

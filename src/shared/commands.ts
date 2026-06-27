@@ -23,6 +23,7 @@ export type CommandName =
   | "item.updateCreators"
   | "item.setCollections"
   | "item.updateTags"
+  | "item.trash"
   | "import.bibtex"
   | "import.ris"
   | "import.cslJson"
@@ -40,6 +41,7 @@ export type CommandName =
   | "attachment.rename"
   | "attachment.runZoteroRename"
   | "attachment.undoAdded"
+  | "attachment.trash"
   | "attachment.renamePreferences.get"
   | "attachment.renamePreferences.set"
   | "backup.settings.get"
@@ -47,6 +49,9 @@ export type CommandName =
   | "backup.snapshot.list"
   | "backup.snapshot.restore"
   | "backup.snapshot.prune"
+  | "collection.trash"
+  | "duplicates.find"
+  | "duplicates.merge"
   | "audit.list"
   | "safety.getProfileStatus"
   | "safety.unlockRealProfile"
@@ -83,6 +88,7 @@ export const COMMAND_DEFINITIONS = [
   { name: "item.updateCreators", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "creators"] },
   { name: "item.setCollections", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "collectionKeys"] },
   { name: "item.updateTags", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "addTags", "removeTags"] },
+  { name: "item.trash", write: true, profileWrite: true, inputFields: ["zoteroItemKeys"] },
   { name: "import.bibtex", write: true, profileWrite: true, inputFields: ["content", "collectionKeys", "tags"] },
   { name: "import.ris", write: true, profileWrite: true, inputFields: ["content", "collectionKeys", "tags"] },
   { name: "import.cslJson", write: true, profileWrite: true, inputFields: ["content", "collectionKeys", "tags"] },
@@ -100,6 +106,7 @@ export const COMMAND_DEFINITIONS = [
   { name: "attachment.rename", write: true, profileWrite: true, inputFields: ["attachmentKey", "title", "renameFile"] },
   { name: "attachment.runZoteroRename", write: true, profileWrite: true, inputFields: ["attachmentKey"] },
   { name: "attachment.undoAdded", write: true, profileWrite: true, inputFields: ["attachmentKey"] },
+  { name: "attachment.trash", write: true, profileWrite: true, inputFields: ["attachmentKeys"] },
   { name: "attachment.renamePreferences.get", write: false, inputFields: [] },
   { name: "attachment.renamePreferences.set", write: true, profileWrite: true, inputFields: ["preferences"] },
   { name: "backup.settings.get", write: false, inputFields: [] },
@@ -107,6 +114,9 @@ export const COMMAND_DEFINITIONS = [
   { name: "backup.snapshot.list", write: false, inputFields: ["limit"] },
   { name: "backup.snapshot.restore", write: true, profileWrite: true, inputFields: ["backupId"] },
   { name: "backup.snapshot.prune", write: true, profileWrite: true, inputFields: [] },
+  { name: "collection.trash", write: true, profileWrite: true, inputFields: ["collectionKey", "trashDescendentItems"] },
+  { name: "duplicates.find", write: false, inputFields: ["limit"] },
+  { name: "duplicates.merge", write: true, profileWrite: true, inputFields: ["masterZoteroItemKey", "duplicateZoteroItemKeys"] },
   { name: "audit.list", write: false, inputFields: ["limit"] },
   { name: "safety.getProfileStatus", write: false, inputFields: [] },
   {
