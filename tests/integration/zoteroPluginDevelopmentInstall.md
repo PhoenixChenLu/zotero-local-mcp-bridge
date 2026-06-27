@@ -1253,7 +1253,7 @@ $duplicatesFind = Invoke-RestMethod `
   -ContentType "application/json" `
   -Headers @{"x-zotero-codex-bridge-token"=$token} `
   -Body '{"name":"duplicates.find","requestId":"req_duplicates_find_same_doi","input":{"limit":50}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.42"
+  -UserAgent "ZoteroCodexBridge/0.1.43"
 
 $duplicatesFind.data.setCount
 $duplicatesFind.data.sets | Select-Object setId,zoteroItemKeys

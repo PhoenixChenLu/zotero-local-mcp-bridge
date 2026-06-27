@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      id="zotero-codex-bridge-preferences"
+      class="zotero-codex-bridge-preferences">
+  <html:link rel="stylesheet" href="preferences.css"/>
+
+  <groupbox>
+    <caption label="Zotero Codex Bridge"/>
+    <description>Configure local bridge safety settings. Dry-run and audit are always enabled.</description>
+    <grid>
+      <columns>
+        <column/>
+        <column flex="1"/>
+      </columns>
+      <rows>
+        <row align="center">
+          <label value="Run mode"/>
+          <menulist id="zcb-operation-mode" preference="extensions.zotero-codex-bridge.operationMode">
+            <menupopup>
+              <menuitem label="readonly" value="readonly"/>
+              <menuitem label="askforapprove" value="askforapprove"/>
+              <menuitem label="yolo" value="yolo"/>
+            </menupopup>
+          </menulist>
+        </row>
+        <row align="center">
+          <label value="Real-profile unlock TTL"/>
+          <hbox align="center">
+            <html:input id="zcb-real-profile-ttl" type="number" min="1" max="120" preference="extensions.zotero-codex-bridge.realProfileUnlockTtlMinutes"/>
+            <label value="minutes"/>
+          </hbox>
+        </row>
+        <row align="center">
+          <label value="File backup / undo"/>
+          <checkbox id="zcb-file-backup-enabled" label="Enable file-level backup and undo" preference="extensions.zotero-codex-bridge.fileBackupEnabled"/>
+        </row>
+        <row align="center">
+          <label value="Backup retention"/>
+          <hbox align="center">
+            <html:input id="zcb-backup-retention-days" type="number" min="1" preference="extensions.zotero-codex-bridge.backupRetentionDays"/>
+            <label value="days"/>
+          </hbox>
+        </row>
+        <row align="center">
+          <label value="Backup space limit"/>
+          <hbox align="center">
+            <html:input id="zcb-backup-max-gb" type="number" min="1"/>
+            <label value="GB"/>
+          </hbox>
+        </row>
+        <row align="center">
+          <label value="Limits"/>
+          <vbox>
+            <checkbox id="zcb-backup-time-limit" label="Apply time limit" preference="extensions.zotero-codex-bridge.backupEnableTimeLimit"/>
+            <checkbox id="zcb-backup-space-limit" label="Apply space limit before time limit" preference="extensions.zotero-codex-bridge.backupEnableSpaceLimit"/>
+          </vbox>
+        </row>
+        <row align="center">
+          <label value="Default attachment mode"/>
+          <menulist id="zcb-default-attachment-mode" preference="extensions.zotero-codex-bridge.defaultAttachmentMode">
+            <menupopup>
+              <menuitem label="Copy to Zotero storage" value="copy"/>
+              <menuitem label="Linked file" value="linked"/>
+            </menupopup>
+          </menulist>
+        </row>
+        <row align="center">
+          <label value="Attachment duplicate check"/>
+          <checkbox id="zcb-attachment-duplicate-check" label="Check duplicate file paths before adding attachments" preference="extensions.zotero-codex-bridge.attachmentDuplicateCheckEnabled"/>
+        </row>
+      </rows>
+    </grid>
+  </groupbox>
+
+  <groupbox>
+    <caption label="Paths"/>
+    <grid>
+      <columns>
+        <column/>
+        <column flex="1"/>
+      </columns>
+      <rows>
+        <row align="center">
+          <label value="Runtime root"/>
+          <html:input id="zcb-runtime-root" readonly="readonly"/>
+        </row>
+        <row align="center">
+          <label value="Audit path"/>
+          <html:input id="zcb-audit-path" readonly="readonly"/>
+        </row>
+        <row align="center">
+          <label value="Backup path"/>
+          <html:input id="zcb-backup-path" readonly="readonly"/>
+        </row>
+      </rows>
+    </grid>
+  </groupbox>
+
+  <description class="zcb-warning">
+    readonly blocks all write commands. yolo still requires explicit confirmation for future unrecoverable operations.
+  </description>
+</vbox>

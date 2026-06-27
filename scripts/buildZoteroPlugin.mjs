@@ -14,12 +14,15 @@ const distDir = path.join(projectRoot, "dist");
 const stagingDir = path.join(distDir, "zotero-plugin");
 const xpiPath = path.join(distDir, "zotero-codex-bridge.xpi");
 const tokenPath = path.join(projectRoot, "runtime", "auth", "bridge-token");
+const pluginStaticFiles = ["manifest.json", "prefs.js", "preferences.xhtml", "preferences.js", "preferences.css"];
 
 await rm(stagingDir, { recursive: true, force: true });
 await rm(xpiPath, { force: true });
 await mkdir(stagingDir, { recursive: true });
 
-await cp(path.join(projectRoot, "src", "zotero-plugin", "manifest.json"), path.join(stagingDir, "manifest.json"));
+for (const filename of pluginStaticFiles) {
+  await cp(path.join(projectRoot, "src", "zotero-plugin", filename), path.join(stagingDir, filename));
+}
 await writeFile(
   path.join(stagingDir, "bootstrap.js"),
   (await readFile(path.join(projectRoot, "src", "zotero-plugin", "bootstrap.js"), "utf8"))
@@ -37,7 +40,7 @@ await writeFile(
 await zipArchive(stagingDir, xpiPath);
 
 async function zipArchive(sourceDir, destinationPath) {
-  await execFileAsync("zip", ["-r", destinationPath, "manifest.json", "bootstrap.js"], {
+  await execFileAsync("zip", ["-r", destinationPath, "manifest.json", "bootstrap.js", "prefs.js", "preferences.xhtml", "preferences.js", "preferences.css"], {
     cwd: sourceDir,
     windowsHide: true
   });

@@ -6,3 +6,4 @@ export * from "./backup.js";
 export * from "./commands.js";
 export * from "./dryRun.js";
 export * from "./errors.js";
+export * from "./settings.js";

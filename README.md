@@ -13,14 +13,15 @@
   - Data Directory: `H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData`
 - `ZoteroProfile/`、`ZoteroVault/`、`ZoteroData/` 是本地测试数据目录，不是项目源码。
 - 真实 Zotero 插件安装、MCP inspector/Codex MCP 连接测试和 Zotero UI 手工验收仍在后续阶段。
-- 当前版本为**内部测试版（0.1.42）**，尚未满足公开发布硬门禁；公开发布就绪评估见 `docs/release-readiness.md`。
+- 当前版本为**内部测试版（0.1.43）**，尚未满足公开发布硬门禁；公开发布就绪评估见 `docs/release-readiness.md`。
 
 ## Public Release Readiness (Step 2)
 
-- `0.1.42` 当前不直接公开发布的原因：
+- `0.1.43` 当前不直接公开发布的原因：
   - 仍以测试 profile 与固定测试约束为前提，尚未切换到发布默认的只读/安全锁定启动模型。
   - 公开分发链路未完成：未形成可复用的公开插件发布链路与 MCP artifact + registry 元数据齐备链路。
   - 未完成公开发布硬门禁文档化后的一次性对齐（真实主库解锁、路径隔离、审计/backup 可观测、发布阻塞项列表）。
+  - 插件设置界面已进入第一片实现，但 `askforapprove` / `yolo` 的完整高风险确认语义仍待 runtime 验收。
 - 当前公开发布目标路径（已明确）：
   - Zotero 插件：GitHub Release / 项目主页 / Zotero Forums / `update manifest`（当前没有官方 Zotero 插件库直接上传入口）。
   - MCP server：npm 包或等价 artifact + `mcpName` + `server.json` + MCP Registry metadata（Registry 仅托管元数据，不托管 artifact）。
@@ -31,7 +32,7 @@
   - 高级搜索、保存搜索、引用格式输出已有第一批 runtime 验收
   - 真实主库解锁的公开发布验收与用户文档（底层安全状态模型已开始实现）
   - Codex 专用 skill
-  - 删除与 merge duplicates 已进入第一片受控 trash/merge 实现，仍需 runtime 验收与公开发布安全文档
+  - 删除与 merge duplicates 已完成第一片受控 trash/find/merge runtime 验收，仍需公开发布安全文档
 
 ## Safety Boundaries
 
@@ -119,11 +120,11 @@ Zotero connector server 会拦截 browser-like User-Agent。PowerShell 默认 Us
 ```powershell
 Invoke-WebRequest `
   -Uri http://127.0.0.1:23119/zotero-codex-bridge/health `
-  -UserAgent "ZoteroCodexBridge/0.1.42" `
+  -UserAgent "ZoteroCodexBridge/0.1.43" `
   -UseBasicParsing
 ```
 
-成功时返回纯文本：`zotero-codex-bridge ok 0.1.42 zotero-codex-bridge@example.com test`。当前 command endpoint 已接入只读 `collection.getTree`、`collection.getItems`、`item.get`、`item.search`、`search.advanced`、`savedSearch.list`、`savedSearch.get`、`citation.format`、`duplicates.find`、`export.bibtex`、`export.ris`、`export.cslJson`、`annotation.list`、`attachment.get`、`attachment.getForItem`、`attachment.renamePreferences.get`、`backup.settings.get`、`backup.snapshot.list`、`audit.list`、`safety.getProfileStatus`，以及第一批 collection create/rename/move/addItems/removeItems/trash、`item.create`、`item.updateFields`、`item.updateCreators`、`item.setCollections`、`item.updateTags`、`item.trash`、`savedSearch.create`、`savedSearch.update`、`duplicates.merge`、`import.bibtex`、`import.ris`、`import.cslJson`、`annotation.create`、`annotation.update`、`note.createChild`、`attachment.addFile`、`attachment.moveToItem`、`attachment.rename`、`attachment.runZoteroRename`、`attachment.undoAdded`、`attachment.trash`、`attachment.renamePreferences.set`、`backup.settings.set`、`backup.snapshot.restore`、`backup.snapshot.prune`、`safety.unlockRealProfile` 和 `safety.lockRealProfile` dry-run/execute 闭环。写命令必须先 dry-run，再带未过期的 `planId` 和 `confirmationToken` execute。direct HTTP 写命令会在 bridge runtime 的 `runtime/logs/audit/` 记录 JSONL 审计事件；`attachment.rename` 和 `attachment.runZoteroRename` 在执行文件重名前会把原附件文件快照写入 bridge runtime 的 `runtime/backups/zotero-operations/files/`。
+成功时返回纯文本：`zotero-codex-bridge ok 0.1.43 zotero-codex-bridge@example.com test`。当前 command endpoint 已接入只读 `collection.getTree`、`collection.getItems`、`item.get`、`item.search`、`search.advanced`、`savedSearch.list`、`savedSearch.get`、`citation.format`、`duplicates.find`、`export.bibtex`、`export.ris`、`export.cslJson`、`annotation.list`、`attachment.get`、`attachment.getForItem`、`attachment.renamePreferences.get`、`backup.settings.get`、`backup.snapshot.list`、`audit.list`、`safety.getProfileStatus`，以及第一批 collection create/rename/move/addItems/removeItems/trash、`item.create`、`item.updateFields`、`item.updateCreators`、`item.setCollections`、`item.updateTags`、`item.trash`、`savedSearch.create`、`savedSearch.update`、`duplicates.merge`、`import.bibtex`、`import.ris`、`import.cslJson`、`annotation.create`、`annotation.update`、`note.createChild`、`attachment.addFile`、`attachment.moveToItem`、`attachment.rename`、`attachment.runZoteroRename`、`attachment.undoAdded`、`attachment.trash`、`attachment.renamePreferences.set`、`backup.settings.set`、`backup.snapshot.restore`、`backup.snapshot.prune`、`safety.unlockRealProfile` 和 `safety.lockRealProfile` dry-run/execute 闭环。写命令必须先 dry-run，再带未过期的 `planId` 和 `confirmationToken` execute。direct HTTP 写命令会在 bridge runtime 的 `runtime/logs/audit/` 记录 JSONL 审计事件；`attachment.rename` 和 `attachment.runZoteroRename` 在执行文件重名前会把原附件文件快照写入 bridge runtime 的 `runtime/backups/zotero-operations/files/`。`0.1.43` 起测试 XPI 包含 Zotero 插件设置界面资源，并默认以 `readonly` operation mode 保护写操作。
 
 ## Key Files
 

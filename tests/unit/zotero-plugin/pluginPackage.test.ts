@@ -35,7 +35,17 @@ describe("Zotero plugin package", () => {
   it("registers Zotero connector server health and command endpoints", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.42"');
+    expect(bootstrap).toContain('version: "0.1.43"');
+    expect(bootstrap).toContain("Zotero.PreferencePanes.register");
+    expect(bootstrap).toContain('src: data.rootURI + "preferences.xhtml"');
+    expect(bootstrap).toContain('scripts: [data.rootURI + "preferences.js"]');
+    expect(bootstrap).toContain('BRIDGE_OPERATION_MODE_DEFAULT = "readonly"');
+    expect(bootstrap).toContain("function getBridgeOperationMode");
+    expect(bootstrap).toContain("assertOperationWritePermission(operationMode, commandName)");
+    expect(bootstrap).toContain('"OPERATION_MODE_READONLY"');
+    expect(bootstrap).toContain("operationMode: operationMode");
+    expect(bootstrap).toContain("dryRunRequired: true");
+    expect(bootstrap).toContain("auditEnabled: true");
     expect(bootstrap).toContain('"zotero-codex-bridge ok " + ZoteroCodexBridge.version');
     expect(bootstrap).toContain('healthPath: "/zotero-codex-bridge/health"');
     expect(bootstrap).toContain('commandPath: "/zotero-codex-bridge/command"');
@@ -181,7 +191,7 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("function onMainWindowLoad");
     expect(bootstrap).toContain("function onMainWindowUnload");
     expect(bootstrap).toContain("runtimeRoot: __ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__");
-    expect(bootstrap).not.toContain("runtimeRoot: resolveBridgeRuntimeRoot()");
+    expect(bootstrap).not.toContain("runtimeRoot: resolveBridgeRuntimeRoot(),");
     expect(bootstrap).toContain("var expectedAuthToken;");
     expect(bootstrap).toContain("try {");
     expect(bootstrap).toContain("expectedAuthToken = await getExpectedAuthToken();");
@@ -201,11 +211,35 @@ describe("Zotero plugin package", () => {
     const { stdout } = await execFileAsync("tar", ["-tf", xpiPath], { windowsHide: true });
     expect(stdout).toContain("manifest.json");
     expect(stdout).toContain("bootstrap.js");
+    expect(stdout).toContain("prefs.js");
+    expect(stdout).toContain("preferences.xhtml");
+    expect(stdout).toContain("preferences.js");
+    expect(stdout).toContain("preferences.css");
 
     const bootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
     expect(bootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__");
     expect(bootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__");
     expect(bootstrap.stdout).not.toContain("H:\\\\ProgramDocument\\\\MixLanguage\\\\Zotero-codex-bridge");
+  });
+
+  it("defines settings UI resources and defaults", async () => {
+    const prefs = await readFile(path.resolve("src", "zotero-plugin", "prefs.js"), "utf8");
+    const preferences = await readFile(path.resolve("src", "zotero-plugin", "preferences.xhtml"), "utf8");
+    const script = await readFile(path.resolve("src", "zotero-plugin", "preferences.js"), "utf8");
+
+    expect(prefs).toContain('pref("extensions.zotero-codex-bridge.operationMode", "readonly")');
+    expect(prefs).toContain('pref("extensions.zotero-codex-bridge.realProfileUnlockTtlMinutes", 30)');
+    expect(prefs).toContain('pref("extensions.zotero-codex-bridge.fileBackupEnabled", true)');
+    expect(prefs).toContain('pref("extensions.zotero-codex-bridge.backupMaxLocalBytes", 10737418240)');
+    expect(preferences).toContain('value="readonly"');
+    expect(preferences).toContain('value="askforapprove"');
+    expect(preferences).toContain('value="yolo"');
+    expect(preferences).toContain("Dry-run and audit are always enabled");
+    expect(preferences).toContain("Enable file-level backup and undo");
+    expect(preferences).toContain("Copy to Zotero storage");
+    expect(script).toContain('setPref("operationMode"');
+    expect(script).toContain('setPref("backupMaxLocalBytes"');
+    expect(script).toContain('setPref("defaultAttachmentMode"');
   });
 
   it("keeps release build artifact free of embedded local tokens", async () => {

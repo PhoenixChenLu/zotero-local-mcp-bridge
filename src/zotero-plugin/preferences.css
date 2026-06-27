@@ -1,0 +1,15 @@
+.zotero-codex-bridge-preferences {
+  padding: 12px;
+}
+
+.zotero-codex-bridge-preferences groupbox {
+  margin-bottom: 12px;
+}
+
+.zotero-codex-bridge-preferences input[readonly] {
+  min-width: 34em;
+}
+
+.zcb-warning {
+  color: #8a4b00;
+}

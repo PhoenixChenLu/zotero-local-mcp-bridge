@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.42",
+  version: "0.1.43",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -24,6 +24,13 @@ var REAL_PROFILE_UNLOCK_CONFIRMATION = "I understand and authorize temporary rea
 var REAL_PROFILE_PREFERENCE_MODE = "extensions.zotero-codex-bridge.profileMode";
 var REAL_PROFILE_DEFAULT_MODE = "real-locked";
 var REAL_PROFILE_STATE_PATH_PARTS = ["runtime", "safety", "real-profile-state.json"];
+var BRIDGE_OPERATION_MODE_PREFERENCE = "extensions.zotero-codex-bridge.operationMode";
+var BRIDGE_OPERATION_MODE_DEFAULT = "readonly";
+var BRIDGE_OPERATION_MODES = {
+  readonly: true,
+  askforapprove: true,
+  yolo: true
+};
 var EXPORT_TRANSLATOR_IDS = {
   bibtex: "9cb70025-a888-4a29-a210-93ec52da40d4",
   ris: "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7",
@@ -122,8 +129,9 @@ function install() {
   log("installed");
 }
 
-function startup() {
+function startup(data) {
   ZoteroCodexBridge.started = true;
+  registerPreferencePane(data || {});
   registerHealthEndpoint();
   registerCommandEndpoint();
   log("started");
@@ -145,6 +153,25 @@ function shutdown() {
 
 function uninstall() {
   log("uninstalled");
+}
+
+function registerPreferencePane(data) {
+  if (typeof Zotero === "undefined" || !Zotero.PreferencePanes || !Zotero.PreferencePanes.register) {
+    log("preference pane unavailable");
+    return;
+  }
+
+  if (!data.rootURI) {
+    log("preference pane rootURI unavailable");
+    return;
+  }
+
+  Zotero.PreferencePanes.register({
+    pluginID: ZoteroCodexBridge.id,
+    src: data.rootURI + "preferences.xhtml",
+    scripts: [data.rootURI + "preferences.js"]
+  });
+  log("preference pane registered");
 }
 
 function registerHealthEndpoint() {
@@ -235,9 +262,11 @@ function registerCommandEndpoint() {
       var commandName = payload.name || "unknown";
       var requestId = payload.requestId || "unknown";
       var profileMode;
+      var operationMode;
       var testProfileMarkerPresent;
       try {
         profileMode = await getProfileMode();
+        operationMode = getBridgeOperationMode();
         testProfileMarkerPresent = await isTestProfileMarkerPresent();
       } catch (error) {
         return jsonCommandResponse(error.status || 500, commandName, requestId, undefined, {
@@ -248,11 +277,12 @@ function registerCommandEndpoint() {
 
       if (ZoteroCodexBridgeProfileWriteCommands[commandName] && !ZoteroCodexBridgeSafetyStateCommands[commandName]) {
         try {
+          assertOperationWritePermission(operationMode, commandName);
           assertProfileWritePermission(profileMode, testProfileMarkerPresent, commandName);
         } catch (error) {
           return jsonCommandResponse(error.status || 403, commandName, requestId, undefined, {
-            code: error.code || "PROFILE_WRITE_FORBIDDEN",
-            message: error.message || "Profile write guard blocked this command"
+            code: error.code || "WRITE_FORBIDDEN",
+            message: error.message || "Write guard blocked this command"
           });
         }
       }
@@ -265,6 +295,7 @@ function registerCommandEndpoint() {
             requestId,
             await getProfileStatusResponse({
               profileMode: profileMode,
+              operationMode: operationMode,
               testProfileMarkerPresent: testProfileMarkerPresent
             })
           );
@@ -1317,8 +1348,19 @@ function assertProfileWritePermission(profileMode, testProfileMarkerPresent, com
   }
 }
 
+function assertOperationWritePermission(operationMode, commandName) {
+  if (operationMode === "readonly") {
+    throw commandError(
+      "OPERATION_MODE_READONLY",
+      "Command " + commandName + " is blocked because operation mode is readonly",
+      403
+    );
+  }
+}
+
 async function getProfileStatusResponse(context) {
   var profileMode = context.profileMode || REAL_PROFILE_DEFAULT_MODE;
+  var operationMode = context.operationMode || getBridgeOperationMode();
   var state = await readRealProfileUnlockState();
   var profileFingerprint = resolveProfileFingerprint();
   var unlockExpiresAt = state.expiresAt || null;
@@ -1330,13 +1372,18 @@ async function getProfileStatusResponse(context) {
 
   return {
     profileMode: profileMode,
+    operationMode: operationMode,
+    runMode: operationMode,
+    dryRunRequired: true,
+    auditEnabled: true,
     testProfileMarkerPresent: !!context.testProfileMarkerPresent,
     isRealUnlocked: unlockActive,
     profileFingerprint: profileFingerprint,
     unlockExpiresAt: unlockExpiresAt,
     unlockTtlMinutes: unlockTtlMinutes,
     auditPath: auditRootPath(),
-    backupPath: backupRootPath()
+    backupPath: backupRootPath(),
+    runtimeRoot: resolveBridgeRuntimeRoot()
   };
 }
 
@@ -1461,6 +1508,11 @@ async function getProfileMode() {
   }
 
   return "real-locked";
+}
+
+function getBridgeOperationMode() {
+  var value = getPreferenceValue(BRIDGE_OPERATION_MODE_PREFERENCE);
+  return BRIDGE_OPERATION_MODES[value] ? value : BRIDGE_OPERATION_MODE_DEFAULT;
 }
 
 function isProfileUnlockActive(state, profileFingerprint) {

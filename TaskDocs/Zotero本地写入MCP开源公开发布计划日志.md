@@ -745,7 +745,17 @@
   - 已明确运行模式为 `readonly`、`askforapprove`、`yolo`。
   - 已明确 `yolo` 对极高危或不可恢复操作仍必须主动确认。
   - 已新增设置界面规格文档并同步主 spec。
-- 测试结果：未开始
+  - 完成第一片实现：
+    - 新增共享设置默认值与模式校验：`src/shared/settings.ts`。
+    - 新增 Zotero preferences 资源：`prefs.js`、`preferences.xhtml`、`preferences.js`、`preferences.css`。
+    - `startup(data)` 注册 `Zotero.PreferencePanes.register(...)`。
+    - `safety.getProfileStatus` 返回 `operationMode`、`runMode`、`dryRunRequired`、`auditEnabled`、`runtimeRoot`。
+    - 写命令 guard 增加 `readonly` 拦截；`readonly` 下 profile write 命令返回 `OPERATION_MODE_READONLY`。
+    - XPI 打包脚本将设置界面资源纳入 `dist/zotero-codex-bridge.xpi`。
+    - 内部测试版本提升到 `0.1.43`。
+- 测试结果：
+  - 自动验证通过：`npm run test`、`npm run lint`、`npm run typecheck`、`npm run build`、`npm run build:zotero-plugin:test`。
+  - XPI 内容检查通过：`manifest.json`、`bootstrap.js`、`prefs.js`、`preferences.xhtml`、`preferences.js`、`preferences.css` 均在包内。
 - 备注：用户在 2026-06-28 指出功能虽已具备，但关键可选项未出现在插件设置界面；因此本步骤插入到公开发布和 Codex skill 之前。
 
 ### 步骤 15 - Codex 专用 skill
