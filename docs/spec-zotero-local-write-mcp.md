@@ -226,7 +226,9 @@ type ZoteroLocalCommandResult<T> = {
   - 不直接写 `zotero.sqlite`。
   - 不向 MCP tool 暴露任意 JavaScript eval。
 - **输出能力范围**：
-  - 当前公开发布阶段默认不包括 item 创建/完整元数据编辑、BibTeX/RIS/CSL 导入导出、PDF annotation 读写、高级搜索/保存搜索/引用输出、Codex 专用 skill、真实主库解锁以外的高风险操作、删除与 merge duplicates。
+  - 2026-06-27 起，公开发布准备、边缘发布文件与 Codex 专用 skill 全部后置。
+  - 在进入发布准备前，必须先完成并测试通过：item 创建/完整元数据编辑、BibTeX/RIS/CSL 导入导出、PDF annotation 读取/写入、高级搜索/保存搜索/引用格式输出。
+  - 删除、trash、merge duplicates 仍作为后续高风险阶段，不阻塞上述四组核心功能的下一步开发。
 - **分发边界**：
   - MCP Registry 仅声明与元数据；不会托管 artifact。
   - 插件更新依赖 update manifest 与 release artifact 的可追溯公开发布逻辑。
