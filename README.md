@@ -13,11 +13,11 @@
   - Data Directory: `H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData`
 - `ZoteroProfile/`、`ZoteroVault/`、`ZoteroData/` 是本地测试数据目录，不是项目源码。
 - 真实 Zotero 插件安装、MCP inspector/Codex MCP 连接测试和 Zotero UI 手工验收仍在后续阶段。
-- 当前版本为**内部测试版（0.1.36）**，尚未满足公开发布硬门禁；公开发布就绪评估见 `docs/release-readiness.md`。
+- 当前版本为**内部测试版（0.1.37）**，尚未满足公开发布硬门禁；公开发布就绪评估见 `docs/release-readiness.md`。
 
 ## Public Release Readiness (Step 2)
 
-- `0.1.36` 当前不直接公开发布的原因：
+- `0.1.37` 当前不直接公开发布的原因：
   - 仍以测试 profile 与固定测试约束为前提，尚未切换到发布默认的只读/安全锁定启动模型。
   - 公开分发链路未完成：未形成可复用的公开插件发布链路与 MCP artifact + registry 元数据齐备链路。
   - 未完成公开发布硬门禁文档化后的一次性对齐（真实主库解锁、路径隔离、审计/backup 可观测、发布阻塞项列表）。
@@ -119,11 +119,11 @@ Zotero connector server 会拦截 browser-like User-Agent。PowerShell 默认 Us
 ```powershell
 Invoke-WebRequest `
   -Uri http://127.0.0.1:23119/zotero-codex-bridge/health `
-  -UserAgent "ZoteroCodexBridge/0.1.36" `
+  -UserAgent "ZoteroCodexBridge/0.1.37" `
   -UseBasicParsing
 ```
 
-成功时返回纯文本：`zotero-codex-bridge ok 0.1.36 zotero-codex-bridge@example.com test`。当前 command endpoint 已接入只读 `collection.getTree`、`collection.getItems`、`item.get`、`item.search`、`attachment.get`、`attachment.getForItem`、`attachment.renamePreferences.get`、`backup.settings.get`、`backup.snapshot.list`、`audit.list`、`safety.getProfileStatus`，以及第一批 collection create/rename/move/addItems/removeItems、`item.create`、`item.updateFields`、`item.updateCreators`、`item.setCollections`、`item.updateTags`、`note.createChild`、`attachment.addFile`、`attachment.moveToItem`、`attachment.rename`、`attachment.runZoteroRename`、`attachment.undoAdded`、`attachment.renamePreferences.set`、`backup.settings.set`、`backup.snapshot.restore`、`backup.snapshot.prune`、`safety.unlockRealProfile` 和 `safety.lockRealProfile` dry-run/execute 闭环。写命令必须先 dry-run，再带未过期的 `planId` 和 `confirmationToken` execute。direct HTTP 写命令会在 bridge runtime 的 `runtime/logs/audit/` 记录 JSONL 审计事件；`attachment.rename` 和 `attachment.runZoteroRename` 在执行文件重名前会把原附件文件快照写入 bridge runtime 的 `runtime/backups/zotero-operations/files/`。
+成功时返回纯文本：`zotero-codex-bridge ok 0.1.37 zotero-codex-bridge@example.com test`。当前 command endpoint 已接入只读 `collection.getTree`、`collection.getItems`、`item.get`、`item.search`、`export.bibtex`、`export.ris`、`export.cslJson`、`attachment.get`、`attachment.getForItem`、`attachment.renamePreferences.get`、`backup.settings.get`、`backup.snapshot.list`、`audit.list`、`safety.getProfileStatus`，以及第一批 collection create/rename/move/addItems/removeItems、`item.create`、`item.updateFields`、`item.updateCreators`、`item.setCollections`、`item.updateTags`、`import.bibtex`、`import.ris`、`import.cslJson`、`note.createChild`、`attachment.addFile`、`attachment.moveToItem`、`attachment.rename`、`attachment.runZoteroRename`、`attachment.undoAdded`、`attachment.renamePreferences.set`、`backup.settings.set`、`backup.snapshot.restore`、`backup.snapshot.prune`、`safety.unlockRealProfile` 和 `safety.lockRealProfile` dry-run/execute 闭环。写命令必须先 dry-run，再带未过期的 `planId` 和 `confirmationToken` execute。direct HTTP 写命令会在 bridge runtime 的 `runtime/logs/audit/` 记录 JSONL 审计事件；`attachment.rename` 和 `attachment.runZoteroRename` 在执行文件重名前会把原附件文件快照写入 bridge runtime 的 `runtime/backups/zotero-operations/files/`。
 
 ## Key Files
 

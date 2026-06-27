@@ -2,7 +2,7 @@
 
 更新时间：2026-06-26 23:05:00
 
-本文件记录真实 Zotero 插件命令接入前使用的 Zotero 内部 API 依据。审计范围覆盖本项目第一批 collection read/create/rename/move、item membership、item tag、child note、attachment read、attachment add file、attachment move、attachment rename、Zotero 内置附件自动重命名与附件重命名偏好设计。
+本文件记录真实 Zotero 插件命令接入前使用的 Zotero 内部 API 依据。审计范围覆盖本项目第一批 collection read/create/rename/move、item membership、item metadata、item tag、BibTeX/RIS/CSL JSON 导入导出、child note、attachment read、attachment add file、attachment move、attachment rename、Zotero 内置附件自动重命名与附件重命名偏好设计。
 
 ## 适用边界
 
@@ -24,6 +24,10 @@
 - `references/official/zotero/zotero-9.0.5-client/xpcom/data/dataObject.js`
 - `references/official/zotero/zotero-9.0.5-client/xpcom/attachments.js`
 - `references/official/zotero/zotero-9.0.5-server/server_localAPI.js`
+- `references/official/zotero/zotero-9.0.5-client/xpcom/server/server_localAPI.js`
+- `ZoteroData/translators/BibTeX.js`
+- `ZoteroData/translators/RIS.js`
+- `ZoteroData/translators/CSL JSON.js`
 
 ## `collection.getTree`
 
@@ -255,6 +259,74 @@ await item.saveTx();
 
 - `item.updateTags` 可以通过 Zotero item 对象层的 `addTag()`、`removeTag()` 和 `saveTx()` 实现，不直接写 SQLite。
 - execute 添加已存在 tag 或移除不存在 tag 时跳过，返回实际 `addedTags` 和 `removedTags`。
+
+## `export.bibtex` / `export.ris` / `export.cslJson`
+
+导出计划使用：
+
+```js
+const translation = new Zotero.Translate.Export();
+translation.setItems(items.slice());
+translation.setTranslator(translatorID);
+translation.setHandler("done", () => resolve(translation.string));
+translation.setHandler("error", (_, error) => reject(error));
+translation.translate();
+```
+
+源码依据：
+
+- `server_localAPI.js:985-1009` 定义 local API 内部 `exportItems(itemOrItems, translatorID)`，使用 `new Zotero.Translate.Export()`、`setItems()`、`setTranslator()`、`setHandler("done")`、`setHandler("error")` 和 `translate()` 将 Zotero item 导出为字符串。
+- `server_localAPI.js:996-997` 在导出前过滤 annotation item；本项目第一片导出命令遇到 annotation item 时返回明确错误，后续 annotation 专项步骤再处理 annotation 数据。
+- `ZoteroData/translators/BibTeX.js:2-3` 声明 BibTeX translatorID `9cb70025-a888-4a29-a210-93ec52da40d4` 与 label `BibTeX`。
+- `ZoteroData/translators/RIS.js:2-3` 声明 RIS translatorID `32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7` 与 label `RIS`。
+- `ZoteroData/translators/CSL JSON.js:2-3` 声明 CSL JSON translatorID `bc03b4fe-436d-4a1f-ba59-de4d2d7a63f7` 与 label `CSL JSON`。
+
+预校验规则：
+
+- `zoteroItemKeys` 必须是非空数组，单次最多 50 个。
+- 每个 `zoteroItemKey` 必须在 local user library 中存在。
+- 不接受 annotation item；PDF annotation 读取/写入将在后续步骤 11 单独设计。
+- 导出命令是只读命令，不需要 dry-run 或 confirmation，不写 Zotero profile、不写文件。
+
+结论：
+
+- BibTeX/RIS/CSL JSON 导出可以直接复用 Zotero 内置 translator，不由本项目手写格式化器。
+- 该路径不使用 Zotero Web API，不直接写 SQLite，不触碰 group library。
+
+## `import.bibtex` / `import.ris` / `import.cslJson`
+
+导入计划使用：
+
+```js
+const translation = Zotero.loadTranslator("import");
+translation.setTranslator(translatorID);
+translation.setString(content);
+translation.setHandler("itemDone", (_, item) => importedItems.push(item));
+translation.setHandler("done", () => resolve(importedItems));
+translation.setHandler("error", (_, error) => reject(error));
+translation.translate();
+```
+
+源码依据：
+
+- Zotero translators 中大量使用 `Zotero.loadTranslator("import")` 或 `Zotero.loadTranslator('import')` 将 RIS、BibTeX、CSL JSON 等字符串交给内置 import translator。
+- `ZoteroData/translators/NewsBank.js:83-86` 使用 `Zotero.loadTranslator('import')`、RIS translatorID、`setString(risText)` 和 `setHandler('itemDone', ...)`。
+- `ZoteroData/translators/AMS MathSciNet.js:94-95` 使用 BibTeX 内容、`setString(bibTex)` 和 `setHandler('itemDone', ...)`。
+- `ZoteroData/translators/Clinical Key.js:211-216` 使用 CSL JSON translator 处理预备好的 JSON 字符串。
+- BibTeX/RIS/CSL JSON translatorID 与导出小节相同，均来自本地 translator metadata。
+
+预校验规则：
+
+- `content` 必须是非空字符串。
+- `collectionKeys` 和 `tags` 可选，省略时为空数组；合计最多 50 个目标对象。
+- `collectionKeys` 必须指向 local user library 中存在的 collection。
+- dry-run 不调用 Zotero translator，避免在预览阶段写库；BibTeX/RIS 使用轻量格式计数估算 item 数，CSL JSON 使用 `JSON.parse()` 校验并估算数组长度。
+- execute 必须先通过 dry-run confirmation；导入结果作为新增 item 处理，第一片不做重复检测、merge 或更新已有 item。
+
+结论：
+
+- BibTeX/RIS/CSL JSON 导入可以复用 Zotero 内置 import translator，不由本项目手写解析器。
+- 导入是 profile write 命令，必须走 test profile 或后续真实主库显式解锁；不使用 Zotero Web API，不直接写 SQLite。
 
 ## `note.createChild`
 

@@ -181,6 +181,12 @@ type ZoteroLocalCommandResult<T> = {
 - `zotero_item_update_creators`：按 Zotero item key 替换 creator 列表。
 - `zotero_item_set_collections`：按 Zotero item key 设置 item 所属 collection 列表，不删除 item 或 collection。
 - `zotero_item_update_tags`：添加或移除 tag。
+- `zotero_import_bibtex`：从 BibTeX 字符串导入 item，作为写操作强制 dry-run + confirmation。
+- `zotero_import_ris`：从 RIS 字符串导入 item，作为写操作强制 dry-run + confirmation。
+- `zotero_import_csl_json`：从 CSL JSON 字符串导入 item，作为写操作强制 dry-run + confirmation。
+- `zotero_export_bibtex`：按 Zotero item key 导出 BibTeX 字符串。
+- `zotero_export_ris`：按 Zotero item key 导出 RIS 字符串。
+- `zotero_export_csl_json`：按 Zotero item key 导出 CSL JSON 字符串。
 - `zotero_note_create_child`：为 item 创建 child note。
 - `zotero_attachment_get`：按 attachment key 读取附件详情、parent item key、文件路径、content type、linkMode 和 attachmentMode。
 - `zotero_item_get_attachments`：读取 item 下的附件信息。

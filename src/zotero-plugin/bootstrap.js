@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.36",
+  version: "0.1.37",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -24,6 +24,11 @@ var REAL_PROFILE_UNLOCK_CONFIRMATION = "I understand and authorize temporary rea
 var REAL_PROFILE_PREFERENCE_MODE = "extensions.zotero-codex-bridge.profileMode";
 var REAL_PROFILE_DEFAULT_MODE = "real-locked";
 var REAL_PROFILE_STATE_PATH_PARTS = ["runtime", "safety", "real-profile-state.json"];
+var EXPORT_TRANSLATOR_IDS = {
+  bibtex: "9cb70025-a888-4a29-a210-93ec52da40d4",
+  ris: "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7",
+  cslJson: "bc03b4fe-436d-4a1f-ba59-de4d2d7a63f7"
+};
 
 var ZoteroCodexBridgeSafetyStateCommands = {
   "safety.unlockRealProfile": true,
@@ -48,6 +53,9 @@ var ZoteroCodexBridgeProfileWriteCommands = {
   "item.updateCreators": true,
   "item.setCollections": true,
   "item.updateTags": true,
+  "import.bibtex": true,
+  "import.ris": true,
+  "import.cslJson": true,
   "note.createChild": true,
   "attachment.addFile": true,
   "attachment.moveToItem": true,
@@ -71,6 +79,9 @@ var ZoteroCodexBridgeWriteCommands = {
   "item.updateCreators": true,
   "item.setCollections": true,
   "item.updateTags": true,
+  "import.bibtex": true,
+  "import.ris": true,
+  "import.cslJson": true,
   "note.createChild": true,
   "attachment.addFile": true,
   "attachment.moveToItem": true,
@@ -456,6 +467,55 @@ function registerCommandEndpoint() {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "ITEM_SEARCH_FAILED",
             message: error.message || "Failed to search Zotero items"
+          });
+        }
+      }
+
+      if (commandName === "export.bibtex" || commandName === "export.ris" || commandName === "export.cslJson") {
+        try {
+          var exportResult = await exportItemsWithTranslator(commandName, payload.input || {});
+          return jsonCommandResponse(
+            200,
+            commandName,
+            requestId,
+            exportResult,
+            undefined,
+            {
+              zoteroItemKeys: exportResult.zoteroItemKeys
+            }
+          );
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ITEM_EXPORT_FAILED",
+            message: error.message || "Failed to export Zotero items"
+          });
+        }
+      }
+
+      if (commandName === "import.bibtex" || commandName === "import.ris" || commandName === "import.cslJson") {
+        try {
+          if (payload.mode === "execute") {
+            var imported = await executeImportWithTranslator(commandName, payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              imported,
+              undefined,
+              {
+                zoteroItemKeys: imported.zoteroItemKeys,
+                collectionKeys: imported.collectionKeys,
+                tags: imported.tags
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createImportDryRun(commandName, payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ITEM_IMPORT_FAILED",
+            message: error.message || "Failed to import Zotero items"
           });
         }
       }
@@ -1223,6 +1283,232 @@ function readCollectionItems(input) {
       return item.key;
     })
   };
+}
+
+async function exportItemsWithTranslator(commandName, input) {
+  var normalized = normalizeExportItemsInput(commandName, input);
+  var content = await runZoteroItemExport(normalized.items, normalized.translatorID);
+  return {
+    format: normalized.format,
+    translatorID: normalized.translatorID,
+    zoteroItemKeys: normalized.zoteroItemKeys,
+    content: content
+  };
+}
+
+function normalizeExportItemsInput(commandName, input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", commandName + " input must be an object", 400);
+  }
+
+  if (!Array.isArray(input.zoteroItemKeys) || input.zoteroItemKeys.length === 0) {
+    throw commandError("ZOTERO_ITEM_KEYS_REQUIRED", commandName + " requires a non-empty zoteroItemKeys array", 400);
+  }
+
+  if (input.zoteroItemKeys.length > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", "Export item count exceeds limit 50", 400);
+  }
+
+  var format = commandName === "export.bibtex"
+    ? "bibtex"
+    : commandName === "export.ris"
+      ? "ris"
+      : "cslJson";
+  var itemKeys = [];
+  var items = [];
+  for (var i = 0; i < input.zoteroItemKeys.length; i += 1) {
+    var itemKey = input.zoteroItemKeys[i];
+    if (typeof itemKey !== "string" || itemKey.trim().length === 0) {
+      throw commandError("ZOTERO_ITEM_KEY_INVALID", "zoteroItemKeys must contain non-empty strings", 400);
+    }
+
+    var item = normalizeItemTarget(itemKey.trim());
+    if (item.isAnnotation && item.isAnnotation()) {
+      throw commandError("ITEM_EXPORT_UNSUPPORTED", "Annotation items cannot be exported by this command", 400);
+    }
+
+    itemKeys.push(item.key);
+    items.push(item);
+  }
+
+  return {
+    format: format,
+    translatorID: EXPORT_TRANSLATOR_IDS[format],
+    zoteroItemKeys: itemKeys,
+    items: items
+  };
+}
+
+function runZoteroItemExport(items, translatorID) {
+  if (!Zotero.Translate || !Zotero.Translate.Export) {
+    throw commandError("ITEM_EXPORT_UNSUPPORTED", "This Zotero runtime does not expose Zotero.Translate.Export", 500);
+  }
+
+  return new Promise(function (resolve, reject) {
+    var translation = new Zotero.Translate.Export();
+    translation.setItems(items.slice());
+    translation.setTranslator(translatorID);
+    translation.setHandler("done", function () {
+      resolve(translation.string || "");
+    });
+    translation.setHandler("error", function (_, error) {
+      reject(commandError("ITEM_EXPORT_FAILED", error && error.message ? error.message : "Zotero export translator failed", 500));
+    });
+    translation.translate();
+  });
+}
+
+function createImportDryRun(commandName, input) {
+  var normalized = normalizeImportItemsInput(commandName, input);
+  return createWriteDryRunPlan(
+    commandName,
+    normalized,
+    {
+      zoteroItemKeys: [],
+      collectionKeys: normalized.collectionKeys,
+      attachmentKeys: [],
+      filePaths: [],
+      tags: normalized.tags
+    },
+    [],
+    { items: [] },
+    {
+      format: normalized.format,
+      estimatedItemCount: normalized.estimatedItemCount,
+      action: "create",
+      collectionKeys: normalized.collectionKeys,
+      tags: normalized.tags
+    }
+  );
+}
+
+async function executeImportWithTranslator(commandName, input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeImportItemsInput(commandName, input);
+  validateStoredConfirmation(normalized, confirmation);
+
+  var importedItems = await runZoteroItemImport(normalized.content, normalized.translatorID);
+  var postProcessedItems = [];
+  for (var i = 0; i < importedItems.length; i += 1) {
+    var item = resolveImportedZoteroItem(importedItems[i]);
+    if (!item) {
+      continue;
+    }
+
+    if (normalized.collectionKeys.length > 0) {
+      item.setCollections(normalized.collectionKeys);
+    }
+    for (var tagIndex = 0; tagIndex < normalized.tags.length; tagIndex += 1) {
+      item.addTag(normalized.tags[tagIndex]);
+    }
+    if (normalized.collectionKeys.length > 0 || normalized.tags.length > 0) {
+      await item.saveTx();
+    }
+    postProcessedItems.push(item);
+  }
+
+  return {
+    format: normalized.format,
+    translatorID: normalized.translatorID,
+    importedItemCount: postProcessedItems.length,
+    zoteroItemKeys: postProcessedItems.map(function (item) { return item.key; }),
+    collectionKeys: normalized.collectionKeys,
+    tags: normalized.tags,
+    items: postProcessedItems.map(function (item) {
+      return readItemDetails({ zoteroItemKey: item.key });
+    })
+  };
+}
+
+function normalizeImportItemsInput(commandName, input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", commandName + " input must be an object", 400);
+  }
+
+  if (typeof input.content !== "string" || input.content.trim().length === 0) {
+    throw commandError("IMPORT_CONTENT_REQUIRED", commandName + " requires non-empty content", 400);
+  }
+
+  var format = commandName === "import.bibtex"
+    ? "bibtex"
+    : commandName === "import.ris"
+      ? "ris"
+      : "cslJson";
+  var collectionKeys = normalizeCollectionKeyArray(input.collectionKeys || [], "collectionKeys");
+  var tags = normalizeTagArray(input.tags || [], "tags");
+  if (collectionKeys.length + tags.length > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", "Import related object count exceeds limit 50", 400);
+  }
+
+  return {
+    content: input.content,
+    format: format,
+    translatorID: EXPORT_TRANSLATOR_IDS[format],
+    estimatedItemCount: estimateImportItemCount(format, input.content),
+    collectionKeys: collectionKeys,
+    tags: tags
+  };
+}
+
+function estimateImportItemCount(format, content) {
+  if (format === "bibtex") {
+    var bibtexMatches = content.match(/@[A-Za-z]+\s*[({]/g);
+    return bibtexMatches ? bibtexMatches.length : 0;
+  }
+
+  if (format === "ris") {
+    var risMatches = content.match(/^ER\s*-/gm);
+    return risMatches ? risMatches.length : 0;
+  }
+
+  try {
+    var parsed = JSON.parse(content);
+    return Array.isArray(parsed) ? parsed.length : 1;
+  } catch (error) {
+    throw commandError("IMPORT_CONTENT_INVALID", "CSL JSON content must be valid JSON", 400);
+  }
+}
+
+function runZoteroItemImport(content, translatorID) {
+  if (!Zotero.loadTranslator) {
+    throw commandError("ITEM_IMPORT_UNSUPPORTED", "This Zotero runtime does not expose Zotero.loadTranslator", 500);
+  }
+
+  return new Promise(function (resolve, reject) {
+    var importedItems = [];
+    var translation = Zotero.loadTranslator("import");
+    translation.setTranslator(translatorID);
+    translation.setString(content);
+    translation.setHandler("itemDone", function (_, item) {
+      importedItems.push(item);
+    });
+    translation.setHandler("done", function () {
+      resolve(importedItems);
+    });
+    translation.setHandler("error", function (_, error) {
+      reject(commandError("ITEM_IMPORT_FAILED", error && error.message ? error.message : "Zotero import translator failed", 500));
+    });
+    translation.translate();
+  });
+}
+
+function resolveImportedZoteroItem(item) {
+  if (!item) {
+    return null;
+  }
+
+  if (item.key) {
+    return getLocalUserItem(item.key);
+  }
+
+  if (item.id && Zotero.Items && Zotero.Items.get) {
+    var zoteroItem = Zotero.Items.get(item.id);
+    if (zoteroItem && zoteroItem.libraryID === Zotero.Libraries.userLibraryID) {
+      return zoteroItem;
+    }
+  }
+
+  return null;
 }
 
 function readItemDetails(input) {

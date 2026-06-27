@@ -35,7 +35,7 @@ describe("Zotero plugin package", () => {
   it("registers Zotero connector server health and command endpoints", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.36"');
+    expect(bootstrap).toContain('version: "0.1.37"');
     expect(bootstrap).toContain('"zotero-codex-bridge ok " + ZoteroCodexBridge.version');
     expect(bootstrap).toContain('healthPath: "/zotero-codex-bridge/health"');
     expect(bootstrap).toContain('commandPath: "/zotero-codex-bridge/command"');
@@ -49,6 +49,12 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "collection.removeItems"');
     expect(bootstrap).toContain('commandName === "item.get"');
     expect(bootstrap).toContain('commandName === "item.search"');
+    expect(bootstrap).toContain('commandName === "import.bibtex"');
+    expect(bootstrap).toContain('commandName === "import.ris"');
+    expect(bootstrap).toContain('commandName === "import.cslJson"');
+    expect(bootstrap).toContain('commandName === "export.bibtex"');
+    expect(bootstrap).toContain('commandName === "export.ris"');
+    expect(bootstrap).toContain('commandName === "export.cslJson"');
     expect(bootstrap).toContain('commandName === "item.create"');
     expect(bootstrap).toContain('commandName === "item.updateFields"');
     expect(bootstrap).toContain('commandName === "item.updateCreators"');
@@ -98,6 +104,14 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("BACKUP_SNAPSHOT_PRUNE_PATH_INVALID");
     expect(bootstrap).toContain("readItemDetails");
     expect(bootstrap).toContain("searchItems");
+    expect(bootstrap).toContain("executeImportWithTranslator");
+    expect(bootstrap).toContain('Zotero.loadTranslator("import")');
+    expect(bootstrap).toContain("estimateImportItemCount");
+    expect(bootstrap).toContain("exportItemsWithTranslator");
+    expect(bootstrap).toContain("new Zotero.Translate.Export()");
+    expect(bootstrap).toContain('bibtex: "9cb70025-a888-4a29-a210-93ec52da40d4"');
+    expect(bootstrap).toContain('ris: "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7"');
+    expect(bootstrap).toContain('cslJson: "bc03b4fe-436d-4a1f-ba59-de4d2d7a63f7"');
     expect(bootstrap).toContain("readAttachmentDetails");
     expect(bootstrap).toContain("item.toJSON");
     expect(bootstrap).toContain("new Zotero.Item(normalized.itemType)");

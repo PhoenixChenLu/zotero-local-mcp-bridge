@@ -25,6 +25,12 @@ describe("shared command definitions", () => {
       "item.updateCreators",
       "item.setCollections",
       "item.updateTags",
+      "import.bibtex",
+      "import.ris",
+      "import.cslJson",
+      "export.bibtex",
+      "export.ris",
+      "export.cslJson",
       "note.createChild",
       "attachment.get",
       "attachment.getForItem",
@@ -51,6 +57,9 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("collection.getTree")).toBe(false);
     expect(isWriteCommand("item.get")).toBe(false);
     expect(isWriteCommand("item.search")).toBe(false);
+    expect(isWriteCommand("export.bibtex")).toBe(false);
+    expect(isWriteCommand("export.ris")).toBe(false);
+    expect(isWriteCommand("export.cslJson")).toBe(false);
     expect(isWriteCommand("attachment.get")).toBe(false);
     expect(isWriteCommand("attachment.renamePreferences.get")).toBe(false);
     expect(isWriteCommand("backup.snapshot.list")).toBe(false);
@@ -66,6 +75,9 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("item.updateFields")).toBe(true);
     expect(isWriteCommand("item.updateCreators")).toBe(true);
     expect(isWriteCommand("item.setCollections")).toBe(true);
+    expect(isWriteCommand("import.bibtex")).toBe(true);
+    expect(isWriteCommand("import.ris")).toBe(true);
+    expect(isWriteCommand("import.cslJson")).toBe(true);
     expect(isWriteCommand("safety.unlockRealProfile")).toBe(true);
     expect(isWriteCommand("safety.lockRealProfile")).toBe(true);
   });

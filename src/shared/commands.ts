@@ -17,6 +17,12 @@ export type CommandName =
   | "item.updateCreators"
   | "item.setCollections"
   | "item.updateTags"
+  | "import.bibtex"
+  | "import.ris"
+  | "import.cslJson"
+  | "export.bibtex"
+  | "export.ris"
+  | "export.cslJson"
   | "note.createChild"
   | "attachment.get"
   | "attachment.getForItem"
@@ -62,6 +68,12 @@ export const COMMAND_DEFINITIONS = [
   { name: "item.updateCreators", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "creators"] },
   { name: "item.setCollections", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "collectionKeys"] },
   { name: "item.updateTags", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "addTags", "removeTags"] },
+  { name: "import.bibtex", write: true, profileWrite: true, inputFields: ["content", "collectionKeys", "tags"] },
+  { name: "import.ris", write: true, profileWrite: true, inputFields: ["content", "collectionKeys", "tags"] },
+  { name: "import.cslJson", write: true, profileWrite: true, inputFields: ["content", "collectionKeys", "tags"] },
+  { name: "export.bibtex", write: false, inputFields: ["zoteroItemKeys"] },
+  { name: "export.ris", write: false, inputFields: ["zoteroItemKeys"] },
+  { name: "export.cslJson", write: false, inputFields: ["zoteroItemKeys"] },
   { name: "note.createChild", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "content", "contentFormat"] },
   { name: "attachment.get", write: false, inputFields: ["attachmentKey"] },
   { name: "attachment.getForItem", write: false, inputFields: ["zoteroItemKey"] },
