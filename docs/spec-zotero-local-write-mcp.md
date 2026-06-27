@@ -176,6 +176,12 @@ type ZoteroLocalCommandResult<T> = {
 - `zotero_collection_remove_items`：把 item 从 collection/subcollection 移除，不删除 item。
 - `zotero_item_get`：按 Zotero item key 读取本地 user library 条目详情，包括 itemType、title、creators、tags、collectionKeys、attachmentKeys、noteKeys 和 Zotero 原生 JSON 摘要。
 - `zotero_item_search`：在本地 user library 中按 query、itemType、collectionKey、tag 搜索顶层普通条目，返回最多 50 条摘要。
+- `zotero_search_advanced`：使用 Zotero `Search` 条件三元组执行高级搜索。
+- `zotero_saved_search_list`：列出本地 user library 保存搜索。
+- `zotero_saved_search_get`：按 saved search key 读取保存搜索。
+- `zotero_saved_search_create`：创建保存搜索，作为写操作强制 dry-run + confirmation。
+- `zotero_saved_search_update`：更新保存搜索名称或条件，作为写操作强制 dry-run + confirmation。
+- `zotero_citation_format`：按 CSL style 输出 citation 或 bibliography HTML。
 - `zotero_item_create`：在本地 user library 创建普通 item，支持 itemType、fields、creators、collectionKeys 和 tags。
 - `zotero_item_update_fields`：按 Zotero item key 更新 item 字段元数据，不修改 creators、collections、tags、attachments 或 notes。
 - `zotero_item_update_creators`：按 Zotero item key 替换 creator 列表。

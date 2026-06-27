@@ -20,6 +20,12 @@ describe("shared command definitions", () => {
       "collection.removeItems",
       "item.get",
       "item.search",
+      "search.advanced",
+      "savedSearch.list",
+      "savedSearch.get",
+      "savedSearch.create",
+      "savedSearch.update",
+      "citation.format",
       "item.create",
       "item.updateFields",
       "item.updateCreators",
@@ -60,6 +66,10 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("collection.getTree")).toBe(false);
     expect(isWriteCommand("item.get")).toBe(false);
     expect(isWriteCommand("item.search")).toBe(false);
+    expect(isWriteCommand("search.advanced")).toBe(false);
+    expect(isWriteCommand("savedSearch.list")).toBe(false);
+    expect(isWriteCommand("savedSearch.get")).toBe(false);
+    expect(isWriteCommand("citation.format")).toBe(false);
     expect(isWriteCommand("export.bibtex")).toBe(false);
     expect(isWriteCommand("export.ris")).toBe(false);
     expect(isWriteCommand("export.cslJson")).toBe(false);
@@ -79,6 +89,8 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("item.updateFields")).toBe(true);
     expect(isWriteCommand("item.updateCreators")).toBe(true);
     expect(isWriteCommand("item.setCollections")).toBe(true);
+    expect(isWriteCommand("savedSearch.create")).toBe(true);
+    expect(isWriteCommand("savedSearch.update")).toBe(true);
     expect(isWriteCommand("import.bibtex")).toBe(true);
     expect(isWriteCommand("import.ris")).toBe(true);
     expect(isWriteCommand("import.cslJson")).toBe(true);

@@ -377,6 +377,54 @@ await annotation.saveTx();
 - PDF annotation 读取与基本写入可以通过 Zotero item 对象层实现，不直接写 SQLite。
 - annotation 写入仍需 runtime 验证 PDF reader 可见性；如果 Zotero reader 对 position JSON 有更严格格式要求，应以 runtime 失败证据修订输入契约。
 
+## `search.advanced` / `savedSearch.*` / `citation.format`
+
+高级搜索计划使用：
+
+```js
+const search = new Zotero.Search();
+search.libraryID = Zotero.Libraries.userLibraryID;
+search.addCondition("noChildren", "true");
+search.addCondition(condition, operator, value);
+const ids = await search.search();
+```
+
+保存搜索计划使用：
+
+```js
+const search = new Zotero.Search();
+search.libraryID = Zotero.Libraries.userLibraryID;
+search.name = name;
+search.addCondition(condition, operator, value);
+await search.saveTx();
+```
+
+引用输出计划使用：
+
+```js
+const style = Zotero.Styles.get(styleIDOrURL);
+const cslEngine = style.getCiteProc(locale, "html", { cache: true });
+const html = Zotero.Cite.makeFormattedBibliographyOrCitationList(cslEngine, items, "html", asCitationList);
+```
+
+源码依据：
+
+- `references/official/zotero/zotero-9.0.5-client/xpcom/server/server_localAPI.js:593-665` 使用 `new Zotero.Search()`、`libraryID`、`addCondition()`、`setScope()` 和 `search.search()` 处理 local API items/search 查询。
+- `server_localAPI.js:1015-1055` 定义 local API search syntax 的条件构建和调试 JSON 输出。
+- `server_localAPI.js:835-855` 使用 `Zotero.Searches.getAll(libraryID)` 和 `Zotero.Searches.getByLibraryAndKey(libraryID, searchKey)` 读取保存搜索。
+- `server_localAPI.js:944-983` 定义 `citeprocToHTML()`，通过 `Zotero.Styles.get()`、`style.getCiteProc()` 和 `Zotero.Cite.makeFormattedBibliographyOrCitationList()` 输出 bibliography/citation HTML。
+
+预校验规则：
+
+- `search.advanced` 第一片接受 Zotero Search 条件三元组 `{ condition, operator, value }`，不尝试重新定义一套搜索 DSL。
+- `savedSearch.create` / `savedSearch.update` 是 profile write 命令，必须 dry-run + confirmation。
+- `citation.format` 只处理 regular item；attachment、note、annotation 不生成引用输出。
+- `citation.format` 第一片只使用本地已安装 CSL style，不在命令中自动联网安装 style。
+
+结论：
+
+- 高级搜索、保存搜索和引用输出均可复用 Zotero 内部对象层和 citeproc，不使用 Zotero Web API，不直接写 SQLite。
+
 ## `note.createChild`
 
 创建计划使用：

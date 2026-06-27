@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.39",
+  version: "0.1.40",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -53,6 +53,8 @@ var ZoteroCodexBridgeProfileWriteCommands = {
   "item.updateCreators": true,
   "item.setCollections": true,
   "item.updateTags": true,
+  "savedSearch.create": true,
+  "savedSearch.update": true,
   "import.bibtex": true,
   "import.ris": true,
   "import.cslJson": true,
@@ -81,6 +83,8 @@ var ZoteroCodexBridgeWriteCommands = {
   "item.updateCreators": true,
   "item.setCollections": true,
   "item.updateTags": true,
+  "savedSearch.create": true,
+  "savedSearch.update": true,
   "import.bibtex": true,
   "import.ris": true,
   "import.cslJson": true,
@@ -471,6 +475,105 @@ function registerCommandEndpoint() {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "ITEM_SEARCH_FAILED",
             message: error.message || "Failed to search Zotero items"
+          });
+        }
+      }
+
+      if (commandName === "search.advanced") {
+        try {
+          var advancedSearch = await runAdvancedSearch(payload.input || {});
+          return jsonCommandResponse(
+            200,
+            commandName,
+            requestId,
+            advancedSearch,
+            undefined,
+            {
+              zoteroItemKeys: advancedSearch.items.map(function (item) { return item.zoteroItemKey; })
+            }
+          );
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "SEARCH_ADVANCED_FAILED",
+            message: error.message || "Failed to run Zotero advanced search"
+          });
+        }
+      }
+
+      if (commandName === "savedSearch.list") {
+        try {
+          var savedSearches = await listSavedSearches(payload.input || {});
+          return jsonCommandResponse(200, commandName, requestId, savedSearches, undefined, {
+            zoteroItemKeys: savedSearches.savedSearches.map(function (search) { return search.savedSearchKey; })
+          });
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "SAVED_SEARCH_LIST_FAILED",
+            message: error.message || "Failed to list Zotero saved searches"
+          });
+        }
+      }
+
+      if (commandName === "savedSearch.get") {
+        try {
+          var savedSearch = getSavedSearchDetails(payload.input || {});
+          return jsonCommandResponse(200, commandName, requestId, savedSearch, undefined, {
+            zoteroItemKeys: [savedSearch.savedSearchKey]
+          });
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "SAVED_SEARCH_GET_FAILED",
+            message: error.message || "Failed to get Zotero saved search"
+          });
+        }
+      }
+
+      if (commandName === "savedSearch.create") {
+        try {
+          if (payload.mode === "execute") {
+            var createdSearch = await executeSavedSearchCreate(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(200, commandName, requestId, createdSearch, undefined, {
+              zoteroItemKeys: [createdSearch.savedSearchKey]
+            }, payload.confirmation.planId);
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createSavedSearchCreateDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "SAVED_SEARCH_CREATE_FAILED",
+            message: error.message || "Failed to create Zotero saved search"
+          });
+        }
+      }
+
+      if (commandName === "savedSearch.update") {
+        try {
+          if (payload.mode === "execute") {
+            var updatedSearch = await executeSavedSearchUpdate(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(200, commandName, requestId, updatedSearch, undefined, {
+              zoteroItemKeys: [updatedSearch.savedSearchKey]
+            }, payload.confirmation.planId);
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createSavedSearchUpdateDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "SAVED_SEARCH_UPDATE_FAILED",
+            message: error.message || "Failed to update Zotero saved search"
+          });
+        }
+      }
+
+      if (commandName === "citation.format") {
+        try {
+          var citationResult = await formatCitation(payload.input || {});
+          return jsonCommandResponse(200, commandName, requestId, citationResult, undefined, {
+            zoteroItemKeys: citationResult.zoteroItemKeys
+          });
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "CITATION_FORMAT_FAILED",
+            message: error.message || "Failed to format Zotero citation"
           });
         }
       }
@@ -1048,7 +1151,7 @@ function registerCommandEndpoint() {
 
       return jsonCommandResponse(501, commandName, requestId, undefined, {
         code: "COMMAND_ENDPOINT_NOT_IMPLEMENTED",
-        message: "Only collection getTree/getItems/create/rename/move/addItems/removeItems, item get/search/updateTags, import/export, annotation list/create/update, note.createChild, attachment get/getForItem/add/move/rename/runZoteroRename/undoAdded, attachment rename preferences, backup settings/snapshot list/restore/prune, audit.list, and safety.getProfileStatus/unlockRealProfile/lockRealProfile are connected in this runtime build"
+        message: "Only collection getTree/getItems/create/rename/move/addItems/removeItems, item get/search/updateTags, advanced search, saved search, citation formatting, import/export, annotation list/create/update, note.createChild, attachment get/getForItem/add/move/rename/runZoteroRename/undoAdded, attachment rename preferences, backup settings/snapshot list/restore/prune, audit.list, and safety.getProfileStatus/unlockRealProfile/lockRealProfile are connected in this runtime build"
       });
     }
   };
@@ -1765,6 +1868,349 @@ function itemSummaryMatchesQuery(summary, query) {
     summary.year
   ].concat(summary.tags || []).join(" ").toLowerCase();
   return haystack.indexOf(needle) !== -1;
+}
+
+async function runAdvancedSearch(input) {
+  var normalized = normalizeAdvancedSearchInput(input);
+  var search = buildZoteroSearch(normalized);
+  var resultIDs = await search.search();
+  var uniqueIDs = [];
+  var seen = {};
+  for (var i = 0; i < resultIDs.length; i += 1) {
+    if (!seen[resultIDs[i]]) {
+      seen[resultIDs[i]] = true;
+      uniqueIDs.push(resultIDs[i]);
+    }
+    if (uniqueIDs.length >= normalized.limit) {
+      break;
+    }
+  }
+
+  var items = await Zotero.Items.getAsync(uniqueIDs);
+  return {
+    conditions: normalized.conditions,
+    joinMode: normalized.joinMode,
+    includeChildren: normalized.includeChildren,
+    includeDeleted: normalized.includeDeleted,
+    limit: normalized.limit,
+    items: items.filter(function (item) {
+      return item && item.key;
+    }).map(function (item) {
+      return itemSummaryRecord(item);
+    })
+  };
+}
+
+async function listSavedSearches(input) {
+  var limit = normalizeBoundedInteger(input && input.limit !== undefined ? input.limit : 50, 1, 200, "savedSearch.list limit", "SAVED_SEARCH_LIST_LIMIT_INVALID");
+  var searches = await Zotero.Searches.getAll(Zotero.Libraries.userLibraryID);
+  return {
+    limit: limit,
+    savedSearches: searches.slice(0, limit).map(function (search) {
+      return savedSearchRecord(search);
+    })
+  };
+}
+
+function getSavedSearchDetails(input) {
+  var search = normalizeSavedSearchTarget(input.savedSearchKey);
+  return savedSearchRecord(search);
+}
+
+function createSavedSearchCreateDryRun(input) {
+  var normalized = normalizeSavedSearchCreateInput(input);
+  return createWriteDryRunPlan(
+    "savedSearch.create",
+    normalized,
+    {
+      zoteroItemKeys: [],
+      collectionKeys: [],
+      attachmentKeys: [],
+      filePaths: [],
+      tags: []
+    },
+    [],
+    undefined,
+    {
+      action: "create",
+      name: normalized.name,
+      conditions: normalized.conditions,
+      joinMode: normalized.joinMode
+    }
+  );
+}
+
+async function executeSavedSearchCreate(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeSavedSearchCreateInput(input);
+  validateStoredConfirmation(normalized, confirmation);
+
+  var search = new Zotero.Search();
+  search.libraryID = Zotero.Libraries.userLibraryID;
+  search.name = normalized.name;
+  applySearchConditions(search, normalized);
+  await search.saveTx();
+  return savedSearchRecord(search);
+}
+
+function createSavedSearchUpdateDryRun(input) {
+  var normalized = normalizeSavedSearchUpdateInput(input);
+  return createWriteDryRunPlan(
+    "savedSearch.update",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [normalized.savedSearchKey],
+      collectionKeys: [],
+      attachmentKeys: [],
+      filePaths: [],
+      tags: []
+    },
+    [],
+    savedSearchRecord(normalized.search),
+    {
+      action: "update",
+      savedSearchKey: normalized.savedSearchKey,
+      name: normalized.name,
+      conditions: normalized.conditions,
+      joinMode: normalized.joinMode
+    }
+  );
+}
+
+async function executeSavedSearchUpdate(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeSavedSearchUpdateInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var search = normalized.search;
+  if (normalized.name) {
+    search.name = normalized.name;
+  }
+  if (normalized.conditions) {
+    search.conditions = {};
+    applySearchConditions(search, {
+      conditions: normalized.conditions,
+      joinMode: normalized.joinMode
+    });
+  }
+  await search.saveTx();
+  return savedSearchRecord(search);
+}
+
+async function formatCitation(input) {
+  var normalized = normalizeCitationFormatInput(input);
+  var items = normalized.zoteroItemKeys.map(function (zoteroItemKey) {
+    return getLocalUserItem(zoteroItemKey);
+  }).filter(function (item) {
+    return item && item.isRegularItem && item.isRegularItem();
+  });
+  if (items.length === 0) {
+    throw commandError("CITATION_ITEMS_EMPTY", "citation.format requires at least one regular Zotero item", 400);
+  }
+
+  var style = resolveCitationStyle(normalized.style);
+  var cslEngine = style.getCiteProc(normalized.locale, "html", { cache: true });
+  cslEngine.opt.development_extensions.wrap_url_and_doi = normalized.linkwrap;
+  var html = Zotero.Cite.makeFormattedBibliographyOrCitationList(cslEngine, items, "html", normalized.mode === "citation");
+  return {
+    zoteroItemKeys: items.map(function (item) { return item.key; }),
+    style: normalized.style,
+    locale: normalized.locale,
+    mode: normalized.mode,
+    format: "html",
+    html: html
+  };
+}
+
+function normalizeAdvancedSearchInput(input) {
+  if (!input || typeof input !== "object") {
+    input = {};
+  }
+  return {
+    conditions: normalizeSearchConditions(input.conditions || []),
+    joinMode: normalizeJoinMode(input.joinMode),
+    includeChildren: input.includeChildren === true,
+    includeDeleted: input.includeDeleted === true,
+    limit: normalizeBoundedInteger(input.limit === undefined ? 25 : input.limit, 1, 50, "search.advanced limit", "SEARCH_ADVANCED_LIMIT_INVALID")
+  };
+}
+
+function normalizeSavedSearchCreateInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "savedSearch.create input must be an object", 400);
+  }
+  var name = normalizeRequiredString(input.name, "name");
+  return {
+    name: name,
+    conditions: normalizeSearchConditions(input.conditions || []),
+    joinMode: normalizeJoinMode(input.joinMode)
+  };
+}
+
+function normalizeSavedSearchUpdateInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "savedSearch.update input must be an object", 400);
+  }
+  var search = normalizeSavedSearchTarget(input.savedSearchKey);
+  var normalized = {
+    savedSearchKey: search.key,
+    search: search,
+    name: normalizeOptionalString(input.name, "name"),
+    joinMode: normalizeJoinMode(input.joinMode)
+  };
+  if (Object.prototype.hasOwnProperty.call(input, "conditions")) {
+    normalized.conditions = normalizeSearchConditions(input.conditions || []);
+  }
+  if (!normalized.name && !normalized.conditions) {
+    throw commandError("SAVED_SEARCH_UPDATE_EMPTY", "savedSearch.update requires name or conditions", 400);
+  }
+  return normalized;
+}
+
+function normalizeCitationFormatInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "citation.format input must be an object", 400);
+  }
+  var zoteroItemKeys = normalizeCitationItemKeys(input.zoteroItemKeys || []);
+  if (zoteroItemKeys.length === 0) {
+    throw commandError("CITATION_ITEM_KEYS_REQUIRED", "citation.format requires zoteroItemKeys", 400);
+  }
+  var mode = input.mode || "bibliography";
+  if (mode !== "bibliography" && mode !== "citation") {
+    throw commandError("CITATION_MODE_INVALID", "citation.format mode must be bibliography or citation", 400);
+  }
+  return {
+    zoteroItemKeys: zoteroItemKeys,
+    style: normalizeOptionalString(input.style, "style") || "chicago-shortened-notes-bibliography",
+    locale: normalizeOptionalString(input.locale, "locale") || "en-US",
+    mode: mode,
+    linkwrap: input.linkwrap === true
+  };
+}
+
+function normalizeSearchConditions(conditions) {
+  if (!Array.isArray(conditions)) {
+    throw commandError("SEARCH_CONDITIONS_INVALID", "conditions must be an array", 400);
+  }
+  if (conditions.length > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", "Search conditions exceed limit 50", 400);
+  }
+  return conditions.map(function (condition) {
+    if (!condition || typeof condition !== "object") {
+      throw commandError("SEARCH_CONDITION_INVALID", "Each search condition must be an object", 400);
+    }
+    return {
+      condition: normalizeRequiredString(condition.condition, "condition"),
+      operator: normalizeRequiredString(condition.operator, "operator"),
+      value: condition.value === undefined || condition.value === null ? undefined : String(condition.value)
+    };
+  });
+}
+
+function normalizeJoinMode(joinMode) {
+  if (joinMode === undefined || joinMode === null || joinMode === "") {
+    return "all";
+  }
+  if (joinMode !== "all" && joinMode !== "any") {
+    throw commandError("SEARCH_JOIN_MODE_INVALID", "joinMode must be all or any", 400);
+  }
+  return joinMode;
+}
+
+function normalizeRequiredString(value, fieldName) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw commandError("COMMAND_INPUT_INVALID", fieldName + " must be a non-empty string", 400);
+  }
+  return value.trim();
+}
+
+function normalizeBoundedInteger(value, min, max, label, errorCode) {
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw commandError(errorCode || "INTEGER_LIMIT_INVALID", label + " must be an integer from " + min + " to " + max, 400);
+  }
+  return value;
+}
+
+function normalizeCitationItemKeys(value) {
+  if (!Array.isArray(value)) {
+    throw commandError("CITATION_ITEM_KEYS_INVALID", "zoteroItemKeys must be an array", 400);
+  }
+  if (value.length > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", "Batch size " + value.length + " exceeds limit 50", 400);
+  }
+  var itemKeys = [];
+  for (var i = 0; i < value.length; i += 1) {
+    if (typeof value[i] !== "string" || value[i].trim().length === 0) {
+      throw commandError("ZOTERO_ITEM_KEY_INVALID", "zoteroItemKeys must contain non-empty strings", 400);
+    }
+    itemKeys.push(getLocalUserItem(value[i].trim()).key);
+  }
+  return itemKeys;
+}
+
+function buildZoteroSearch(normalized) {
+  var search = new Zotero.Search();
+  search.libraryID = Zotero.Libraries.userLibraryID;
+  if (normalized.includeChildren) {
+    search.addCondition("includeChildren", "true");
+  } else {
+    search.addCondition("noChildren", "true");
+  }
+  if (normalized.includeDeleted) {
+    search.addCondition("includeDeleted", "true");
+  }
+  applySearchConditions(search, normalized);
+  return search;
+}
+
+function applySearchConditions(search, normalized) {
+  if (normalized.joinMode === "any") {
+    search.addCondition("joinMode", "any");
+  }
+  normalized.conditions.forEach(function (condition) {
+    search.addCondition(condition.condition, condition.operator, condition.value);
+  });
+}
+
+function normalizeSavedSearchTarget(savedSearchKey) {
+  if (typeof savedSearchKey !== "string" || savedSearchKey.trim().length === 0) {
+    throw commandError("SAVED_SEARCH_KEY_REQUIRED", "A savedSearchKey is required", 400);
+  }
+  var search = Zotero.Searches.getByLibraryAndKey(Zotero.Libraries.userLibraryID, savedSearchKey.trim());
+  if (!search) {
+    throw commandError("SAVED_SEARCH_NOT_FOUND", "Saved search was not found in local user library", 404);
+  }
+  return search;
+}
+
+function savedSearchRecord(search) {
+  return {
+    savedSearchKey: search.key,
+    name: search.name,
+    conditions: searchConditionsRecord(search)
+  };
+}
+
+function searchConditionsRecord(search) {
+  return Object.keys(search.conditions || {}).map(function (conditionKey) {
+    var condition = search.conditions[conditionKey];
+    return {
+      condition: condition.condition,
+      operator: condition.operator,
+      value: condition.value
+    };
+  });
+}
+
+function resolveCitationStyle(styleIDOrURL) {
+  var style = Zotero.Styles.get(styleIDOrURL);
+  if (!style && styleIDOrURL.indexOf(":") === -1) {
+    style = Zotero.Styles.get("http://www.zotero.org/styles/" + styleIDOrURL);
+  }
+  if (!style) {
+    throw commandError("CITATION_STYLE_NOT_FOUND", "Citation style is not installed locally: " + styleIDOrURL, 400);
+  }
+  return style;
 }
 
 function createCollectionCreateDryRun(input) {
@@ -3958,7 +4404,8 @@ function stripRuntimeFields(input) {
     sourceAuditPlanId: true,
     sourceAuditTimestamp: true,
     annotation: true,
-    fields: true
+    fields: true,
+    search: true
   };
   Object.keys(input).forEach(function (key) {
     if (key.indexOf("current") !== 0 && !runtimeFields[key]) {

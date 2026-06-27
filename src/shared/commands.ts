@@ -12,6 +12,12 @@ export type CommandName =
   | "collection.removeItems"
   | "item.get"
   | "item.search"
+  | "search.advanced"
+  | "savedSearch.list"
+  | "savedSearch.get"
+  | "savedSearch.create"
+  | "savedSearch.update"
+  | "citation.format"
   | "item.create"
   | "item.updateFields"
   | "item.updateCreators"
@@ -66,6 +72,12 @@ export const COMMAND_DEFINITIONS = [
   { name: "collection.removeItems", write: true, profileWrite: true, inputFields: ["collectionKey", "zoteroItemKeys"] },
   { name: "item.get", write: false, inputFields: ["zoteroItemKey"] },
   { name: "item.search", write: false, inputFields: ["query", "itemType", "collectionKey", "tag", "limit"] },
+  { name: "search.advanced", write: false, inputFields: ["conditions", "joinMode", "includeChildren", "includeDeleted", "limit"] },
+  { name: "savedSearch.list", write: false, inputFields: [] },
+  { name: "savedSearch.get", write: false, inputFields: ["savedSearchKey"] },
+  { name: "savedSearch.create", write: true, profileWrite: true, inputFields: ["name", "conditions", "joinMode"] },
+  { name: "savedSearch.update", write: true, profileWrite: true, inputFields: ["savedSearchKey", "name", "conditions", "joinMode"] },
+  { name: "citation.format", write: false, inputFields: ["zoteroItemKeys", "style", "locale", "mode", "linkwrap"] },
   { name: "item.create", write: true, profileWrite: true, inputFields: ["libraryScope", "itemType", "fields", "creators", "collectionKeys", "tags"] },
   { name: "item.updateFields", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "fields"] },
   { name: "item.updateCreators", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "creators"] },

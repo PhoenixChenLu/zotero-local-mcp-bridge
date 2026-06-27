@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Zotero Codex Bridge",
-  "version": "0.1.39",
+  "version": "0.1.40",
   "description": "Local command bridge for controlled Zotero management through Codex.",
   "homepage_url": "https://example.com/zotero-codex-bridge-local-test",
   "applications": {

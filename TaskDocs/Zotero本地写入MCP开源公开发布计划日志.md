@@ -632,11 +632,16 @@
   - 写入保存搜索仍 dry-run + confirmation。
 
 执行：
-- 开始时间：未开始
-- 结束时间：未开始
-- 操作内容：未开始
-- 测试结果：未开始
-- 备注：这是最终完整 Zotero 功能面缺口之一。
+- 开始时间：2026-06-27
+- 结束时间：进行中
+- 操作内容：
+  - 第一片实现 `search.advanced`、`savedSearch.list`、`savedSearch.get`、`savedSearch.create`、`savedSearch.update`、`citation.format`。
+  - `search.advanced` 直接接受 Zotero Search 条件三元组 `{ condition, operator, value }`，避免重造搜索 DSL。
+  - `savedSearch.create` / `savedSearch.update` 作为 profile write 命令接入 dry-run + confirmation。
+  - `citation.format` 复用 Zotero citeproc 输出 HTML，第一片只使用本地已安装 style，不自动联网安装 style。
+- 测试结果：
+  - 自动验证与 runtime 验收待 0.1.40 测试 XPI 生成并安装后执行。
+- 备注：这是最终完整 Zotero 功能面缺口之一；第一片先覆盖本地 user library，不支持 group library。
 
 ### 步骤 13 - 删除、trash 与 merge duplicates
 
