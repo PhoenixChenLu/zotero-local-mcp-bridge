@@ -234,10 +234,12 @@ type ZoteroLocalCommandResult<T> = {
 
 ### Release Gate（公开发布硬门禁）
 
-- **默认安全行为**：公开发布必须默认只读/安全锁定；任何真实主库写操作必须显式解锁。
+- **默认安全行为**：公开发布必须默认 `readonly`；插件设置界面只提供 `readonly`、`askforapprove`、`yolo` 三种运行模式。
 - **确认链路**：任何执行类写命令必须先 dry-run，必须返回可执行差异；执行必须校验未过期 `planId` 和 `confirmationToken`。
 - **真实主库防护**：公开版禁止在未解锁情况下连接并改写真实主库。
-- **真实主库临时解锁**：`profileMode` 区分 `readonly`、`test`、`real-locked`、`real-unlocked`；真实主库解锁必须校验当前 profile fingerprint、精确确认文本和过期时间，状态文件写入 bridge runtime 目录。
+- **真实主库临时解锁**：真实主库写入授权 TTL 默认 30 分钟；TTL 到期后可写授权失效，需要重新批准。单个 dry-run plan / confirmation token 默认 10 分钟后过期。
+- **模式行为**：`readonly` 拒绝所有写操作；`askforapprove` 要求写操作确认，普通高风险操作输入 `CONFIRM`，极高危或不可恢复操作输入具体命令名；`yolo` 可自动执行普通写操作和普通高风险操作，但极高危或不可恢复操作仍必须主动确认。
+- **设置界面**：公开发布前必须实现 Zotero 插件设置界面，设置规格见 `docs/plugin-settings-ui-spec.md`。
 - **路径隔离**：禁止将审计、backup、undo 写入 Zotero profile、Zotero data directory、linked attachment root、附件目录。
 - **禁止项（Must not）**：
   - 不使用 Zotero Web API 写入。
@@ -278,6 +280,8 @@ backup 保留策略：
 - 第一版默认最大本地空间占用为 10GB。
 - 时间限制和空间限制可分别启用。
 - 如果两个限制都启用，优先执行空间限制清理，再执行时间限制清理。
+- 用户可以关闭文件级 backup/undo，但审计不能关闭；关闭后必须提示附件文件级恢复不再保证。
+- 用户可以自定义 backup root，但必须拒绝 Zotero profile、Zotero Data Directory、linked attachment root 和任意附件目录。
 - backup 和审计文件都必须保存在本项目目录，不得写入 Zotero profile、Zotero data directory 或附件目录。
 - undo 能力与 backup 保留策略联动；backup 被清理后，只保证保留元数据级反向操作，不保证附件文件级恢复。
 - `0.1.26` 起，`attachment.rename` 和 `attachment.runZoteroRename` 在执行附件文件重名前创建项目本地文件快照，路径为 `backups/zotero-operations/files/`；`0.1.28` 已接入严格同路径 restore。
@@ -286,10 +290,13 @@ backup 保留策略：
 confirmation 与批量执行：
 
 - 所有写操作必须先 dry-run。
+- dry-run 不允许关闭。
 - 执行写操作必须提供未过期的 `planId` 和 `confirmationToken`。
-- `confirmationToken` 采用自动 token 机制，不要求用户输入固定确认短语。
+- `confirmationToken` 采用自动 token 机制；在 `askforapprove` 下，普通高风险操作额外要求 `CONFIRM`，极高危或不可恢复操作额外要求输入具体命令名。
+- 在 `yolo` 下，普通写操作和普通高风险操作可免人工确认；极高危或不可恢复操作仍必须主动确认。
 - dry-run plan 默认 10 分钟后过期，后续可配置。
 - 批量写操作默认尽量执行所有可执行项，不因单项失败中途停止。
+- 批量上限默认 50，暂不提供设置界面调整。
 - 批量完成后必须汇总成功项、失败项、错误详情、审计记录路径，并返回已完成部分可用的 undo 操作清单。
 
 HTTP command endpoint 安全门槛：

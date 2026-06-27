@@ -703,7 +703,52 @@
   - 清理验证通过：旧残留 `BIKHXZ2L`、`7W7R6GFW`、`4R5DU7Z5` 和本次专项样本 `P7JBYRDJ`、`C8KWB43B`、`BGGT9EWG` 均已通过本插件 `item.trash` / `collection.trash` 移动到 Zotero trash；回读 `collection.getTree` 不再包含这些临时 collection。
 - 备注：本步骤第一片已完成 Zotero trash、duplicates find 和 duplicates merge 的 test profile runtime 验收；仍不实现永久删除、清空 trash、group library 或直接文件删除。
 
-### 步骤 14 - Codex 专用 skill
+### 步骤 14 - 插件设置界面规格与实现
+
+计划：
+- 目标文件：
+  - 新建 `H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\docs\plugin-settings-ui-spec.md`
+  - 修改 `H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\docs\spec-zotero-local-write-mcp.md`
+  - 修改 `H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\src\zotero-plugin\...`
+  - 修改 `H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\tests\unit\zotero-plugin\...`
+- 符号变更：
+  - 新增设置 schema/defaults。
+  - 新增或扩展 Zotero 插件 preferences/options UI。
+  - 将运行模式、backup/undo、确认策略、附件默认策略接入写命令 guard。
+- 预期行为：
+  - 设置界面只提供 `readonly`、`askforapprove`、`yolo` 三种运行模式。
+  - dry-run 固定开启，不允许关闭。
+  - audit 固定开启，不允许关闭。
+  - backup/undo 默认开启，允许关闭文件级 backup/undo，并显示恢复能力下降提示。
+  - backup root 允许自定义，但必须拒绝 Zotero profile、Zotero Data Directory、linked attachment root 和附件目录。
+  - `askforapprove` 下普通高风险操作需要 `CONFIRM`；极高危或不可恢复操作需要输入具体命令名。
+  - `yolo` 下普通写操作和普通高风险操作可免人工确认，但极高危或不可恢复操作仍必须主动确认。
+  - 批量上限固定 50，暂不提供 UI 调整。
+- 测试命令：
+  - `npm run test`
+  - `npm run lint`
+  - `npm run typecheck`
+  - `npm run build`
+  - `npm run build:zotero-plugin:test`
+  - Zotero test profile 手工验证设置界面显示、保存和命令 guard 生效。
+- 通过标准：
+  - `readonly` 下写命令被拒绝。
+  - `askforapprove` 和 `yolo` 的确认策略符合 `docs/plugin-settings-ui-spec.md`。
+  - 设置修改写入 audit。
+  - release/test XPI 均不携带本机测试 token 或测试数据。
+
+执行：
+- 开始时间：2026-06-28
+- 结束时间：未开始
+- 操作内容：
+  - 使用 `$spec-driven-development` 完成 SPECIFY 阶段，记录用户确认的设置界面策略。
+  - 已明确运行模式为 `readonly`、`askforapprove`、`yolo`。
+  - 已明确 `yolo` 对极高危或不可恢复操作仍必须主动确认。
+  - 已新增设置界面规格文档并同步主 spec。
+- 测试结果：未开始
+- 备注：用户在 2026-06-28 指出功能虽已具备，但关键可选项未出现在插件设置界面；因此本步骤插入到公开发布和 Codex skill 之前。
+
+### 步骤 15 - Codex 专用 skill
 
 计划：
 - 目标文件：
@@ -729,9 +774,9 @@
 - 结束时间：未开始
 - 操作内容：未开始
 - 测试结果：未开始
-- 备注：用户已明确暂时不进入 skill 编辑阶段；根据 2026-06-27 执行顺序修订，skill 必须等 item 创建/编辑、导入导出、annotation、高级搜索/保存搜索/引用输出全部完成并通过测试后再开始。
+- 备注：用户已明确暂时不进入 skill 编辑阶段；根据 2026-06-28 执行顺序修订，skill 必须等插件设置界面完成并通过测试后再开始。
 
-### 步骤 15 - 发布候选验收与公开发布
+### 步骤 16 - 发布候选验收与公开发布
 
 计划：
 - 目标文件：
@@ -763,7 +808,7 @@
 - 结束时间：未开始
 - 操作内容：未开始
 - 测试结果：未开始
-- 备注：根据 2026-06-27 执行顺序修订，本步骤后置到核心 Zotero 功能面、发布准备和 skill 之后。
+- 备注：根据 2026-06-28 执行顺序修订，本步骤后置到插件设置界面、发布准备和 skill 之后。
 
 ## 最终结果
 
@@ -774,14 +819,16 @@
 - 公开发布目标已拆分为 Zotero 插件公开分发与 MCP server 公开发布两条线，但发布准备已根据 2026-06-27 修订后置。
 - 旧日志未完成内容已搬迁到本日志：
   - 真实主库解锁流程：步骤 4。
-  - Codex 专用 skill：步骤 14。
-  - 文档发布与安全说明：步骤 2、5、6、7、15。
+  - 插件设置界面：步骤 14。
+  - Codex 专用 skill：步骤 15。
+  - 文档发布与安全说明：步骤 2、5、6、7、16。
   - 完整 Zotero 功能面：步骤 9-13。
 - 最终功能缺口已明确纳入计划：
   - item 创建/完整元数据编辑。
   - BibTeX/RIS/CSL 等导入导出。
   - PDF annotation 读取/写入。
   - 高级搜索、保存搜索、引用格式输出等更完整 Zotero 能力。
+  - 插件设置界面。
   - 真实主库解锁流程。
   - Codex 专用 skill。
   - 删除/merge duplicates 已完成受控 trash/find/merge 第一批 runtime 验收；仍缺少公开发布安全文档。
@@ -789,4 +836,4 @@
 
 下一步：
 
-- 开始公开发布边缘文件、发布准备和 Codex skill。
+- 按 `docs/plugin-settings-ui-spec.md` 进入插件设置界面 PLAN/TASKS 阶段，之后再开始实现。
