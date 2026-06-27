@@ -689,8 +689,17 @@
   - 更新 `docs/zotero-api-source-audit.md`，记录 Zotero 9.0.5 源码依据：`Items.trashTx()`、`Collection.prototype.trash()`、`Zotero.Duplicates`、`Zotero.Items.merge()` / `mergeItems.mjs`。
 - 测试结果：
   - 针对性单元测试已通过：`npm run test -- tests/unit/shared/commands.test.ts tests/unit/mcp-server/toolRegistry.test.ts tests/unit/zotero-plugin/pluginPackage.test.ts`。
-  - 完整自动验证、XPI 打包和 Zotero test profile runtime 验收待执行。
-- 备注：本步骤第一片只实现 Zotero trash 和 duplicates merge，不实现永久删除、清空 trash、group library 或直接文件删除。
+  - 完整自动验证已通过：`npm run test`、`npm run lint`、`npm run typecheck`、`npm run build`、`npm run build:zotero-plugin`、`npm run build:zotero-plugin:test`。
+  - 安全边界搜索通过：未发现源码实现或依赖配置引入 `ZOTERO_API_KEY`、`api.zotero.org`、`zotero.sqlite`、`sqlite write` 或任意 JS eval。
+  - XPI 静态检查通过：测试版 `dist/zotero-codex-bridge.xpi` manifest 为 `0.1.42`，包含 `item.trash`、`attachment.trash`、`collection.trash`、`duplicates.find`、`duplicates.merge` 分支。
+  - 2026-06-27 用户安装 `0.1.42` 测试 XPI 后 runtime 验收通过：`/health` 返回 `zotero-codex-bridge ok 0.1.42 ... test`；项目本地 `runtime/auth/bridge-token` 鉴权通过，旧手工 token 被正确拒绝。
+  - runtime dry-run/execute 验收通过：
+    - `item.trash`：创建临时 item `WIARCVMP`，dry-run 风险等级为 `high`，execute 后 `item.get` 回读 `deleted: true`。
+    - `attachment.trash`：创建临时 attachment `U5YZTNSI`，execute 后用 `item.get` 对 attachment key 回读 `deleted: true`；未执行永久文件删除。
+    - `collection.trash`：创建临时 collection `YLYGU6AK`，execute 后不再出现在普通 `collection.getTree` 中。
+    - `duplicates.merge`：临时 master `ZHLYXJVN` 与 duplicate `J8Z6XIQT` dry-run 风险等级为 `high`，execute 成功；master 回读包含 `dc:replaces`，duplicate 回读 `deleted: true`。
+  - runtime 观察：`duplicates.find` 在刚创建的同题名临时条目上返回 0 个 duplicate set；这不阻塞 `duplicates.merge` 命令验收，但后续需要用更接近 Zotero UI duplicate 判定的样本补充专项测试。
+- 备注：本步骤第一片已完成 Zotero trash 和 duplicates merge 的 test profile runtime 验收；仍不实现永久删除、清空 trash、group library 或直接文件删除。
 
 ### 步骤 14 - Codex 专用 skill
 
@@ -773,10 +782,10 @@
   - 高级搜索、保存搜索、引用格式输出等更完整 Zotero 能力。
   - 真实主库解锁流程。
   - Codex 专用 skill。
-  - 删除/merge duplicates。
-- 当前硬性执行顺序中的四组核心功能已经完成第一批 runtime 验收：item 创建/完整元数据编辑、BibTeX/RIS/CSL 导入导出、PDF annotation 读取/写入、高级搜索/保存搜索/引用格式输出。
+  - 删除/merge duplicates 已完成受控 trash/merge 第一批 runtime 验收；仍缺少更完整 duplicate 判定样本和公开发布安全文档。
+- 当前硬性执行顺序中的五组核心功能已经完成第一批 runtime 验收：item 创建/完整元数据编辑、BibTeX/RIS/CSL 导入导出、PDF annotation 读取/写入、高级搜索/保存搜索/引用格式输出、受控 trash/merge。
 
 下一步：
 
-- 步骤 13：删除、trash 与 merge duplicates。
-- 之后才开始公开发布边缘文件、发布准备和 Codex skill。
+- 补充 `duplicates.find` 专项验收样本，使测试数据更贴近 Zotero UI duplicate 判定。
+- 之后开始公开发布边缘文件、发布准备和 Codex skill。

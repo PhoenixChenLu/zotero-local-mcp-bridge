@@ -1,6 +1,7 @@
 node_modules/
 dist/
 coverage/
+runtime/
 runtime/auth/bridge-token
 runtime/logs/audit/*.jsonl
 runtime/backups/zotero-operations/**

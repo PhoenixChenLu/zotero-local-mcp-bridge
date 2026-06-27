@@ -8,6 +8,7 @@ export default [
     ignores: [
       "dist/**",
       "node_modules/**",
+      "runtime/**",
       "references/**",
       "ZoteroProfile/**",
       "ZoteroVault/**",
