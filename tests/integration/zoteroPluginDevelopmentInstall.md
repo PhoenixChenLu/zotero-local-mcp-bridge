@@ -1244,6 +1244,23 @@ $undoExecute.data
 
 预期：`attachment.undoAdded` dry-run 返回 `action: trash`；execute 返回 `trashed: true`、`erased: false`。该命令只把附件移入 Zotero trash，不清空 trash，不永久删除 storage 文件。
 
+验证 `duplicates.find` 时应使用更接近 Zotero duplicate 判定的样本：两条 `journalArticle` 至少应具有相同 title、author、year 与相同 DOI。仅同题名但 DOI 不同的条目可能不会被 Zotero 识别为 duplicate set。
+
+```powershell
+$duplicatesFind = Invoke-RestMethod `
+  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Method POST `
+  -ContentType "application/json" `
+  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Body '{"name":"duplicates.find","requestId":"req_duplicates_find_same_doi","input":{"limit":50}}' `
+  -UserAgent "ZoteroCodexBridge/0.1.42"
+
+$duplicatesFind.data.setCount
+$duplicatesFind.data.sets | Select-Object setId,zoteroItemKeys
+```
+
+预期：返回 `ok: true`，`data.setCount` 至少为 `1`，并且某个 `data.sets[*].zoteroItemKeys` 同时包含两条相同 DOI 测试 item。验收结束后必须用 `item.trash` 和 `collection.trash` 清理专项样本，避免正常库残留。
+
 读取 direct HTTP 写命令审计记录：
 
 ```powershell
