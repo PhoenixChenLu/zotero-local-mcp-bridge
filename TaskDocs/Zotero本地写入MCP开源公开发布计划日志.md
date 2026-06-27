@@ -593,14 +593,18 @@
 
 执行：
 - 开始时间：2026-06-27
-- 结束时间：进行中
+- 结束时间：2026-06-27 21:03
 - 操作内容：
   - 第一片实现 `annotation.list`、`annotation.create`、`annotation.update`；暂不实现删除，继续遵守第一版不删除 Zotero 对象的硬边界。
   - 第一片只支持 PDF attachment；EPUB/HTML annotation、image/ink annotation、自动推导 PDF 坐标均后置。
   - `annotation.create` / `annotation.update` 均作为 profile write 命令接入 dry-run + confirmation。
   - 依据 Zotero 9.0.5 `item.js` annotation item 对象层 API：`getAnnotations()`、`new Zotero.Item("annotation")`、annotation 字段 setter 和 `saveTx()`。
 - 测试结果：
-  - 自动验证与 runtime 验收待 0.1.39 测试 XPI 生成并安装后执行。
+  - 自动验证通过：`npm run test`、`npm run typecheck`、`npm run lint`、`npm run build`、`npm run build:zotero-plugin`、`npm run build:zotero-plugin:test`。
+  - 安全边界搜索通过：仅命中文档中的禁止项和历史调查记录，未发现源码实现或依赖配置引入 `ZOTERO_API_KEY`、`api.zotero.org`、`zotero.sqlite`、`sqlite write` 或任意 JS eval。
+  - runtime `annotation.list` 通过：安装 `0.1.39` 后，PDF attachment `FQ8474SV` 初始 annotation 数为 0。
+  - runtime `annotation.create` 通过：创建 highlight annotation `W6RH6YKC`，`annotationText`、`annotationComment`、`annotationColor`、`annotationPageLabel`、`annotationSortIndex` 和 `annotationPosition` 均可读回；create planId 为 `plan_mqwcsmpj_a8slvgqtwk`。
+  - runtime `annotation.update` 通过：更新 annotation `W6RH6YKC` 的 comment 和 color，`annotation.list` 读回 comment 为 `Updated by Zotero Codex Bridge runtime validation 0.1.39`、color 为 `#ff6666`；update planId 为 `plan_mqwct2jf_5na0m16yncn`。
 - 备注：这是最终完整 Zotero 功能面缺口之一；第一片不自动生成 PDF 坐标，调用方必须提供 Zotero reader 可识别的 `annotationPosition` JSON 和 PDF `annotationSortIndex`。
 
 ### 步骤 12 - 高级搜索、保存搜索与引用输出

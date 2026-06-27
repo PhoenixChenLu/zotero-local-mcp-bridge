@@ -227,6 +227,33 @@ data.after.estimatedItemCount: 1
 
 记录时间：2026-06-27 20:48:00
 
+`0.1.39` runtime 验收中验证了 PDF annotation 读取、创建和更新：
+
+```text
+PDF attachmentKey: FQ8474SV
+PDF parent item: Item B (K7P8J5XF)
+PDF file path: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData\storage\FQ8474SV\Zotero Codex Bridge Test Item B.pdf
+annotation.list before create count: 0
+
+Created annotationKey: W6RH6YKC
+annotationType: highlight
+annotationText: Codex Bridge annotation runtime 0.1.39
+annotationComment before update: Created by Zotero Codex Bridge runtime validation 0.1.39
+annotationColor before update: #ffd400
+annotationPageLabel: 1
+annotationSortIndex: 00000|000000|00000
+annotationPosition: {"pageIndex":0,"rects":[[72,72,220,92]]}
+create dry-run/execute planId: plan_mqwcsmpj_a8slvgqtwk
+annotation.list after create count: 1
+
+annotation.update planId: plan_mqwct2jf_5na0m16yncn
+annotationComment after update: Updated by Zotero Codex Bridge runtime validation 0.1.39
+annotationColor after update: #ff6666
+annotation.list after update count: 1
+```
+
+记录时间：2026-06-27 21:03:00
+
 ## Stop Conditions
 
 遇到以下情况立即停止，不执行写操作：

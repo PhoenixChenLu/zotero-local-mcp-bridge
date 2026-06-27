@@ -25,9 +25,9 @@
   - Zotero 插件：GitHub Release / 项目主页 / Zotero Forums / `update manifest`（当前没有官方 Zotero 插件库直接上传入口）。
   - MCP server：npm 包或等价 artifact + `mcpName` + `server.json` + MCP Registry metadata（Registry 仅托管元数据，不托管 artifact）。
 - 公开未实现的功能缺口（仍未覆盖）：
-  - item 创建与元数据编辑已有第一批命令，但仍需 runtime 验收和更完整字段覆盖
-  - BibTeX / RIS / CSL 导入导出
-  - PDF annotation 读取与写入
+  - item 创建与元数据编辑已有第一批 runtime 验收，但仍需更完整字段覆盖
+  - BibTeX / RIS / CSL 导入导出已有第一批 runtime 验收，但暂不做 duplicate merge 或已有 item 更新
+  - PDF annotation 读取与写入已有第一批 runtime 验收，但暂不支持 EPUB/HTML、image/ink、自动坐标推导或删除
   - 高级搜索、保存搜索、引用格式输出
   - 真实主库解锁的公开发布验收与用户文档（底层安全状态模型已开始实现）
   - Codex 专用 skill
