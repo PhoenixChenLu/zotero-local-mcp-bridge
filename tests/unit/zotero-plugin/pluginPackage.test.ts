@@ -35,7 +35,7 @@ describe("Zotero plugin package", () => {
   it("registers Zotero connector server health and command endpoints", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.33"');
+    expect(bootstrap).toContain('version: "0.1.34"');
     expect(bootstrap).toContain('"zotero-codex-bridge ok " + ZoteroCodexBridge.version');
     expect(bootstrap).toContain('healthPath: "/zotero-codex-bridge/health"');
     expect(bootstrap).toContain('commandPath: "/zotero-codex-bridge/command"');
@@ -138,7 +138,7 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("Zotero.Server.Endpoints[ZoteroCodexBridge.healthPath]");
     expect(bootstrap).toContain("function onMainWindowLoad");
     expect(bootstrap).toContain("function onMainWindowUnload");
-    expect(bootstrap).toContain("runtimeRoot: null");
+    expect(bootstrap).toContain("runtimeRoot: __ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__");
     expect(bootstrap).not.toContain("runtimeRoot: resolveBridgeRuntimeRoot()");
     expect(bootstrap).toContain("var expectedAuthToken;");
     expect(bootstrap).toContain("try {");
@@ -162,7 +162,7 @@ describe("Zotero plugin package", () => {
 
     const bootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
     expect(bootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__");
-    expect(bootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_PROJECT_ROOT__");
+    expect(bootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__");
     expect(bootstrap.stdout).not.toContain("H:\\\\ProgramDocument\\\\MixLanguage\\\\Zotero-codex-bridge");
   });
 
@@ -179,14 +179,18 @@ describe("Zotero plugin package", () => {
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });
       const releaseBootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
       expect(releaseBootstrap.stdout).toContain("expectedAuthToken: null");
+      expect(releaseBootstrap.stdout).toContain("runtimeRoot: null");
       expect(releaseBootstrap.stdout).not.toContain(tokenForTestBuild);
       expect(releaseBootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__");
+      expect(releaseBootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__");
 
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs", "--test"], { windowsHide: true });
       const testBootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
       expect(testBootstrap.stdout).toContain(`expectedAuthToken: "${tokenForTestBuild}"`);
+      expect(testBootstrap.stdout).toContain('runtimeRoot: "H:\\\\ProgramDocument\\\\MixLanguage\\\\Zotero-codex-bridge"');
       expect(testBootstrap.stdout).not.toContain("expectedAuthToken: null");
       expect(testBootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__");
+      expect(testBootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__");
 
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });
       const rebuiltReleaseBootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });

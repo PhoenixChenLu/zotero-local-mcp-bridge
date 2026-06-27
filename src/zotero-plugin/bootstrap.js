@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* global IOUtils, PathUtils, Zotero, Components, __ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__, navigator */
+/* global IOUtils, PathUtils, Zotero, Components, __ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__, __ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__, navigator */
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.33",
+  version: "0.1.34",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
   expectedAuthToken: __ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__,
-  runtimeRoot: null,
+  runtimeRoot: __ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__,
   dryRunTtlMs: 30 * 60 * 1000,
   confirmations: {},
   started: false,

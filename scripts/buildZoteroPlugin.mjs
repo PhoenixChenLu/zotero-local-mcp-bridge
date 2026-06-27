@@ -22,10 +22,15 @@ await mkdir(stagingDir, { recursive: true });
 await cp(path.join(projectRoot, "src", "zotero-plugin", "manifest.json"), path.join(stagingDir, "manifest.json"));
 await writeFile(
   path.join(stagingDir, "bootstrap.js"),
-  (await readFile(path.join(projectRoot, "src", "zotero-plugin", "bootstrap.js"), "utf8")).replaceAll(
-    "__ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__",
-    testMode ? formatJsStringLiteral(await getOrCreateAuthToken()) : "null"
-  ),
+  (await readFile(path.join(projectRoot, "src", "zotero-plugin", "bootstrap.js"), "utf8"))
+    .replaceAll(
+      "__ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__",
+      testMode ? formatJsStringLiteral(await getOrCreateAuthToken()) : "null"
+    )
+    .replaceAll(
+      "__ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__",
+      testMode ? formatJsStringLiteral(projectRoot) : "null"
+    ),
   "utf8"
 );
 
