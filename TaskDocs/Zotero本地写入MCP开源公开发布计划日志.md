@@ -592,11 +592,16 @@
   - 不破坏 PDF 文件或 Zotero 存储。
 
 执行：
-- 开始时间：未开始
-- 结束时间：未开始
-- 操作内容：未开始
-- 测试结果：未开始
-- 备注：这是最终完整 Zotero 功能面缺口之一。
+- 开始时间：2026-06-27
+- 结束时间：进行中
+- 操作内容：
+  - 第一片实现 `annotation.list`、`annotation.create`、`annotation.update`；暂不实现删除，继续遵守第一版不删除 Zotero 对象的硬边界。
+  - 第一片只支持 PDF attachment；EPUB/HTML annotation、image/ink annotation、自动推导 PDF 坐标均后置。
+  - `annotation.create` / `annotation.update` 均作为 profile write 命令接入 dry-run + confirmation。
+  - 依据 Zotero 9.0.5 `item.js` annotation item 对象层 API：`getAnnotations()`、`new Zotero.Item("annotation")`、annotation 字段 setter 和 `saveTx()`。
+- 测试结果：
+  - 自动验证与 runtime 验收待 0.1.39 测试 XPI 生成并安装后执行。
+- 备注：这是最终完整 Zotero 功能面缺口之一；第一片不自动生成 PDF 坐标，调用方必须提供 Zotero reader 可识别的 `annotationPosition` JSON 和 PDF `annotationSortIndex`。
 
 ### 步骤 12 - 高级搜索、保存搜索与引用输出
 

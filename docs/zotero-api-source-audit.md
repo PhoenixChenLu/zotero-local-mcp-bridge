@@ -331,6 +331,52 @@ const importedItems = await translation.translate({
 - BibTeX/RIS/CSL JSON 导入可以复用 Zotero 内置 import translator，不由本项目手写解析器。
 - 导入是 profile write 命令，必须走 test profile 或后续真实主库显式解锁；不使用 Zotero Web API，不直接写 SQLite。
 
+## `annotation.list` / `annotation.create` / `annotation.update`
+
+读取计划使用：
+
+```js
+const attachment = Zotero.Items.getByLibraryAndKey(Zotero.Libraries.userLibraryID, attachmentKey);
+const annotations = attachment.getAnnotations(includeTrashed);
+```
+
+写入计划使用：
+
+```js
+const annotation = new Zotero.Item("annotation");
+annotation.libraryID = Zotero.Libraries.userLibraryID;
+annotation.parentKey = attachment.key;
+annotation.annotationType = "highlight";
+annotation.annotationText = text;
+annotation.annotationColor = color;
+annotation.annotationPageLabel = pageLabel;
+annotation.annotationSortIndex = sortIndex;
+annotation.annotationPosition = positionJson;
+annotation.annotationIsExternal = false;
+await annotation.saveTx();
+```
+
+源码依据：
+
+- `references/official/zotero/zotero-9.0.5-client/xpcom/data/item.js:2000-2076` 定义 annotation 保存逻辑，要求 annotation item 必须有父 item，父 item 必须是 file attachment，并且必须是 Zotero reader 可读取的 PDF、EPUB 或 HTML snapshot。
+- `item.js:4195-4320` 定义 annotation 属性 setter：`annotationType`、`annotationText`、`annotationComment`、`annotationColor`、`annotationPageLabel`、`annotationSortIndex`、`annotationPosition`、`annotationIsExternal`。
+- `item.js:4257-4277` 对 PDF `annotationSortIndex` 使用 `00000|000000|00000` 格式校验。
+- `item.js:4326-4405` 定义 `isAnnotation()`、`numAnnotations()` 和 `getAnnotations(includeTrashed, asIDs)`。
+- `item.js:5798-5809` 在 `toJSON()` 中输出 annotation 字段。
+
+预校验规则：
+
+- 第一片只支持 PDF attachment，不支持 EPUB/HTML annotation 写入。
+- 第一片只支持 `highlight`、`underline`、`note`、`text`；暂不写入 `image` 或 `ink` annotation，因为它们涉及 cache image / ink path 数据。
+- `annotation.create` 和 `annotation.update` 均为 profile write 命令，必须 dry-run + confirmation。
+- `annotationPosition` 接受 JSON 字符串或 JSON 对象，但必须能被 `JSON.parse()` 解析；本项目不在第一片自动推导 PDF 坐标。
+- 第一片不实现 annotation 删除，继续遵守第一版不删除 Zotero 对象的边界。
+
+结论：
+
+- PDF annotation 读取与基本写入可以通过 Zotero item 对象层实现，不直接写 SQLite。
+- annotation 写入仍需 runtime 验证 PDF reader 可见性；如果 Zotero reader 对 position JSON 有更严格格式要求，应以 runtime 失败证据修订输入契约。
+
 ## `note.createChild`
 
 创建计划使用：

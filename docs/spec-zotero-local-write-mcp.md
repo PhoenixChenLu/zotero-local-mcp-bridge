@@ -187,6 +187,9 @@ type ZoteroLocalCommandResult<T> = {
 - `zotero_export_bibtex`：按 Zotero item key 导出 BibTeX 字符串。
 - `zotero_export_ris`：按 Zotero item key 导出 RIS 字符串。
 - `zotero_export_csl_json`：按 Zotero item key 导出 CSL JSON 字符串。
+- `zotero_annotation_list`：按 PDF attachment key 读取 Zotero PDF annotation。
+- `zotero_annotation_create`：在 PDF attachment 下创建 annotation，作为写操作强制 dry-run + confirmation；第一片不支持 image/ink。
+- `zotero_annotation_update`：更新既有 annotation 的 text/comment/color/pageLabel/sortIndex/position，作为写操作强制 dry-run + confirmation；第一片不支持删除 annotation。
 - `zotero_note_create_child`：为 item 创建 child note。
 - `zotero_attachment_get`：按 attachment key 读取附件详情、parent item key、文件路径、content type、linkMode 和 attachmentMode。
 - `zotero_item_get_attachments`：读取 item 下的附件信息。

@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.38",
+  version: "0.1.39",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -56,6 +56,8 @@ var ZoteroCodexBridgeProfileWriteCommands = {
   "import.bibtex": true,
   "import.ris": true,
   "import.cslJson": true,
+  "annotation.create": true,
+  "annotation.update": true,
   "note.createChild": true,
   "attachment.addFile": true,
   "attachment.moveToItem": true,
@@ -82,6 +84,8 @@ var ZoteroCodexBridgeWriteCommands = {
   "import.bibtex": true,
   "import.ris": true,
   "import.cslJson": true,
+  "annotation.create": true,
+  "annotation.update": true,
   "note.createChild": true,
   "attachment.addFile": true,
   "attachment.moveToItem": true,
@@ -647,6 +651,82 @@ function registerCommandEndpoint() {
         }
       }
 
+      if (commandName === "annotation.list") {
+        try {
+          var annotationList = readAttachmentAnnotations(payload.input || {});
+          return jsonCommandResponse(
+            200,
+            commandName,
+            requestId,
+            annotationList,
+            undefined,
+            {
+              zoteroItemKeys: annotationList.annotations.map(function (annotation) { return annotation.annotationKey; }),
+              attachmentKeys: [annotationList.attachmentKey]
+            }
+          );
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ANNOTATION_LIST_FAILED",
+            message: error.message || "Failed to read Zotero attachment annotations"
+          });
+        }
+      }
+
+      if (commandName === "annotation.create") {
+        try {
+          if (payload.mode === "execute") {
+            var createdAnnotation = await executeAnnotationCreate(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              createdAnnotation,
+              undefined,
+              {
+                zoteroItemKeys: [createdAnnotation.annotationKey],
+                attachmentKeys: [createdAnnotation.attachmentKey]
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createAnnotationCreateDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ANNOTATION_CREATE_FAILED",
+            message: error.message || "Failed to create Zotero annotation"
+          });
+        }
+      }
+
+      if (commandName === "annotation.update") {
+        try {
+          if (payload.mode === "execute") {
+            var updatedAnnotation = await executeAnnotationUpdate(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              updatedAnnotation,
+              undefined,
+              {
+                zoteroItemKeys: [updatedAnnotation.annotationKey],
+                attachmentKeys: [updatedAnnotation.attachmentKey]
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createAnnotationUpdateDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ANNOTATION_UPDATE_FAILED",
+            message: error.message || "Failed to update Zotero annotation"
+          });
+        }
+      }
+
       if (commandName === "note.createChild") {
         try {
           if (payload.mode === "execute") {
@@ -968,7 +1048,7 @@ function registerCommandEndpoint() {
 
       return jsonCommandResponse(501, commandName, requestId, undefined, {
         code: "COMMAND_ENDPOINT_NOT_IMPLEMENTED",
-        message: "Only collection getTree/getItems/create/rename/move/addItems/removeItems, item get/search/updateTags, note.createChild, attachment get/getForItem/add/move/rename/runZoteroRename/undoAdded, attachment rename preferences, backup settings/snapshot list/restore/prune, audit.list, and safety.getProfileStatus/unlockRealProfile/lockRealProfile are connected in this runtime build"
+        message: "Only collection getTree/getItems/create/rename/move/addItems/removeItems, item get/search/updateTags, import/export, annotation list/create/update, note.createChild, attachment get/getForItem/add/move/rename/runZoteroRename/undoAdded, attachment rename preferences, backup settings/snapshot list/restore/prune, audit.list, and safety.getProfileStatus/unlockRealProfile/lockRealProfile are connected in this runtime build"
       });
     }
   };
@@ -3426,6 +3506,314 @@ function attachmentModeName(linkMode) {
   return "unknown";
 }
 
+function readAttachmentAnnotations(input) {
+  var attachment = normalizeAnnotationAttachmentTarget(input.attachmentKey);
+  var includeTrashed = input.includeTrashed === true;
+  var annotations = attachment.getAnnotations(includeTrashed).map(function (annotation) {
+    return annotationRecord(annotation);
+  });
+
+  return {
+    attachmentKey: attachment.key,
+    parentZoteroItemKey: attachment.parentKey || undefined,
+    includeTrashed: includeTrashed,
+    annotations: annotations
+  };
+}
+
+function createAnnotationCreateDryRun(input) {
+  var normalized = normalizeAnnotationCreateInput(input);
+  return createWriteDryRunPlan(
+    "annotation.create",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [],
+      collectionKeys: [],
+      attachmentKeys: [normalized.attachmentKey],
+      filePaths: [],
+      tags: []
+    },
+    [],
+    undefined,
+    {
+      action: "create",
+      attachmentKey: normalized.attachmentKey,
+      annotationType: normalized.annotationType,
+      annotationColor: normalized.annotationColor,
+      annotationPageLabel: normalized.annotationPageLabel,
+      annotationSortIndex: normalized.annotationSortIndex,
+      annotationPosition: normalized.annotationPosition
+    }
+  );
+}
+
+async function executeAnnotationCreate(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeAnnotationCreateInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var attachment = normalizeAnnotationAttachmentTarget(normalized.attachmentKey);
+  var annotation = new Zotero.Item("annotation");
+  annotation.libraryID = Zotero.Libraries.userLibraryID;
+  annotation.parentKey = attachment.key;
+  applyAnnotationFields(annotation, normalized, true);
+  await annotation.saveTx();
+
+  return annotationRecord(annotation);
+}
+
+function createAnnotationUpdateDryRun(input) {
+  var normalized = normalizeAnnotationUpdateInput(input);
+  return createWriteDryRunPlan(
+    "annotation.update",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [normalized.annotationKey],
+      collectionKeys: [],
+      attachmentKeys: [normalized.attachmentKey],
+      filePaths: [],
+      tags: []
+    },
+    [],
+    annotationRecord(normalized.annotation),
+    {
+      action: "update",
+      annotationKey: normalized.annotationKey,
+      attachmentKey: normalized.attachmentKey,
+      fields: normalized.fields
+    }
+  );
+}
+
+async function executeAnnotationUpdate(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeAnnotationUpdateInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  applyAnnotationFields(normalized.annotation, normalized, false);
+  await normalized.annotation.saveTx();
+
+  return annotationRecord(normalized.annotation);
+}
+
+function normalizeAnnotationCreateInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "annotation.create input must be an object", 400);
+  }
+
+  var attachment = normalizeAnnotationAttachmentTarget(input.attachmentKey);
+  var annotationType = normalizeAnnotationType(input.annotationType);
+  var annotationText = normalizeAnnotationText(input.annotationText, annotationType);
+  var annotationComment = normalizeOptionalAnnotationString(input.annotationComment, "annotationComment");
+  var annotationColor = normalizeAnnotationColor(input.annotationColor);
+  var annotationPageLabel = normalizeOptionalAnnotationString(input.annotationPageLabel, "annotationPageLabel");
+  var annotationSortIndex = normalizeAnnotationSortIndex(input.annotationSortIndex);
+  var annotationPosition = normalizeAnnotationPosition(input.annotationPosition);
+
+  return {
+    attachmentKey: attachment.key,
+    annotationType: annotationType,
+    annotationText: annotationText,
+    annotationComment: annotationComment,
+    annotationColor: annotationColor,
+    annotationPageLabel: annotationPageLabel,
+    annotationSortIndex: annotationSortIndex,
+    annotationPosition: annotationPosition
+  };
+}
+
+function normalizeAnnotationUpdateInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "annotation.update input must be an object", 400);
+  }
+
+  var annotation = normalizeAnnotationTarget(input.annotationKey);
+  var attachment = normalizeAnnotationAttachmentTarget(annotation.parentKey);
+  var fields = {};
+  var normalized = {
+    annotationKey: annotation.key,
+    attachmentKey: attachment.key,
+    annotation: annotation,
+    fields: fields
+  };
+
+  if (Object.prototype.hasOwnProperty.call(input, "annotationText")) {
+    fields.annotationText = normalizeAnnotationText(input.annotationText, annotation.annotationType);
+    normalized.annotationText = fields.annotationText;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "annotationComment")) {
+    fields.annotationComment = normalizeOptionalAnnotationString(input.annotationComment, "annotationComment");
+    normalized.annotationComment = fields.annotationComment;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "annotationColor")) {
+    fields.annotationColor = normalizeAnnotationColor(input.annotationColor);
+    normalized.annotationColor = fields.annotationColor;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "annotationPageLabel")) {
+    fields.annotationPageLabel = normalizeOptionalAnnotationString(input.annotationPageLabel, "annotationPageLabel");
+    normalized.annotationPageLabel = fields.annotationPageLabel;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "annotationSortIndex")) {
+    fields.annotationSortIndex = normalizeAnnotationSortIndex(input.annotationSortIndex);
+    normalized.annotationSortIndex = fields.annotationSortIndex;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "annotationPosition")) {
+    fields.annotationPosition = normalizeAnnotationPosition(input.annotationPosition);
+    normalized.annotationPosition = fields.annotationPosition;
+  }
+
+  if (Object.keys(fields).length === 0) {
+    throw commandError("ANNOTATION_UPDATE_EMPTY", "annotation.update requires at least one annotation field", 400);
+  }
+
+  return normalized;
+}
+
+function normalizeAnnotationAttachmentTarget(attachmentKey) {
+  var attachment = normalizeAttachmentTarget(attachmentKey);
+  if (!attachment.isFileAttachment || !attachment.isFileAttachment()) {
+    throw commandError("ANNOTATION_PARENT_INVALID", "Annotations can only be managed under file attachments", 400);
+  }
+  if (!attachment.isPDFAttachment || !attachment.isPDFAttachment()) {
+    throw commandError("ANNOTATION_PARENT_NOT_PDF", "The first annotation implementation only supports PDF attachments", 400);
+  }
+  if (!attachment.attachmentReaderType) {
+    throw commandError("ANNOTATION_PARENT_NOT_READABLE", "Attachment is not readable by the Zotero reader", 400);
+  }
+  return attachment;
+}
+
+function normalizeAnnotationTarget(annotationKey) {
+  if (typeof annotationKey !== "string" || annotationKey.trim().length === 0) {
+    throw commandError("ANNOTATION_KEY_REQUIRED", "An annotationKey is required", 400);
+  }
+
+  var annotation = Zotero.Items.getByLibraryAndKey(Zotero.Libraries.userLibraryID, annotationKey.trim());
+  if (!annotation || !annotation.isAnnotation || !annotation.isAnnotation()) {
+    throw commandError("ANNOTATION_NOT_FOUND", "Annotation was not found in local user library", 404);
+  }
+
+  return annotation;
+}
+
+function normalizeAnnotationType(annotationType) {
+  if (typeof annotationType !== "string") {
+    throw commandError("ANNOTATION_TYPE_REQUIRED", "annotationType is required", 400);
+  }
+  var normalized = annotationType.trim();
+  if (["highlight", "underline", "note", "text"].indexOf(normalized) === -1) {
+    throw commandError("ANNOTATION_TYPE_UNSUPPORTED", "annotationType must be highlight, underline, note, or text", 400);
+  }
+  return normalized;
+}
+
+function normalizeAnnotationText(annotationText, annotationType) {
+  if (annotationText === undefined || annotationText === null) {
+    if (annotationType === "highlight" || annotationType === "underline") {
+      throw commandError("ANNOTATION_TEXT_REQUIRED", "annotationText is required for highlight and underline annotations", 400);
+    }
+    return undefined;
+  }
+  if (typeof annotationText !== "string") {
+    throw commandError("ANNOTATION_TEXT_INVALID", "annotationText must be a string", 400);
+  }
+  var normalized = annotationText.trim();
+  if ((annotationType === "highlight" || annotationType === "underline") && normalized.length === 0) {
+    throw commandError("ANNOTATION_TEXT_REQUIRED", "annotationText is required for highlight and underline annotations", 400);
+  }
+  if (annotationType !== "highlight" && annotationType !== "underline" && normalized.length > 0) {
+    throw commandError("ANNOTATION_TEXT_UNSUPPORTED", "annotationText can only be set for highlight and underline annotations", 400);
+  }
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeOptionalAnnotationString(value, fieldName) {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    throw commandError("ANNOTATION_FIELD_INVALID", fieldName + " must be a string", 400);
+  }
+  var normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeAnnotationColor(value) {
+  var color = value === undefined || value === null ? "#ffd400" : value;
+  if (typeof color !== "string" || !/^#[a-f0-9]{6}$/i.test(color.trim())) {
+    throw commandError("ANNOTATION_COLOR_INVALID", "annotationColor must be a #rrggbb hex color", 400);
+  }
+  return color.trim().toLowerCase();
+}
+
+function normalizeAnnotationSortIndex(value) {
+  if (typeof value !== "string" || !/^\d{5}\|\d{6}\|\d{5}$/.test(value.trim())) {
+    throw commandError("ANNOTATION_SORT_INDEX_INVALID", "PDF annotationSortIndex must match 00000|000000|00000", 400);
+  }
+  return value.trim();
+}
+
+function normalizeAnnotationPosition(value) {
+  if (value === undefined || value === null) {
+    throw commandError("ANNOTATION_POSITION_REQUIRED", "annotationPosition is required", 400);
+  }
+
+  var position = typeof value === "string" ? value.trim() : JSON.stringify(value);
+  if (position.length === 0) {
+    throw commandError("ANNOTATION_POSITION_REQUIRED", "annotationPosition is required", 400);
+  }
+
+  try {
+    JSON.parse(position);
+  } catch (error) {
+    throw commandError("ANNOTATION_POSITION_INVALID", "annotationPosition must be valid JSON", 400);
+  }
+
+  return position;
+}
+
+function applyAnnotationFields(annotation, normalized, isCreate) {
+  if (isCreate) {
+    annotation.annotationType = normalized.annotationType;
+    annotation.annotationIsExternal = false;
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, "annotationText") && normalized.annotationText !== undefined) {
+    annotation.annotationText = normalized.annotationText;
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, "annotationComment")) {
+    annotation.annotationComment = normalized.annotationComment;
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, "annotationColor")) {
+    annotation.annotationColor = normalized.annotationColor;
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, "annotationPageLabel")) {
+    annotation.annotationPageLabel = normalized.annotationPageLabel;
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, "annotationSortIndex")) {
+    annotation.annotationSortIndex = normalized.annotationSortIndex;
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, "annotationPosition")) {
+    annotation.annotationPosition = normalized.annotationPosition;
+  }
+}
+
+function annotationRecord(annotation) {
+  var parent = annotation.parentItem;
+  return {
+    annotationKey: annotation.key,
+    attachmentKey: annotation.parentKey || undefined,
+    parentZoteroItemKey: parent && parent.parentKey ? parent.parentKey : undefined,
+    annotationType: annotation.annotationType,
+    annotationText: annotation.annotationText || "",
+    annotationComment: annotation.annotationComment || "",
+    annotationColor: annotation.annotationColor || "",
+    annotationPageLabel: annotation.annotationPageLabel || "",
+    annotationSortIndex: annotation.annotationSortIndex || "",
+    annotationPosition: annotation.annotationPosition || "",
+    annotationIsExternal: annotation.annotationIsExternal === true
+  };
+}
+
 function createChildNoteDryRun(input) {
   var normalized = normalizeChildNoteCreateInput(input);
   return createWriteDryRunPlan(
@@ -3568,7 +3956,9 @@ function stripRuntimeFields(input) {
     newPreferences: true,
     sourceAuditRequestId: true,
     sourceAuditPlanId: true,
-    sourceAuditTimestamp: true
+    sourceAuditTimestamp: true,
+    annotation: true,
+    fields: true
   };
   Object.keys(input).forEach(function (key) {
     if (key.indexOf("current") !== 0 && !runtimeFields[key]) {

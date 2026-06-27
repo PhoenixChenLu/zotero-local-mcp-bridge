@@ -31,6 +31,9 @@ describe("shared command definitions", () => {
       "export.bibtex",
       "export.ris",
       "export.cslJson",
+      "annotation.list",
+      "annotation.create",
+      "annotation.update",
       "note.createChild",
       "attachment.get",
       "attachment.getForItem",
@@ -60,6 +63,7 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("export.bibtex")).toBe(false);
     expect(isWriteCommand("export.ris")).toBe(false);
     expect(isWriteCommand("export.cslJson")).toBe(false);
+    expect(isWriteCommand("annotation.list")).toBe(false);
     expect(isWriteCommand("attachment.get")).toBe(false);
     expect(isWriteCommand("attachment.renamePreferences.get")).toBe(false);
     expect(isWriteCommand("backup.snapshot.list")).toBe(false);
@@ -78,6 +82,8 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("import.bibtex")).toBe(true);
     expect(isWriteCommand("import.ris")).toBe(true);
     expect(isWriteCommand("import.cslJson")).toBe(true);
+    expect(isWriteCommand("annotation.create")).toBe(true);
+    expect(isWriteCommand("annotation.update")).toBe(true);
     expect(isWriteCommand("safety.unlockRealProfile")).toBe(true);
     expect(isWriteCommand("safety.lockRealProfile")).toBe(true);
   });

@@ -35,7 +35,7 @@ describe("Zotero plugin package", () => {
   it("registers Zotero connector server health and command endpoints", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.38"');
+    expect(bootstrap).toContain('version: "0.1.39"');
     expect(bootstrap).toContain('"zotero-codex-bridge ok " + ZoteroCodexBridge.version');
     expect(bootstrap).toContain('healthPath: "/zotero-codex-bridge/health"');
     expect(bootstrap).toContain('commandPath: "/zotero-codex-bridge/command"');
@@ -55,6 +55,9 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "export.bibtex"');
     expect(bootstrap).toContain('commandName === "export.ris"');
     expect(bootstrap).toContain('commandName === "export.cslJson"');
+    expect(bootstrap).toContain('commandName === "annotation.list"');
+    expect(bootstrap).toContain('commandName === "annotation.create"');
+    expect(bootstrap).toContain('commandName === "annotation.update"');
     expect(bootstrap).toContain('commandName === "item.create"');
     expect(bootstrap).toContain('commandName === "item.updateFields"');
     expect(bootstrap).toContain('commandName === "item.updateCreators"');
@@ -109,6 +112,9 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("estimateImportItemCount");
     expect(bootstrap).toContain("exportItemsWithTranslator");
     expect(bootstrap).toContain("new Zotero.Translate.Export()");
+    expect(bootstrap).toContain('new Zotero.Item("annotation")');
+    expect(bootstrap).toContain("attachment.getAnnotations(includeTrashed)");
+    expect(bootstrap).toContain("annotation.annotationPosition = normalized.annotationPosition");
     expect(bootstrap).toContain('bibtex: "9cb70025-a888-4a29-a210-93ec52da40d4"');
     expect(bootstrap).toContain('ris: "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7"');
     expect(bootstrap).toContain('cslJson: "bc03b4fe-436d-4a1f-ba59-de4d2d7a63f7"');

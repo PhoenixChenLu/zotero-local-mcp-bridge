@@ -23,6 +23,9 @@ export type CommandName =
   | "export.bibtex"
   | "export.ris"
   | "export.cslJson"
+  | "annotation.list"
+  | "annotation.create"
+  | "annotation.update"
   | "note.createChild"
   | "attachment.get"
   | "attachment.getForItem"
@@ -74,6 +77,9 @@ export const COMMAND_DEFINITIONS = [
   { name: "export.bibtex", write: false, inputFields: ["zoteroItemKeys"] },
   { name: "export.ris", write: false, inputFields: ["zoteroItemKeys"] },
   { name: "export.cslJson", write: false, inputFields: ["zoteroItemKeys"] },
+  { name: "annotation.list", write: false, inputFields: ["attachmentKey", "includeTrashed"] },
+  { name: "annotation.create", write: true, profileWrite: true, inputFields: ["attachmentKey", "annotationType", "annotationText", "annotationComment", "annotationColor", "annotationPageLabel", "annotationSortIndex", "annotationPosition"] },
+  { name: "annotation.update", write: true, profileWrite: true, inputFields: ["annotationKey", "annotationText", "annotationComment", "annotationColor", "annotationPageLabel", "annotationSortIndex", "annotationPosition"] },
   { name: "note.createChild", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "content", "contentFormat"] },
   { name: "attachment.get", write: false, inputFields: ["attachmentKey"] },
   { name: "attachment.getForItem", write: false, inputFields: ["zoteroItemKey"] },
