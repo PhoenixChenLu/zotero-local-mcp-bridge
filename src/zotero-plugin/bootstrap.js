@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.40",
+  version: "0.1.41",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -1987,7 +1987,9 @@ async function executeSavedSearchUpdate(input, confirmation) {
     search.name = normalized.name;
   }
   if (normalized.conditions) {
-    search.conditions = {};
+    Object.keys(search.getConditions()).forEach(function (conditionID) {
+      search.removeCondition(conditionID);
+    });
     applySearchConditions(search, {
       conditions: normalized.conditions,
       joinMode: normalized.joinMode

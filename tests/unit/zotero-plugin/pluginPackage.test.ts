@@ -35,7 +35,7 @@ describe("Zotero plugin package", () => {
   it("registers Zotero connector server health and command endpoints", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.40"');
+    expect(bootstrap).toContain('version: "0.1.41"');
     expect(bootstrap).toContain('"zotero-codex-bridge ok " + ZoteroCodexBridge.version');
     expect(bootstrap).toContain('healthPath: "/zotero-codex-bridge/health"');
     expect(bootstrap).toContain('commandPath: "/zotero-codex-bridge/command"');

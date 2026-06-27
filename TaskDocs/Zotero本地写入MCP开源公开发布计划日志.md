@@ -640,7 +640,12 @@
   - `savedSearch.create` / `savedSearch.update` 作为 profile write 命令接入 dry-run + confirmation。
   - `citation.format` 复用 Zotero citeproc 输出 HTML，第一片只使用本地已安装 style，不自动联网安装 style。
 - 测试结果：
-  - 自动验证与 runtime 验收待 0.1.40 测试 XPI 生成并安装后执行。
+  - 自动验证通过：`npm run test`、`npm run lint`、`npm run typecheck`、`npm run build`、`npm run build:zotero-plugin:test`、`npm run build:zotero-plugin`。
+  - runtime `search.advanced` 通过：安装 `0.1.40` 后，`quicksearch-titleCreatorYear contains Codex Bridge` 返回 8 个本地条目 key。
+  - runtime `citation.format` 通过：bibliography 和 citation 均返回 Zotero citeproc HTML。
+  - runtime `savedSearch.create` 通过：dry-run planId `plan_mqwddcng_5p4j6l4koxr`，execute 创建 saved search `STD4ECMX`。
+  - runtime `savedSearch.update` 在 `0.1.40` 暴露缺陷：execute 能返回成功，但 Zotero 保存搜索条件未被替换，而是与旧条件叠加。原因是直接赋值 `search.conditions = {}` 不会清空 Zotero `Search` 内部条件；依据 Zotero 9.0.5 `search.js` 的 `fromJSON()` 实现，`0.1.41` 改为 `getConditions()` 后逐个 `removeCondition()`，再重新 `addCondition()`。
+  - `0.1.41` 修复包已生成，待用户重装后验证被污染的 `STD4ECMX` 能否被 `savedSearch.update` 正确替换条件。
 - 备注：这是最终完整 Zotero 功能面缺口之一；第一片先覆盖本地 user library，不支持 group library。
 
 ### 步骤 13 - 删除、trash 与 merge duplicates
