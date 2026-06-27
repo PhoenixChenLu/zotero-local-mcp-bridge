@@ -1,0 +1,30 @@
+{
+  "name": "zotero-codex-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first Zotero management MCP bridge for Codex.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:zotero-plugin": "node scripts/buildZoteroPlugin.mjs --mode=release",
+    "build:zotero-plugin:release": "node scripts/buildZoteroPlugin.mjs --mode=release",
+    "build:zotero-plugin:test": "node scripts/buildZoteroPlugin.mjs --mode=test",
+    "build:zotero-plugin:dev": "node scripts/buildZoteroPlugin.mjs --mode=dev",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "ensure:test-profile-marker": "node scripts/ensureTestProfileMarker.mjs",
+    "pretest": "npm run ensure:test-profile-marker",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "@types/node": "^22.15.34",
+    "eslint": "^9.29.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.35.0",
+    "vitest": "^3.2.4"
+  }
+}

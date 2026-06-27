@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+runtime/auth/bridge-token
+runtime/temp/
+.env
+.env.*
+ZoteroProfile/
+ZoteroVault/
+ZoteroData/
+logs/audit/*.jsonl
+backups/zotero-operations/**
+!logs/audit/.gitkeep
+!backups/zotero-operations/.gitkeep
+references/official/zotero/make-it-red/
