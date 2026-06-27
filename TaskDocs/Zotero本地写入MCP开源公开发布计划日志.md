@@ -551,14 +551,16 @@
 - 操作内容：
   - 第一切片实现只读导出命令：`export.bibtex`、`export.ris`、`export.cslJson`。
   - 同一测试版继续实现导入写命令：`import.bibtex`、`import.ris`、`import.cslJson`，均标记为 `profileWrite` 并强制 dry-run/confirmation。
-  - 使用 Zotero 9.0.5 local API 源码中的 `Zotero.Translate.Export` 路径执行导出；使用 Zotero translators 常用的 `Zotero.loadTranslator("import")` + `setString()` 路径执行导入；不手写 BibTeX/RIS/CSL JSON 格式化器或完整解析器。
+  - 使用 Zotero 9.0.5 local API 源码中的 `Zotero.Translate.Export` 路径执行导出；导入路径先实现为 translator 内部常见的 `Zotero.loadTranslator("import")` + `setString()`，runtime 证明插件环境不暴露该入口后，0.1.38 改为官方 Connector import endpoint 使用的 `new Zotero.Translate.Import()` + `translate({ libraryID, collections, forceTagType, saveOptions })`。
   - dry-run 不调用 import translator，避免预览阶段写库；BibTeX/RIS 仅估算条目数，CSL JSON 使用 `JSON.parse()` 校验和估算条目数。
   - 共享命令清单、插件运行时、README、spec 和 API source audit 已同步。
 - 测试结果：
   - 自动验证通过：`npm run test`、`npm run typecheck`、`npm run lint`、`npm run build`、`npm run build:zotero-plugin`、`npm run build:zotero-plugin:test`。
   - XPI 静态检查通过：`dist/zotero-codex-bridge.xpi` manifest 为 `0.1.37`；包内包含 `import.bibtex`、`import.ris`、`import.cslJson`、`export.bibtex`、`export.ris`、`export.cslJson` endpoint 分支，以及 `Zotero.loadTranslator("import")` 和 `new Zotero.Translate.Export()`。
   - 安全边界搜索通过：仅命中文档中的禁止项和历史调查记录，未发现源码实现或依赖配置引入 `ZOTERO_API_KEY`、`api.zotero.org`、`zotero.sqlite`、`sqlite write` 或任意 JS eval。
-  - runtime 导入/导出验收待安装 `0.1.37` 测试 XPI 后执行。
+  - runtime 导出验收通过：安装 `0.1.37` 后，`export.bibtex`、`export.ris`、`export.cslJson` 对既有测试条目返回非空内容。
+  - runtime 导入验收发现 `0.1.37` 缺陷：`import.bibtex` execute 返回 `ITEM_IMPORT_UNSUPPORTED`，原因是 Zotero 9.0.5 插件运行态不暴露 `Zotero.loadTranslator`。
+  - 0.1.38 修正：导入实现改用 `new Zotero.Translate.Import()`，collection 直接转换为 Zotero collection id 传给 `translate()`；待重新打包、安装后继续 runtime 导入验收。
 - 备注：第一片导入全部按新增 item 处理，不做 duplicate merge、已有 item 更新或删除；这些属于后续高风险/高级导入策略。
 
 ### 步骤 11 - PDF annotation 读取与写入

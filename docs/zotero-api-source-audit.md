@@ -298,21 +298,24 @@ translation.translate();
 导入计划使用：
 
 ```js
-const translation = Zotero.loadTranslator("import");
-translation.setTranslator(translatorID);
+const translation = new Zotero.Translate.Import();
 translation.setString(content);
-translation.setHandler("itemDone", (_, item) => importedItems.push(item));
-translation.setHandler("done", () => resolve(importedItems));
-translation.setHandler("error", (_, error) => reject(error));
-translation.translate();
+translation.setTranslator(translatorID);
+const importedItems = await translation.translate({
+  libraryID: Zotero.Libraries.userLibraryID,
+  collections: collectionIDs.length ? collectionIDs : null,
+  forceTagType: 1,
+  saveOptions: {
+    skipSelect: false
+  }
+});
 ```
 
 源码依据：
 
-- Zotero translators 中大量使用 `Zotero.loadTranslator("import")` 或 `Zotero.loadTranslator('import')` 将 RIS、BibTeX、CSL JSON 等字符串交给内置 import translator。
-- `ZoteroData/translators/NewsBank.js:83-86` 使用 `Zotero.loadTranslator('import')`、RIS translatorID、`setString(risText)` 和 `setHandler('itemDone', ...)`。
-- `ZoteroData/translators/AMS MathSciNet.js:94-95` 使用 BibTeX 内容、`setString(bibTex)` 和 `setHandler('itemDone', ...)`。
-- `ZoteroData/translators/Clinical Key.js:211-216` 使用 CSL JSON translator 处理预备好的 JSON 字符串。
+- `references/official/zotero/zotero-9.0.5-server/server_connector.js:806-836` 定义 Connector import endpoint，使用 `new Zotero.Translate.Import()`、`setString()`、`setTranslator()` 和 `translate({ libraryID, collections, forceTagType, saveOptions })` 导入字符串内容。
+- Zotero 9.0.5 插件运行态未暴露 `Zotero.loadTranslator`；因此本项目不采用 translator 内部常见的 `Zotero.loadTranslator("import")` 写法。
+- `ZoteroData/translators/NewsBank.js`、`AMS MathSciNet.js`、`Clinical Key.js` 仍作为输入格式和 translatorID 可处理 BibTeX/RIS/CSL JSON 字符串的旁证，而非插件端 API 入口依据。
 - BibTeX/RIS/CSL JSON translatorID 与导出小节相同，均来自本地 translator metadata。
 
 预校验规则：

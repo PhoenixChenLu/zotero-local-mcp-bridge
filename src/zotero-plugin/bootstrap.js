@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.37",
+  version: "0.1.38",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -1387,7 +1387,7 @@ async function executeImportWithTranslator(commandName, input, confirmation) {
   var normalized = normalizeImportItemsInput(commandName, input);
   validateStoredConfirmation(normalized, confirmation);
 
-  var importedItems = await runZoteroItemImport(normalized.content, normalized.translatorID);
+  var importedItems = await runZoteroItemImport(normalized.content, normalized.translatorID, normalized.collectionKeys);
   var postProcessedItems = [];
   for (var i = 0; i < importedItems.length; i += 1) {
     var item = resolveImportedZoteroItem(importedItems[i]);
@@ -1469,27 +1469,31 @@ function estimateImportItemCount(format, content) {
   }
 }
 
-function runZoteroItemImport(content, translatorID) {
-  if (!Zotero.loadTranslator) {
-    throw commandError("ITEM_IMPORT_UNSUPPORTED", "This Zotero runtime does not expose Zotero.loadTranslator", 500);
+async function runZoteroItemImport(content, translatorID, collectionKeys) {
+  if (!Zotero.Translate || !Zotero.Translate.Import) {
+    throw commandError("ITEM_IMPORT_UNSUPPORTED", "This Zotero runtime does not expose Zotero.Translate.Import", 500);
   }
 
-  return new Promise(function (resolve, reject) {
-    var importedItems = [];
-    var translation = Zotero.loadTranslator("import");
-    translation.setTranslator(translatorID);
+  var collectionIDs = [];
+  for (var index = 0; index < collectionKeys.length; index += 1) {
+    collectionIDs.push(getLocalUserCollection(collectionKeys[index]).id);
+  }
+
+  try {
+    var translation = new Zotero.Translate.Import();
     translation.setString(content);
-    translation.setHandler("itemDone", function (_, item) {
-      importedItems.push(item);
+    translation.setTranslator(translatorID);
+    return await translation.translate({
+      libraryID: Zotero.Libraries.userLibraryID,
+      collections: collectionIDs.length ? collectionIDs : null,
+      forceTagType: 1,
+      saveOptions: {
+        skipSelect: false
+      }
     });
-    translation.setHandler("done", function () {
-      resolve(importedItems);
-    });
-    translation.setHandler("error", function (_, error) {
-      reject(commandError("ITEM_IMPORT_FAILED", error && error.message ? error.message : "Zotero import translator failed", 500));
-    });
-    translation.translate();
-  });
+  } catch (error) {
+    throw commandError("ITEM_IMPORT_FAILED", error && error.message ? error.message : "Zotero import translator failed", 500);
+  }
 }
 
 function resolveImportedZoteroItem(item) {
