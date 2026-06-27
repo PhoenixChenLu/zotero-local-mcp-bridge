@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.35",
+  version: "0.1.36",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -1070,18 +1070,17 @@ function trimString(value) {
 }
 
 async function getProfileMode() {
-  var preferenceMode = (function () {
-    var pref = getPreferenceValue(REAL_PROFILE_PREFERENCE_MODE);
-
-    if (pref === "readonly" || pref === "test" || pref === "real-locked" || pref === "real-unlocked") {
-      return pref;
-    }
-
-    return REAL_PROFILE_DEFAULT_MODE;
-  })();
+  var pref = getPreferenceValue(REAL_PROFILE_PREFERENCE_MODE);
+  var preferenceMode = pref === "readonly" || pref === "test" || pref === "real-locked" || pref === "real-unlocked"
+    ? pref
+    : undefined;
 
   if (preferenceMode === "readonly" || preferenceMode === "test") {
     return preferenceMode;
+  }
+
+  if (!preferenceMode && await isTestProfileMarkerPresent()) {
+    return "test";
   }
 
   var state = await readRealProfileUnlockState();
