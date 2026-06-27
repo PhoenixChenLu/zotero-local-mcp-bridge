@@ -331,7 +331,7 @@
 
 执行：
 - 开始时间：2026-06-27 14:13:02 +08:00
-- 结束时间：进行中
+- 结束时间：2026-06-27 22:22
 - 操作内容：
   - Spark 子代理先写入了 Step 4 半成品；主线程审查发现 `typecheck` 失败、`commandRegistry` 运行时函数被错误地作为 type-only import、旧测试仍使用 `profileMode: "real"`、`docs/production-profile-unlock.md` 缺失。
   - 主线程接手后修复 `src/shared/commands.ts`、`src/zotero-plugin/commandRegistry.ts`、`tests/unit/zotero-plugin/profileGuard.test.ts`、`tests/unit/zotero-plugin/commandRegistry.test.ts`。
@@ -645,8 +645,8 @@
   - runtime `citation.format` 通过：bibliography 和 citation 均返回 Zotero citeproc HTML。
   - runtime `savedSearch.create` 通过：dry-run planId `plan_mqwddcng_5p4j6l4koxr`，execute 创建 saved search `STD4ECMX`。
   - runtime `savedSearch.update` 在 `0.1.40` 暴露缺陷：execute 能返回成功，但 Zotero 保存搜索条件未被替换，而是与旧条件叠加。原因是直接赋值 `search.conditions = {}` 不会清空 Zotero `Search` 内部条件；依据 Zotero 9.0.5 `search.js` 的 `fromJSON()` 实现，`0.1.41` 改为 `getConditions()` 后逐个 `removeCondition()`，再重新 `addCondition()`。
-  - `0.1.41` 修复包已生成，待用户重装后验证被污染的 `STD4ECMX` 能否被 `savedSearch.update` 正确替换条件。
-- 备注：这是最终完整 Zotero 功能面缺口之一；第一片先覆盖本地 user library，不支持 group library。
+  - runtime `savedSearch.update` 回归通过：安装 `0.1.41` 后，先回读被 `0.1.40` 污染的 `STD4ECMX`，确认旧状态为 23 条条件；随后 dry-run planId `plan_mqwg7q5k_u968wdc4eva`，execute 成功；再次回读后名称为 `Codex Bridge Saved Search 0.1.41 Replaced`，条件只剩 `title contains Runtime` 和 `noChildren true` 两条，旧条件已被清除。
+- 备注：这是最终完整 Zotero 功能面缺口之一；第一片先覆盖本地 user library，不支持 group library。步骤 12 已完成高级搜索、保存搜索和引用输出的第一批 runtime 验收。
 
 ### 步骤 13 - 删除、trash 与 merge duplicates
 
@@ -761,12 +761,9 @@
   - 真实主库解锁流程。
   - Codex 专用 skill。
   - 删除/merge duplicates。
-- 当前硬性执行顺序：先完成 item 创建/完整元数据编辑、BibTeX/RIS/CSL 导入导出、PDF annotation 读取/写入、高级搜索/保存搜索/引用格式输出；这些全部完成并通过测试后，才开始发布边缘文件、公开分发准备和 Codex skill。
+- 当前硬性执行顺序中的四组核心功能已经完成第一批 runtime 验收：item 创建/完整元数据编辑、BibTeX/RIS/CSL 导入导出、PDF annotation 读取/写入、高级搜索/保存搜索/引用格式输出。
 
 下一步：
 
-- 步骤 9：item 创建和完整元数据编辑。
-- 步骤 10：BibTeX / RIS / CSL 导入导出。
-- 步骤 11：PDF annotation 读取/写入。
-- 步骤 12：高级搜索、保存搜索、引用格式输出。
-- 只有上述四组功能完成并通过测试后，才开始公开发布边缘文件、发布准备和 Codex skill。
+- 步骤 13：删除、trash 与 merge duplicates。
+- 之后才开始公开发布边缘文件、发布准备和 Codex skill。
