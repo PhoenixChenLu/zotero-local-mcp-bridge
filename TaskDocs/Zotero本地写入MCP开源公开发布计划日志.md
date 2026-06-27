@@ -509,12 +509,12 @@
   - MCP dry-run target 解析增加 `collectionKeys` 与 `tags`，使 item 创建计划能返回 collection/tag 目标。
   - 插件运行时新增 `item.create`、`item.updateFields`、`item.updateCreators`、`item.setCollections` 的 dry-run/execute 分支。
   - 通过 Zotero 内部 API `new Zotero.Item(...)`、`item.setField(...)`、`item.setCreators(...)`、`item.addToCollection(...)`、`item.removeFromCollection(...)` 执行写入，不使用 Web API、不直写 SQLite。
-  - 插件内部测试版号提升到 `0.1.34`，README 与规格文档同步当前命令范围。
+  - 插件内部测试版号提升到 `0.1.35`，README 与规格文档同步当前命令范围。
 - 测试结果：
   - 2026-06-27 自动验证已通过：`npm run test`、`npm run build`、`npm run typecheck`、`npm run lint`、`npm run build:zotero-plugin`。
   - 新增/更新单元测试覆盖共享命令清单、MCP dry-run target、插件命令适配器和 XPI 静态包内容。
   - 2026-06-27 用户安装 `0.1.32` 后 health 通过，但认证后的 command endpoint 返回 500 空响应；定位为认证后 command context 缺少顶层兜底，且可选偏好读取过于脆弱。
-  - 已修复为 `0.1.34`：`getProfileMode()` 与 runtime root 偏好读取改为安全读取，command context 读取失败时返回 JSON 错误；测试/开发 XPI 构建时注入本项目 runtime root，release 构建仍保持 `runtimeRoot: null`；仍需安装 `0.1.34` 测试 XPI 后验证创建 document/book/journalArticle、编辑 title/date/creators/extra、设置 collections。
+  - 已修复为 `0.1.35`：`getProfileMode()` 与 runtime root 偏好读取改为安全读取，command context 读取失败时返回 JSON 错误；测试/开发 XPI 构建时注入本项目 runtime root，release 构建仍保持 `runtimeRoot: null`；真实主库 unlock state 路径改为 `PathUtils.join` 分段拼接，避免 Zotero 9 对带 `/` 的片段报 `NS_ERROR_FILE_UNRECOGNIZED_PATH`；仍需安装 `0.1.35` 测试 XPI 后验证创建 document/book/journalArticle、编辑 title/date/creators/extra、设置 collections。
 - 备注：本批完成 item 创建与元数据编辑第一组命令的自动验证；“完整元数据编辑”仍需 runtime 验收和更广字段覆盖后才能关闭步骤 9。
 
 ### 步骤 10 - BibTeX/RIS/CSL 导入导出

@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.34",
+  version: "0.1.35",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -23,7 +23,7 @@ var REAL_PROFILE_UNLOCK_MAX_TTL_MINUTES = 120;
 var REAL_PROFILE_UNLOCK_CONFIRMATION = "I understand and authorize temporary real-library write access";
 var REAL_PROFILE_PREFERENCE_MODE = "extensions.zotero-codex-bridge.profileMode";
 var REAL_PROFILE_DEFAULT_MODE = "real-locked";
-var REAL_PROFILE_STATE_PATH = "runtime/safety/real-profile-state.json";
+var REAL_PROFILE_STATE_PATH_PARTS = ["runtime", "safety", "real-profile-state.json"];
 
 var ZoteroCodexBridgeSafetyStateCommands = {
   "safety.unlockRealProfile": true,
@@ -1141,7 +1141,7 @@ async function saveRealProfileUnlockState(state) {
 }
 
 function resolveRealProfileStatePath() {
-  return PathUtils.join(resolveBridgeRuntimeRoot(), REAL_PROFILE_STATE_PATH);
+  return PathUtils.join.apply(PathUtils, [resolveBridgeRuntimeRoot()].concat(REAL_PROFILE_STATE_PATH_PARTS));
 }
 
 async function isTestProfileMarkerPresent() {

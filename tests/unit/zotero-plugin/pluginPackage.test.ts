@@ -35,7 +35,7 @@ describe("Zotero plugin package", () => {
   it("registers Zotero connector server health and command endpoints", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.34"');
+    expect(bootstrap).toContain('version: "0.1.35"');
     expect(bootstrap).toContain('"zotero-codex-bridge ok " + ZoteroCodexBridge.version');
     expect(bootstrap).toContain('healthPath: "/zotero-codex-bridge/health"');
     expect(bootstrap).toContain('commandPath: "/zotero-codex-bridge/command"');
@@ -82,6 +82,8 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("function getPreferenceValue");
     expect(bootstrap).toContain("getPreferenceValue(REAL_PROFILE_PREFERENCE_MODE)");
     expect(bootstrap).toContain('getPreferenceValue("extensions.zotero-codex-bridge.runtimeRoot")');
+    expect(bootstrap).toContain('REAL_PROFILE_STATE_PATH_PARTS = ["runtime", "safety", "real-profile-state.json"]');
+    expect(bootstrap).toContain("PathUtils.join.apply(PathUtils, [resolveBridgeRuntimeRoot()].concat(REAL_PROFILE_STATE_PATH_PARTS))");
     expect(bootstrap).not.toContain('if (preferenceMode === "real-unlocked")');
     expect(bootstrap).toContain("events: entries");
     expect(bootstrap).toContain("createBackupFileSnapshot");
