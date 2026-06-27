@@ -547,7 +547,7 @@
 
 执行：
 - 开始时间：2026-06-27
-- 结束时间：进行中
+- 结束时间：2026-06-27 20:48
 - 操作内容：
   - 第一切片实现只读导出命令：`export.bibtex`、`export.ris`、`export.cslJson`。
   - 同一测试版继续实现导入写命令：`import.bibtex`、`import.ris`、`import.cslJson`，均标记为 `profileWrite` 并强制 dry-run/confirmation。
@@ -560,7 +560,10 @@
   - 安全边界搜索通过：仅命中文档中的禁止项和历史调查记录，未发现源码实现或依赖配置引入 `ZOTERO_API_KEY`、`api.zotero.org`、`zotero.sqlite`、`sqlite write` 或任意 JS eval。
   - runtime 导出验收通过：安装 `0.1.37` 后，`export.bibtex`、`export.ris`、`export.cslJson` 对既有测试条目返回非空内容。
   - runtime 导入验收发现 `0.1.37` 缺陷：`import.bibtex` execute 返回 `ITEM_IMPORT_UNSUPPORTED`，原因是 Zotero 9.0.5 插件运行态不暴露 `Zotero.loadTranslator`。
-  - 0.1.38 修正：导入实现改用 `new Zotero.Translate.Import()`，collection 直接转换为 Zotero collection id 传给 `translate()`；待重新打包、安装后继续 runtime 导入验收。
+  - 0.1.38 修正：导入实现改用 `new Zotero.Translate.Import()`，collection 直接转换为 Zotero collection id 传给 `translate()`。
+  - 0.1.38 runtime 导入验收通过：`import.bibtex`、`import.ris`、`import.cslJson` 均完成 dry-run + confirmation + execute，各导入 1 个条目。
+  - runtime 导入结果：目标 collection `VZ3P3YEL`；BibTeX item `IH8MPEN8`，RIS item `YYV6EX7A`，CSL JSON item `JUQANXNE`。
+  - runtime 回读通过：`collection.getItems` 包含上述 3 个导入条目；导入条目可再次通过 `export.bibtex`、`export.ris`、`export.cslJson` 导出非空内容。
 - 备注：第一片导入全部按新增 item 处理，不做 duplicate merge、已有 item 更新或删除；这些属于后续高风险/高级导入策略。
 
 ### 步骤 11 - PDF annotation 读取与写入

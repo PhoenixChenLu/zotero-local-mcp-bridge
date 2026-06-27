@@ -193,6 +193,40 @@ Linked probe state after undo: moved to Zotero trash by attachment.undoAdded; It
 
 记录时间：2026-06-27 12:10:00
 
+`0.1.38` runtime 验收中验证了 BibTeX/RIS/CSL JSON 导入导出：
+
+```text
+Import/export collectionKey: VZ3P3YEL
+Import/export collection title: Codex Bridge Import Export 0.1.37 Runtime 191156
+
+Existing test item export:
+export.bibtex length: 942
+export.ris length: 688
+export.cslJson length: 1321
+
+Imported BibTeX item key: IH8MPEN8
+Imported BibTeX title: Codex Bridge Import BibTeX Runtime 0.1.38
+
+Imported RIS item key: YYV6EX7A
+Imported RIS title: Codex Bridge Import RIS Runtime 0.1.38
+
+Imported CSL JSON item key: JUQANXNE
+Imported CSL JSON title: Codex Bridge Import CSL JSON Runtime 0.1.38
+
+collection.getItems contains imported keys: true
+collection item count after import: 3
+
+Imported item re-export:
+export.bibtex length: 925
+export.ris length: 877
+export.cslJson length: 1323
+
+Dry-run import preview field:
+data.after.estimatedItemCount: 1
+```
+
+记录时间：2026-06-27 20:48:00
+
 ## Stop Conditions
 
 遇到以下情况立即停止，不执行写操作：
