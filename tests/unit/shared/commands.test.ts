@@ -20,6 +20,10 @@ describe("shared command definitions", () => {
       "collection.removeItems",
       "item.get",
       "item.search",
+      "item.create",
+      "item.updateFields",
+      "item.updateCreators",
+      "item.setCollections",
       "item.updateTags",
       "note.createChild",
       "attachment.get",
@@ -58,6 +62,10 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("attachment.renamePreferences.set")).toBe(true);
     expect(isWriteCommand("backup.snapshot.restore")).toBe(true);
     expect(isWriteCommand("backup.snapshot.prune")).toBe(true);
+    expect(isWriteCommand("item.create")).toBe(true);
+    expect(isWriteCommand("item.updateFields")).toBe(true);
+    expect(isWriteCommand("item.updateCreators")).toBe(true);
+    expect(isWriteCommand("item.setCollections")).toBe(true);
     expect(isWriteCommand("safety.unlockRealProfile")).toBe(true);
     expect(isWriteCommand("safety.lockRealProfile")).toBe(true);
   });

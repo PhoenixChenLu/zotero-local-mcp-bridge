@@ -223,10 +223,10 @@ function resolveTargets(input: unknown): CreatedDryRunPlan["resolvedTargets"] {
   const object = asObject(input);
   return {
     zoteroItemKeys: stringsFrom(object, "zoteroItemKey", "zoteroItemKeys", "targetZoteroItemKey"),
-    collectionKeys: stringsFrom(object, "collectionKey", "parentCollectionKey"),
+    collectionKeys: stringsFrom(object, "collectionKey", "collectionKeys", "parentCollectionKey"),
     attachmentKeys: stringsFrom(object, "attachmentKey"),
     filePaths: stringsFrom(object, "filePath"),
-    tags: stringsFrom(object, "addTags", "removeTags")
+    tags: stringsFrom(object, "tags", "addTags", "removeTags")
   };
 }
 

@@ -176,6 +176,10 @@ type ZoteroLocalCommandResult<T> = {
 - `zotero_collection_remove_items`：把 item 从 collection/subcollection 移除，不删除 item。
 - `zotero_item_get`：按 Zotero item key 读取本地 user library 条目详情，包括 itemType、title、creators、tags、collectionKeys、attachmentKeys、noteKeys 和 Zotero 原生 JSON 摘要。
 - `zotero_item_search`：在本地 user library 中按 query、itemType、collectionKey、tag 搜索顶层普通条目，返回最多 50 条摘要。
+- `zotero_item_create`：在本地 user library 创建普通 item，支持 itemType、fields、creators、collectionKeys 和 tags。
+- `zotero_item_update_fields`：按 Zotero item key 更新 item 字段元数据，不修改 creators、collections、tags、attachments 或 notes。
+- `zotero_item_update_creators`：按 Zotero item key 替换 creator 列表。
+- `zotero_item_set_collections`：按 Zotero item key 设置 item 所属 collection 列表，不删除 item 或 collection。
 - `zotero_item_update_tags`：添加或移除 tag。
 - `zotero_note_create_child`：为 item 创建 child note。
 - `zotero_attachment_get`：按 attachment key 读取附件详情、parent item key、文件路径、content type、linkMode 和 attachmentMode。

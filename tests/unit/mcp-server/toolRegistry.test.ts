@@ -125,6 +125,31 @@ describe("McpToolRegistry", () => {
     expect(result.plan.confirmation.token.startsWith("confirm_")).toBe(true);
   });
 
+  it("includes item create collection and tag targets in dry-run plans", async () => {
+    const registry = new McpToolRegistry({ pluginClient: new ZoteroPluginClient({ transport: async (command) => okResult(command.name) }) });
+
+    const result = await registry.callTool({
+      commandName: "item.create",
+      input: {
+        libraryScope: "local-user",
+        itemType: "book",
+        fields: { title: "Created by Codex Bridge" },
+        collectionKeys: ["COLL1", "COLL2"],
+        tags: ["imported", "review"]
+      }
+    });
+
+    expect(result.mode).toBe("dry-run");
+    if (result.mode !== "dry-run") {
+      throw new Error("Expected dry-run result");
+    }
+
+    expect(result.plan.operation).toBe("item.create");
+    expect(result.plan.resolvedTargets.collectionKeys).toEqual(["COLL1", "COLL2"]);
+    expect(result.plan.resolvedTargets.tags).toEqual(["imported", "review"]);
+    expect(result.plan.requiresBackup).toBe(true);
+  });
+
   it("rejects write execute calls without a confirmation token", async () => {
     const registry = new McpToolRegistry({ pluginClient: new ZoteroPluginClient({ transport: async (command) => okResult(command.name) }) });
 

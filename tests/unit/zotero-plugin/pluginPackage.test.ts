@@ -35,7 +35,7 @@ describe("Zotero plugin package", () => {
   it("registers Zotero connector server health and command endpoints", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.31"');
+    expect(bootstrap).toContain('version: "0.1.32"');
     expect(bootstrap).toContain('"zotero-codex-bridge ok " + ZoteroCodexBridge.version');
     expect(bootstrap).toContain('healthPath: "/zotero-codex-bridge/health"');
     expect(bootstrap).toContain('commandPath: "/zotero-codex-bridge/command"');
@@ -49,6 +49,10 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "collection.removeItems"');
     expect(bootstrap).toContain('commandName === "item.get"');
     expect(bootstrap).toContain('commandName === "item.search"');
+    expect(bootstrap).toContain('commandName === "item.create"');
+    expect(bootstrap).toContain('commandName === "item.updateFields"');
+    expect(bootstrap).toContain('commandName === "item.updateCreators"');
+    expect(bootstrap).toContain('commandName === "item.setCollections"');
     expect(bootstrap).toContain('commandName === "item.updateTags"');
     expect(bootstrap).toContain('commandName === "note.createChild"');
     expect(bootstrap).toContain('commandName === "attachment.get"');
@@ -88,6 +92,13 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("searchItems");
     expect(bootstrap).toContain("readAttachmentDetails");
     expect(bootstrap).toContain("item.toJSON");
+    expect(bootstrap).toContain("new Zotero.Item(normalized.itemType)");
+    expect(bootstrap).toContain("item.setField(fieldName, fields[fieldName])");
+    expect(bootstrap).toContain("item.setCreators(creators, { strict: true })");
+    expect(bootstrap).toContain("normalizeItemCreateInput");
+    expect(bootstrap).toContain("normalizeItemUpdateFieldsInput");
+    expect(bootstrap).toContain("normalizeItemUpdateCreatorsInput");
+    expect(bootstrap).toContain("normalizeItemSetCollectionsInput");
     expect(bootstrap).toContain("getCollections(true)");
     expect(bootstrap).toContain("backupFilesRootPath");
     expect(bootstrap).toContain("IOUtils.copy");

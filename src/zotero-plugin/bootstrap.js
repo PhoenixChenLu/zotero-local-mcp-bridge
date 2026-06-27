@@ -3,7 +3,7 @@
 
 var ZoteroCodexBridge = {
   id: "zotero-codex-bridge@example.com",
-  version: "0.1.31",
+  version: "0.1.32",
   healthPath: "/zotero-codex-bridge/health",
   commandPath: "/zotero-codex-bridge/command",
   authHeader: "x-zotero-codex-bridge-token",
@@ -43,6 +43,10 @@ var ZoteroCodexBridgeProfileWriteCommands = {
   "collection.move": true,
   "collection.addItems": true,
   "collection.removeItems": true,
+  "item.create": true,
+  "item.updateFields": true,
+  "item.updateCreators": true,
+  "item.setCollections": true,
   "item.updateTags": true,
   "note.createChild": true,
   "attachment.addFile": true,
@@ -62,6 +66,10 @@ var ZoteroCodexBridgeWriteCommands = {
   "collection.move": true,
   "collection.addItems": true,
   "collection.removeItems": true,
+  "item.create": true,
+  "item.updateFields": true,
+  "item.updateCreators": true,
+  "item.setCollections": true,
   "item.updateTags": true,
   "note.createChild": true,
   "attachment.addFile": true,
@@ -439,6 +447,109 @@ function registerCommandEndpoint() {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "ITEM_SEARCH_FAILED",
             message: error.message || "Failed to search Zotero items"
+          });
+        }
+      }
+
+      if (commandName === "item.create") {
+        try {
+          if (payload.mode === "execute") {
+            var createdItem = await executeItemCreate(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              createdItem,
+              undefined,
+              {
+                zoteroItemKeys: [createdItem.zoteroItemKey],
+                collectionKeys: createdItem.collectionKeys || [],
+                tags: createdItem.tags || []
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createItemCreateDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ITEM_CREATE_FAILED",
+            message: error.message || "Failed to create Zotero item"
+          });
+        }
+      }
+
+      if (commandName === "item.updateFields") {
+        try {
+          if (payload.mode === "execute") {
+            var fieldsUpdated = await executeItemUpdateFields(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              fieldsUpdated,
+              undefined,
+              { zoteroItemKeys: [fieldsUpdated.zoteroItemKey] },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createItemUpdateFieldsDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ITEM_UPDATE_FIELDS_FAILED",
+            message: error.message || "Failed to update Zotero item fields"
+          });
+        }
+      }
+
+      if (commandName === "item.updateCreators") {
+        try {
+          if (payload.mode === "execute") {
+            var creatorsUpdated = await executeItemUpdateCreators(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              creatorsUpdated,
+              undefined,
+              { zoteroItemKeys: [creatorsUpdated.zoteroItemKey] },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createItemUpdateCreatorsDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ITEM_UPDATE_CREATORS_FAILED",
+            message: error.message || "Failed to update Zotero item creators"
+          });
+        }
+      }
+
+      if (commandName === "item.setCollections") {
+        try {
+          if (payload.mode === "execute") {
+            var collectionsUpdated = await executeItemSetCollections(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              collectionsUpdated,
+              undefined,
+              {
+                zoteroItemKeys: [collectionsUpdated.zoteroItemKey],
+                collectionKeys: collectionsUpdated.collectionKeys
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, createItemSetCollectionsDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ITEM_SET_COLLECTIONS_FAILED",
+            message: error.message || "Failed to set Zotero item collections"
           });
         }
       }
@@ -1621,6 +1732,399 @@ function normalizeCollectionItemMembershipInput(input, operation) {
   };
 }
 
+function createItemCreateDryRun(input) {
+  var normalized = normalizeItemCreateInput(input);
+  return createWriteDryRunPlan(
+    "item.create",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [],
+      collectionKeys: normalized.collectionKeys,
+      attachmentKeys: [],
+      filePaths: [],
+      tags: normalized.tags
+    },
+    [],
+    { item: null },
+    {
+      itemType: normalized.itemType,
+      fields: normalized.fields,
+      creators: normalized.creators,
+      collectionKeys: normalized.collectionKeys,
+      tags: normalized.tags
+    }
+  );
+}
+
+async function executeItemCreate(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeItemCreateInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var item = new Zotero.Item(normalized.itemType);
+  item.libraryID = Zotero.Libraries.userLibraryID;
+  applyItemFields(item, normalized.fields);
+  applyItemCreators(item, normalized.creators);
+  item.setCollections(normalized.collectionKeys);
+  for (var i = 0; i < normalized.tags.length; i += 1) {
+    item.addTag(normalized.tags[i]);
+  }
+  await item.saveTx();
+
+  return readItemDetails({ zoteroItemKey: item.key });
+}
+
+function createItemUpdateFieldsDryRun(input) {
+  var normalized = normalizeItemUpdateFieldsInput(input);
+  return createWriteDryRunPlan(
+    "item.updateFields",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [normalized.zoteroItemKey],
+      collectionKeys: [],
+      attachmentKeys: [],
+      filePaths: [],
+      tags: []
+    },
+    [],
+    { fields: normalized.currentFields },
+    { fields: normalized.fields }
+  );
+}
+
+async function executeItemUpdateFields(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeItemUpdateFieldsInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var item = getLocalUserItem(normalized.zoteroItemKey);
+  applyItemFields(item, normalized.fields);
+  await item.saveTx();
+
+  return readItemDetails({ zoteroItemKey: item.key });
+}
+
+function createItemUpdateCreatorsDryRun(input) {
+  var normalized = normalizeItemUpdateCreatorsInput(input);
+  return createWriteDryRunPlan(
+    "item.updateCreators",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [normalized.zoteroItemKey],
+      collectionKeys: [],
+      attachmentKeys: [],
+      filePaths: [],
+      tags: []
+    },
+    [],
+    { creators: normalized.currentCreators },
+    { creators: normalized.creators }
+  );
+}
+
+async function executeItemUpdateCreators(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeItemUpdateCreatorsInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var item = getLocalUserItem(normalized.zoteroItemKey);
+  applyItemCreators(item, normalized.creators);
+  await item.saveTx();
+
+  return readItemDetails({ zoteroItemKey: item.key });
+}
+
+function createItemSetCollectionsDryRun(input) {
+  var normalized = normalizeItemSetCollectionsInput(input);
+  return createWriteDryRunPlan(
+    "item.setCollections",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [normalized.zoteroItemKey],
+      collectionKeys: normalized.collectionKeys,
+      attachmentKeys: [],
+      filePaths: [],
+      tags: []
+    },
+    [],
+    { collectionKeys: normalized.currentCollectionKeys },
+    {
+      collectionKeys: normalized.collectionKeys,
+      addedCollectionKeys: normalized.collectionKeysToAdd,
+      removedCollectionKeys: normalized.collectionKeysToRemove
+    }
+  );
+}
+
+async function executeItemSetCollections(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = normalizeItemSetCollectionsInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var item = getLocalUserItem(normalized.zoteroItemKey);
+  item.setCollections(normalized.collectionKeys);
+  await item.saveTx({ skipDateModifiedUpdate: true });
+
+  return readItemDetails({ zoteroItemKey: item.key });
+}
+
+function normalizeItemCreateInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "item.create input must be an object", 400);
+  }
+
+  if (input.libraryScope !== "local-user") {
+    throw commandError("LIBRARY_SCOPE_UNSUPPORTED", "Only libraryScope local-user is supported", 400);
+  }
+
+  var itemType = normalizeItemType(input.itemType);
+  var item = new Zotero.Item(itemType);
+  item.libraryID = Zotero.Libraries.userLibraryID;
+  var fields = normalizeItemFieldMap(input.fields || {}, item, "item.create");
+  var creators = normalizeCreatorArray(input.creators || [], "creators");
+  var collectionKeys = normalizeCollectionKeyArray(input.collectionKeys || [], "collectionKeys");
+  var tags = normalizeTagArray(input.tags || [], "tags");
+  if (collectionKeys.length + tags.length + creators.length > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", "item.create related object count exceeds limit 50", 400);
+  }
+
+  return {
+    libraryScope: "local-user",
+    itemType: itemType,
+    fields: fields,
+    creators: creators,
+    collectionKeys: collectionKeys,
+    tags: tags
+  };
+}
+
+function normalizeItemUpdateFieldsInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "item.updateFields input must be an object", 400);
+  }
+
+  var item = normalizeItemTarget(input.zoteroItemKey);
+  var fields = normalizeItemFieldMap(input.fields, item, "item.updateFields");
+  if (Object.keys(fields).length === 0) {
+    throw commandError("ITEM_FIELDS_REQUIRED", "item.updateFields requires at least one field", 400);
+  }
+
+  return {
+    zoteroItemKey: item.key,
+    fields: fields,
+    currentFields: readItemFieldSnapshot(item, Object.keys(fields))
+  };
+}
+
+function normalizeItemUpdateCreatorsInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "item.updateCreators input must be an object", 400);
+  }
+
+  var item = normalizeItemTarget(input.zoteroItemKey);
+  var creators = normalizeCreatorArray(input.creators, "creators");
+  return {
+    zoteroItemKey: item.key,
+    creators: creators,
+    currentCreators: item.getCreatorsJSON ? item.getCreatorsJSON() : []
+  };
+}
+
+function normalizeItemSetCollectionsInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "item.setCollections input must be an object", 400);
+  }
+
+  var item = normalizeItemTarget(input.zoteroItemKey);
+  var collectionKeys = normalizeCollectionKeyArray(input.collectionKeys, "collectionKeys");
+  var currentCollectionKeys = readItemCollectionKeys(item);
+  var currentSet = objectSet(currentCollectionKeys);
+  var nextSet = objectSet(collectionKeys);
+
+  return {
+    zoteroItemKey: item.key,
+    collectionKeys: collectionKeys,
+    currentCollectionKeys: currentCollectionKeys,
+    collectionKeysToAdd: collectionKeys.filter(function (collectionKey) {
+      return !currentSet[collectionKey];
+    }),
+    collectionKeysToRemove: currentCollectionKeys.filter(function (collectionKey) {
+      return !nextSet[collectionKey];
+    })
+  };
+}
+
+function normalizeItemType(itemType) {
+  if (typeof itemType !== "string" || itemType.trim().length === 0) {
+    throw commandError("ITEM_TYPE_REQUIRED", "itemType must be a non-empty string", 400);
+  }
+
+  var normalized = itemType.trim();
+  if (!Zotero.ItemTypes || !Zotero.ItemTypes.getID || !Zotero.ItemTypes.getID(normalized)) {
+    throw commandError("ITEM_TYPE_UNSUPPORTED", "Zotero item type is not supported: " + normalized, 400);
+  }
+
+  return normalized;
+}
+
+function normalizeItemFieldMap(fields, item, operation) {
+  if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
+    throw commandError("ITEM_FIELDS_INVALID", operation + " fields must be an object", 400);
+  }
+
+  var normalized = {};
+  Object.keys(fields).forEach(function (fieldName) {
+    if (!isEditableItemFieldName(fieldName)) {
+      throw commandError("ITEM_FIELD_RESERVED", "Field cannot be edited through fields: " + fieldName, 400);
+    }
+
+    var value = fields[fieldName];
+    if (!isPrimitiveItemFieldValue(value)) {
+      throw commandError("ITEM_FIELD_VALUE_INVALID", "Field value must be string, number, boolean, or null: " + fieldName, 400);
+    }
+
+    assertItemFieldValidForType(item, fieldName);
+    normalized[fieldName] = value === null ? "" : String(value);
+  });
+
+  return normalized;
+}
+
+function isEditableItemFieldName(fieldName) {
+  var reserved = {
+    key: true,
+    itemKey: true,
+    zoteroItemKey: true,
+    itemType: true,
+    creators: true,
+    collections: true,
+    collectionKeys: true,
+    tags: true,
+    attachments: true,
+    notes: true,
+    relations: true
+  };
+  return typeof fieldName === "string" && fieldName.trim().length > 0 && !reserved[fieldName];
+}
+
+function isPrimitiveItemFieldValue(value) {
+  return value === null || ["string", "number", "boolean"].indexOf(typeof value) !== -1;
+}
+
+function assertItemFieldValidForType(item, fieldName) {
+  if (!Zotero.ItemFields || !Zotero.ItemFields.getID || !Zotero.ItemFields.isValidForType) {
+    return;
+  }
+
+  var fieldID = Zotero.ItemFields.getID(fieldName);
+  if (!fieldID) {
+    throw commandError("ITEM_FIELD_UNKNOWN", "Unknown Zotero item field: " + fieldName, 400);
+  }
+
+  var itemTypeID = item.itemTypeID || Zotero.ItemTypes.getID(item.itemType);
+  var typeFieldID = Zotero.ItemFields.getFieldIDFromTypeAndBase
+    ? Zotero.ItemFields.getFieldIDFromTypeAndBase(itemTypeID, fieldID) || fieldID
+    : fieldID;
+  if (!Zotero.ItemFields.isValidForType(typeFieldID, itemTypeID)) {
+    throw commandError("ITEM_FIELD_UNSUPPORTED_FOR_TYPE", "Field " + fieldName + " is not valid for item type " + item.itemType, 400);
+  }
+}
+
+function normalizeCreatorArray(creators, fieldName) {
+  if (!Array.isArray(creators)) {
+    throw commandError("ITEM_CREATORS_INVALID", fieldName + " must be an array", 400);
+  }
+
+  if (creators.length > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", "Creator count exceeds limit 50", 400);
+  }
+
+  return creators.map(function (creator) {
+    if (!creator || typeof creator !== "object" || Array.isArray(creator)) {
+      throw commandError("ITEM_CREATOR_INVALID", fieldName + " must contain creator objects", 400);
+    }
+
+    if (typeof creator.creatorType !== "string" || creator.creatorType.trim().length === 0) {
+      throw commandError("ITEM_CREATOR_TYPE_REQUIRED", "creatorType must be a non-empty string", 400);
+    }
+
+    var normalized = {
+      creatorType: creator.creatorType.trim()
+    };
+    if (typeof creator.name === "string" && creator.name.trim().length > 0) {
+      normalized.name = creator.name.trim();
+      return normalized;
+    }
+
+    var firstName = typeof creator.firstName === "string" ? creator.firstName.trim() : "";
+    var lastName = typeof creator.lastName === "string" ? creator.lastName.trim() : "";
+    if (!firstName && !lastName) {
+      throw commandError("ITEM_CREATOR_NAME_REQUIRED", "Creator must include name or firstName/lastName", 400);
+    }
+
+    normalized.firstName = firstName;
+    normalized.lastName = lastName;
+    return normalized;
+  });
+}
+
+function normalizeCollectionKeyArray(value, fieldName) {
+  if (!Array.isArray(value)) {
+    throw commandError("COLLECTION_KEYS_INVALID", fieldName + " must be an array", 400);
+  }
+
+  if (value.length > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", fieldName + " count exceeds limit 50", 400);
+  }
+
+  var seen = {};
+  var collectionKeys = [];
+  value.forEach(function (collectionKey) {
+    if (typeof collectionKey !== "string" || collectionKey.trim().length === 0) {
+      throw commandError("COLLECTION_KEY_INVALID", fieldName + " must contain non-empty strings", 400);
+    }
+
+    var normalized = collectionKey.trim();
+    getLocalUserCollection(normalized);
+    if (!seen[normalized]) {
+      seen[normalized] = true;
+      collectionKeys.push(normalized);
+    }
+  });
+
+  return collectionKeys;
+}
+
+function applyItemFields(item, fields) {
+  Object.keys(fields).forEach(function (fieldName) {
+    item.setField(fieldName, fields[fieldName]);
+  });
+}
+
+function applyItemCreators(item, creators) {
+  item.setCreators(creators, { strict: true });
+}
+
+function readItemFieldSnapshot(item, fieldNames) {
+  var snapshot = {};
+  fieldNames.forEach(function (fieldName) {
+    snapshot[fieldName] = item.getField ? item.getField(fieldName) : undefined;
+  });
+  return snapshot;
+}
+
+function readItemCollectionKeys(item) {
+  return readItemDetails({ zoteroItemKey: item.key }).collectionKeys;
+}
+
+function objectSet(values) {
+  var set = {};
+  values.forEach(function (value) {
+    set[value] = true;
+  });
+  return set;
+}
+
 function createItemUpdateTagsDryRun(input) {
   var normalized = normalizeItemUpdateTagsInput(input);
   return createWriteDryRunPlan(
@@ -2753,6 +3257,8 @@ function stripRuntimeFields(input) {
   var runtimeFields = {
     existingItemKeys: true,
     toChangeItemKeys: true,
+    collectionKeysToAdd: true,
+    collectionKeysToRemove: true,
     tagsToAdd: true,
     tagsToRemove: true,
     noteHtml: true,

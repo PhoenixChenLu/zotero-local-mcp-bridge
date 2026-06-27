@@ -12,6 +12,10 @@ export type CommandName =
   | "collection.removeItems"
   | "item.get"
   | "item.search"
+  | "item.create"
+  | "item.updateFields"
+  | "item.updateCreators"
+  | "item.setCollections"
   | "item.updateTags"
   | "note.createChild"
   | "attachment.get"
@@ -53,6 +57,10 @@ export const COMMAND_DEFINITIONS = [
   { name: "collection.removeItems", write: true, profileWrite: true, inputFields: ["collectionKey", "zoteroItemKeys"] },
   { name: "item.get", write: false, inputFields: ["zoteroItemKey"] },
   { name: "item.search", write: false, inputFields: ["query", "itemType", "collectionKey", "tag", "limit"] },
+  { name: "item.create", write: true, profileWrite: true, inputFields: ["libraryScope", "itemType", "fields", "creators", "collectionKeys", "tags"] },
+  { name: "item.updateFields", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "fields"] },
+  { name: "item.updateCreators", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "creators"] },
+  { name: "item.setCollections", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "collectionKeys"] },
   { name: "item.updateTags", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "addTags", "removeTags"] },
   { name: "note.createChild", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "content", "contentFormat"] },
   { name: "attachment.get", write: false, inputFields: ["attachmentKey"] },

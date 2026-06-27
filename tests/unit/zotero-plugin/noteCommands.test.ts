@@ -1,10 +1,66 @@
 import { describe, expect, it } from "vitest";
 
 import { createChildNote, registerNoteCommands, type ZoteroNoteAdapter } from "../../../src/zotero-plugin/commands/noteCommands.js";
-import { updateItemTags, registerItemCommands, type ZoteroItemAdapter } from "../../../src/zotero-plugin/commands/itemCommands.js";
+import {
+  createItem,
+  registerItemCommands,
+  setItemCollections,
+  updateItemCreators,
+  updateItemFields,
+  updateItemTags,
+  type ZoteroItemAdapter
+} from "../../../src/zotero-plugin/commands/itemCommands.js";
 import { CommandRegistry } from "../../../src/zotero-plugin/commandRegistry.js";
 
 describe("tag and note commands", () => {
+  it("creates items through the item adapter", async () => {
+    await expect(
+      createItem(fakeItemAdapter(), {
+        libraryScope: "local-user",
+        itemType: "book",
+        fields: { title: "Created" },
+        creators: [{ creatorType: "author", firstName: "Ada", lastName: "Lovelace" }],
+        collectionKeys: ["COLL1"],
+        tags: ["review"]
+      })
+    ).resolves.toEqual({
+      zoteroItemKey: "ITEM_CREATED",
+      itemType: "book"
+    });
+  });
+
+  it("updates item fields, creators, and collections through the item adapter", async () => {
+    await expect(
+      updateItemFields(fakeItemAdapter(), {
+        zoteroItemKey: "ITEM1",
+        fields: { title: "Updated" }
+      })
+    ).resolves.toEqual({
+      zoteroItemKey: "ITEM1",
+      fields: { title: "Updated" }
+    });
+
+    await expect(
+      updateItemCreators(fakeItemAdapter(), {
+        zoteroItemKey: "ITEM1",
+        creators: [{ creatorType: "author", name: "OpenAI" }]
+      })
+    ).resolves.toEqual({
+      zoteroItemKey: "ITEM1",
+      creators: [{ creatorType: "author", name: "OpenAI" }]
+    });
+
+    await expect(
+      setItemCollections(fakeItemAdapter(), {
+        zoteroItemKey: "ITEM1",
+        collectionKeys: ["COLL1"]
+      })
+    ).resolves.toEqual({
+      zoteroItemKey: "ITEM1",
+      collectionKeys: ["COLL1"]
+    });
+  });
+
   it("updates item tags through the item adapter", async () => {
     await expect(
       updateItemTags(fakeItemAdapter(), {
@@ -40,6 +96,24 @@ describe("tag and note commands", () => {
 
     await expect(
       registry.execute({
+        name: "item.create",
+        requestId: "req_item",
+        input: {
+          libraryScope: "local-user",
+          itemType: "document"
+        }
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      commandName: "item.create",
+      data: {
+        zoteroItemKey: "ITEM_CREATED",
+        itemType: "document"
+      }
+    });
+
+    await expect(
+      registry.execute({
         name: "note.createChild",
         requestId: "req_note",
         input: {
@@ -62,6 +136,30 @@ describe("tag and note commands", () => {
 
 function fakeItemAdapter(): ZoteroItemAdapter {
   return {
+    async createItem(input) {
+      return {
+        zoteroItemKey: "ITEM_CREATED",
+        itemType: input.itemType
+      };
+    },
+    async updateItemFields(input) {
+      return {
+        zoteroItemKey: input.zoteroItemKey,
+        fields: input.fields
+      };
+    },
+    async updateItemCreators(input) {
+      return {
+        zoteroItemKey: input.zoteroItemKey,
+        creators: input.creators
+      };
+    },
+    async setItemCollections(input) {
+      return {
+        zoteroItemKey: input.zoteroItemKey,
+        collectionKeys: input.collectionKeys
+      };
+    },
     async updateItemTags(input) {
       return {
         zoteroItemKey: input.zoteroItemKey,
