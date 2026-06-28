@@ -12,14 +12,16 @@ const xpiPath = path.resolve("dist", "zotero-local-mcp-bridge.xpi");
 const runtimeAuthTokenPath = path.resolve("runtime", "auth", "bridge-token");
 const supportedLocalesPath = path.resolve("src", "zotero-plugin", "locale", "supportedLocales.json");
 const fluentResourceName = "zotero-local-mcp-bridge.ftl";
+const escapedRuntimeRootForBundle = path.resolve(".").replace(/\\/g, "\\\\");
 
 describe("Zotero plugin package", () => {
   it("declares compatibility with Zotero 9", async () => {
     const manifest = JSON.parse(await readFile(path.resolve("src", "zotero-plugin", "manifest.json"), "utf8")) as {
+      homepage_url: string;
       applications: {
         zotero: {
           id: string;
-          update_url: string;
+          update_url?: string;
           strict_min_version: string;
           strict_max_version: string;
         };
@@ -27,9 +29,8 @@ describe("Zotero plugin package", () => {
     };
 
     expect(manifest.applications.zotero.id).toBe("zotero-local-mcp-bridge@example.com");
-    expect(manifest.applications.zotero.update_url).toBe(
-      "https://example.com/zotero-local-mcp-bridge-local-test/updates.json"
-    );
+    expect(manifest.homepage_url).toBe("https://github.com/PhoenixChenLu/zotero-local-mcp-bridge");
+    expect(manifest.applications.zotero.update_url).toBeUndefined();
     expect(manifest.applications.zotero.strict_min_version).toBe("7.0");
     expect(manifest.applications.zotero.strict_max_version).toBe("9.0.*");
   });
@@ -255,7 +256,7 @@ describe("Zotero plugin package", () => {
     const bootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
     expect(bootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
     expect(bootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
-    expect(bootstrap.stdout).not.toContain("H:\\\\ProgramDocument\\\\MixLanguage\\\\Zotero-codex-bridge");
+    expect(bootstrap.stdout).not.toContain(`runtimeRoot: "${escapedRuntimeRootForBundle}"`);
   });
 
   it("defines settings UI resources and defaults", async () => {
@@ -408,11 +409,11 @@ describe("Zotero plugin package", () => {
       const testBootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
       const testPreferences = await execFileAsync("tar", ["-xOf", xpiPath, "preferences.js"], { windowsHide: true });
       expect(testBootstrap.stdout).toContain(`expectedAuthToken: "${tokenForTestBuild}"`);
-      expect(testBootstrap.stdout).toContain('runtimeRoot: "H:\\\\ProgramDocument\\\\MixLanguage\\\\Zotero-codex-bridge"');
+      expect(testBootstrap.stdout).toContain(`runtimeRoot: "${escapedRuntimeRootForBundle}"`);
       expect(testBootstrap.stdout).not.toContain("expectedAuthToken: null");
       expect(testBootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
       expect(testBootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
-      expect(testPreferences.stdout).toContain('var injectedRuntimeRoot = "H:\\\\ProgramDocument\\\\MixLanguage\\\\Zotero-codex-bridge"');
+      expect(testPreferences.stdout).toContain(`var injectedRuntimeRoot = "${escapedRuntimeRootForBundle}"`);
       expect(testPreferences.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
 
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });

@@ -3,11 +3,10 @@
   "name": "Zotero Local MCP Bridge",
   "version": "0.1.56",
   "description": "Local command bridge for controlled Zotero management through MCP clients.",
-  "homepage_url": "https://example.com/zotero-local-mcp-bridge-local-test",
+  "homepage_url": "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge",
   "applications": {
     "zotero": {
       "id": "zotero-local-mcp-bridge@example.com",
-      "update_url": "https://example.com/zotero-local-mcp-bridge-local-test/updates.json",
       "strict_min_version": "7.0",
       "strict_max_version": "9.0.*"
     }
