@@ -21,7 +21,7 @@ describe("Zotero plugin package", () => {
       applications: {
         zotero: {
           id: string;
-          update_url?: string;
+          update_url: string;
           strict_min_version: string;
           strict_max_version: string;
         };
@@ -30,9 +30,11 @@ describe("Zotero plugin package", () => {
 
     expect(manifest.applications.zotero.id).toBe("zotero-local-mcp-bridge@example.com");
     expect(manifest.homepage_url).toBe("https://github.com/PhoenixChenLu/zotero-local-mcp-bridge");
-    expect(manifest.applications.zotero.update_url).toBeUndefined();
+    expect(manifest.applications.zotero.update_url).toBe(
+      "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge/releases/latest/download/updates.json"
+    );
     expect(manifest.applications.zotero.strict_min_version).toBe("7.0");
-    expect(manifest.applications.zotero.strict_max_version).toBe("9.0.*");
+    expect(manifest.applications.zotero.strict_max_version).toBe("9.*");
   });
 
   it("registers only the plugin-hosted Zotero connector MCP endpoint", async () => {

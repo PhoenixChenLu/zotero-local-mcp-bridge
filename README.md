@@ -189,8 +189,8 @@ The user can reply "approve all", or reply "approve 1 and 3, reject 2".
 ## ❤️ Support Author
 
 <div align="center">
-  <a id="ko-fi-support" href="https://ko-fi.com/"><img alt="Ko-fi" src="https://img.shields.io/badge/Ko--fi-Support%20Author-ff5e5b?logo=kofi&logoColor=white"></a>
-  <a id="afdian-support" href="https://afdian.com/"><img alt="Afdian" src="https://img.shields.io/badge/Afdian-Support%20Author-946ce6"></a>
+  <a id="ko-fi-support" href="https://ko-fi.com/phoenixchen"><img alt="Ko-fi" src="https://img.shields.io/badge/Ko--fi-Support%20Author-ff5e5b?logo=kofi&logoColor=white"></a>
+  <a id="afdian-support" href="https://afdian.com/a/PhoenixChen"><img alt="Afdian" src="https://img.shields.io/badge/Afdian-Support%20Author-946ce6"></a>
 </div>
 
 ---

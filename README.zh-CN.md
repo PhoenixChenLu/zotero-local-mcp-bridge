@@ -189,8 +189,8 @@ http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 ## ❤️ 支持作者
 
 <div align="center">
-  <a id="ko-fi-support" href="https://ko-fi.com/"><img alt="Ko-fi" src="https://img.shields.io/badge/Ko--fi-Support%20Author-ff5e5b?logo=kofi&logoColor=white"></a>
-  <a id="afdian-support" href="https://afdian.com/"><img alt="爱发电" src="https://img.shields.io/badge/%E7%88%B1%E5%8F%91%E7%94%B5-%E6%94%AF%E6%8C%81%E4%BD%9C%E8%80%85-946ce6"></a>
+  <a id="ko-fi-support" href="https://ko-fi.com/phoenixchen"><img alt="Ko-fi" src="https://img.shields.io/badge/Ko--fi-Support%20Author-ff5e5b?logo=kofi&logoColor=white"></a>
+  <a id="afdian-support" href="https://afdian.com/a/PhoenixChen"><img alt="爱发电" src="https://img.shields.io/badge/%E7%88%B1%E5%8F%91%E7%94%B5-%E6%94%AF%E6%8C%81%E4%BD%9C%E8%80%85-946ce6"></a>
 </div>
 
 ---
