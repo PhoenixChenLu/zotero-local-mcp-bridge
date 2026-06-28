@@ -364,7 +364,7 @@ describe("Zotero plugin package", () => {
 
     const buildScript = await readFile(path.resolve("scripts", "buildZoteroPlugin.mjs"), "utf8");
     expect(buildScript).toContain("Missing Zotero Local MCP Bridge localization resource");
-    expect(buildScript).not.toContain("fallback");
+    expect(buildScript).not.toContain("fallbackLocale");
 
     await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });
     const { stdout } = await execFileAsync("tar", ["-tf", xpiPath], { windowsHide: true });

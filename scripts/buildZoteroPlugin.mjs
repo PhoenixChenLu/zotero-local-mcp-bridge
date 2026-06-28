@@ -56,10 +56,46 @@ async function replaceBuildPlaceholders(source) {
 }
 
 async function zipArchive(sourceDir, destinationPath) {
-  await execFileAsync("zip", ["-r", destinationPath, "manifest.json", "bootstrap.js", "prefs.js", "preferences.xhtml", "preferences.js", "preferences.css", "locale"], {
-    cwd: sourceDir,
-    windowsHide: true
-  });
+  const archiveEntries = [
+    "manifest.json",
+    "bootstrap.js",
+    "prefs.js",
+    "preferences.xhtml",
+    "preferences.js",
+    "preferences.css",
+    "locale"
+  ];
+
+  try {
+    await execFileAsync("zip", ["-r", destinationPath, ...archiveEntries], {
+      cwd: sourceDir,
+      windowsHide: true
+    });
+    return;
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== "ENOENT" || process.platform !== "win32") {
+      throw error;
+    }
+  }
+
+  const fallbackScriptPath = path.join(sourceDir, "__compress-archive.ps1");
+  await writeFile(
+    fallbackScriptPath,
+    [
+      "param([string] $destination, [Parameter(ValueFromRemainingArguments = $true)] [string[]] $paths)",
+      "Compress-Archive -LiteralPath $paths -DestinationPath $destination -Force"
+    ].join("\n"),
+    "utf8"
+  );
+
+  try {
+    await execFileAsync("powershell", ["-NoProfile", "-NonInteractive", "-File", fallbackScriptPath, destinationPath, ...archiveEntries], {
+      cwd: sourceDir,
+      windowsHide: true
+    });
+  } finally {
+    await rm(fallbackScriptPath, { force: true });
+  }
 }
 
 async function stageLocaleFiles() {
