@@ -1,6 +1,6 @@
 # Zotero Plugin Development Install
 
-本文件记录 `ZoteroCodexBridgeTest` 中插件开发加载路径。依据 Zotero 官方插件开发文档的 “Setting Up a Plugin Development Environment” 小节，以及官方 sample `zotero/make-it-red` README。
+本文件记录 `ZoteroLocalMcpBridgeTest` 中插件开发加载路径。依据 Zotero 官方插件开发文档的 “Setting Up a Plugin Development Environment” 小节，以及官方 sample `zotero/make-it-red` README。
 
 官方来源：
 
@@ -9,10 +9,10 @@
 
 ## Current XPI Path
 
-当前仓库 `dist\zotero-codex-bridge.xpi` 同时承载发布与测试产物，取决于构建脚本参数：
+当前仓库 `dist\zotero-local-mcp-bridge.xpi` 同时承载发布与测试产物，取决于构建脚本参数：
 
 ```text
-H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\dist\zotero-codex-bridge.xpi
+H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\dist\zotero-local-mcp-bridge.xpi
 ```
 
 命令推荐：
@@ -33,7 +33,7 @@ npm run build:zotero-plugin:dev
 前置条件：
 
 - Zotero 已关闭。
-- 当前 profile 是 `ZoteroCodexBridgeTest`。
+- 当前 profile 是 `ZoteroLocalMcpBridgeTest`。
 - Profile directory 是：
 
 ```text
@@ -49,7 +49,7 @@ H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\src\zotero-plugin
 在测试 profile 的 `extensions` 目录下创建 extension proxy 文件：
 
 ```text
-H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroProfile\extensions\zotero-codex-bridge@example.com
+H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroProfile\extensions\zotero-local-mcp-bridge@example.com
 ```
 
 文件内容为一行绝对路径：
@@ -78,12 +78,12 @@ extensions.lastAppVersion
 开发调试时建议从命令行启动 Zotero，并指定测试 profile：
 
 ```powershell
-& "A:\Program Files\Zotero\zotero.exe" -P "ZoteroCodexBridgeTest" -purgecaches -ZoteroDebugText -jsconsole
+& "A:\Program Files\Zotero\zotero.exe" -P "ZoteroLocalMcpBridgeTest" -purgecaches -ZoteroDebugText -jsconsole
 ```
 
 说明：
 
-- `-P "ZoteroCodexBridgeTest"` 指定测试 profile。
+- `-P "ZoteroLocalMcpBridgeTest"` 指定测试 profile。
 - `-purgecaches` 强制 Zotero 重新读取缓存文件；官方文档说明 Zotero 7 后可能不再总是必要，但本项目调试 bootstrap/manifest 时保留该参数。
 - `-ZoteroDebugText` 和 `-jsconsole` 用于查看插件启动和 endpoint 注册错误。
 
@@ -93,15 +93,15 @@ extensions.lastAppVersion
 
 ```powershell
 Invoke-WebRequest `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/health `
-  -UserAgent "ZoteroCodexBridge/0.1.31" `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/health `
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31" `
   -UseBasicParsing
 ```
 
 预期返回：
 
 ```text
-zotero-codex-bridge ok 0.1.31 zotero-codex-bridge@example.com test
+zotero-local-mcp-bridge ok 0.1.31 zotero-local-mcp-bridge@example.com test
 ```
 
 ## Command Endpoint Probe
@@ -110,11 +110,11 @@ zotero-codex-bridge ok 0.1.31 zotero-codex-bridge@example.com test
 
 ```powershell
 Invoke-WebRequest `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
   -Body '{"name":"audit.list","requestId":"req_auth_test","input":{}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.31" `
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31" `
   -SkipHttpErrorCheck `
   -UseBasicParsing
 ```
@@ -125,12 +125,12 @@ Invoke-WebRequest `
 
 ```powershell
 Invoke-WebRequest `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"="wrong-token"} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"="wrong-token"} `
   -Body '{"name":"collection.getTree","requestId":"req_auth_invalid","input":{"libraryScope":"local-user"}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.31" `
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31" `
   -SkipHttpErrorCheck `
   -UseBasicParsing
 ```
@@ -143,12 +143,12 @@ Invoke-WebRequest `
 $token = (Get-Content "H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\runtime\auth\bridge-token" -Raw).Trim()
 
 Invoke-WebRequest `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body '{"name":"collection.getTree","requestId":"req_collection_tree","input":{"libraryScope":"local-user"}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.31" `
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31" `
   -UseBasicParsing
 ```
 
@@ -160,12 +160,12 @@ Invoke-WebRequest `
 $token = (Get-Content "H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\runtime\auth\bridge-token" -Raw).Trim()
 
 $dryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
-  -Body '{"name":"collection.create","requestId":"req_collection_create_dry","input":{"libraryScope":"local-user","name":"Codex Bridge Acceptance 0.1.31"}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
+  -Body '{"name":"collection.create","requestId":"req_collection_create_dry","input":{"libraryScope":"local-user","name":"Local MCP Bridge Acceptance 0.1.31"}}' `
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $dryRun.data.plan.planId
 $dryRun.data.plan.confirmation.token
@@ -182,7 +182,7 @@ $executeBody = @{
   mode = "execute"
   input = @{
     libraryScope = "local-user"
-    name = "Codex Bridge Acceptance 0.1.31"
+    name = "Local MCP Bridge Acceptance 0.1.31"
   }
   confirmation = @{
     planId = $dryRun.data.plan.planId
@@ -191,15 +191,15 @@ $executeBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 $execute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $executeBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 ```
 
-预期：返回 `ok: true`，`data.collectionKey` 有值，并且 Zotero UI 可见 `Codex Bridge Acceptance 0.1.31`。
+预期：返回 `ok: true`，`data.collectionKey` 有值，并且 Zotero UI 可见 `Local MCP Bridge Acceptance 0.1.31`。
 
 `collection.rename` 必须先 dry-run：
 
@@ -207,19 +207,19 @@ $execute = Invoke-RestMethod `
 $collectionKey = $execute.data.collectionKey
 
 $renameDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "collection.rename"
     requestId = "req_collection_rename_dry"
     input = @{
       collectionKey = $collectionKey
-      name = "Codex Bridge Acceptance 0.1.31 Renamed"
+      name = "Local MCP Bridge Acceptance 0.1.31 Renamed"
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $renameExecuteBody = @{
   name = "collection.rename"
@@ -227,7 +227,7 @@ $renameExecuteBody = @{
   mode = "execute"
   input = @{
     collectionKey = $collectionKey
-    name = "Codex Bridge Acceptance 0.1.31 Renamed"
+    name = "Local MCP Bridge Acceptance 0.1.31 Renamed"
   }
   confirmation = @{
     planId = $renameDryRun.data.plan.planId
@@ -236,12 +236,12 @@ $renameExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 $execute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $renameExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 ```
 
 预期：返回 `ok: true`，Zotero UI 可见新名称。
@@ -250,10 +250,10 @@ $execute = Invoke-RestMethod `
 
 ```powershell
 $moveDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "collection.move"
     requestId = "req_collection_move_dry"
@@ -261,7 +261,7 @@ $moveDryRun = Invoke-RestMethod `
       collectionKey = $collectionKey
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $moveExecuteBody = @{
   name = "collection.move"
@@ -277,12 +277,12 @@ $moveExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $moveExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 ```
 
 预期：返回 `ok: true`，`data.parentCollectionKey` 为空。
@@ -291,10 +291,10 @@ Invoke-RestMethod `
 
 ```powershell
 $items = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "collection.getItems"
     requestId = "req_collection_get_items"
@@ -302,7 +302,7 @@ $items = Invoke-RestMethod `
       collectionKey = $collectionKey
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $items.data.zoteroItemKeys
 ```
@@ -314,10 +314,10 @@ $itemAKey = "7N4QZKCM"
 $itemBKey = "K7P8J5XF"
 
 $itemA = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "item.get"
     requestId = "req_item_get_a"
@@ -325,13 +325,13 @@ $itemA = Invoke-RestMethod `
       zoteroItemKey = $itemAKey
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $itemB = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "item.get"
     requestId = "req_item_get_b"
@@ -339,33 +339,33 @@ $itemB = Invoke-RestMethod `
       zoteroItemKey = $itemBKey
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $itemA.data | Select-Object zoteroItemKey,itemType,title,collectionKeys,attachmentKeys,noteKeys
 $itemB.data | Select-Object zoteroItemKey,itemType,title,collectionKeys,attachmentKeys,noteKeys
 ```
 
-预期：返回 `ok: true`，title 分别为 `Zotero Codex Bridge Test Item A` 和 `Zotero Codex Bridge Test Item B`。
+预期：返回 `ok: true`，title 分别为 `Zotero Local MCP Bridge Test Item A` 和 `Zotero Local MCP Bridge Test Item B`。
 
 `item.search` 是只读命令，可按 title/query、collection、itemType、tag 搜索本地 user library 顶层条目：
 
 ```powershell
 $itemSearch = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "item.search"
     requestId = "req_item_search"
     input = @{
-      query = "Zotero Codex Bridge Test Item"
+      query = "Zotero Local MCP Bridge Test Item"
       collectionKey = $collectionKey
       itemType = "document"
       limit = 10
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $itemSearch.data.items | Select-Object zoteroItemKey,itemType,title,collectionKeys
 ```
@@ -378,10 +378,10 @@ $itemSearch.data.items | Select-Object zoteroItemKey,itemType,title,collectionKe
 $itemAKey = "7N4QZKCM"
 
 $addItemsDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "collection.addItems"
     requestId = "req_collection_add_items_dry"
@@ -390,7 +390,7 @@ $addItemsDryRun = Invoke-RestMethod `
       zoteroItemKeys = @($itemAKey)
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $addItemsExecuteBody = @{
   name = "collection.addItems"
@@ -407,12 +407,12 @@ $addItemsExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $addItemsExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 ```
 
 预期：返回 `ok: true`，`data.addedItemKeys` 包含 Item A key，随后 `collection.getItems` 能读到 Item A。
@@ -421,10 +421,10 @@ Invoke-RestMethod `
 
 ```powershell
 $removeItemsDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "collection.removeItems"
     requestId = "req_collection_remove_items_dry"
@@ -433,7 +433,7 @@ $removeItemsDryRun = Invoke-RestMethod `
       zoteroItemKeys = @($itemAKey)
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $removeItemsExecuteBody = @{
   name = "collection.removeItems"
@@ -450,12 +450,12 @@ $removeItemsExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $removeItemsExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 ```
 
 预期：返回 `ok: true`，`data.removedItemKeys` 包含 Item A key，Zotero UI 中 Item A 未被删除，只是不再属于该 collection。
@@ -464,10 +464,10 @@ Invoke-RestMethod `
 
 ```powershell
 $tagAddDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "item.updateTags"
     requestId = "req_item_update_tags_add_dry"
@@ -477,7 +477,7 @@ $tagAddDryRun = Invoke-RestMethod `
       removeTags = @()
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $tagAddExecuteBody = @{
   name = "item.updateTags"
@@ -495,12 +495,12 @@ $tagAddExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $tagAddExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 ```
 
 预期：返回 `ok: true`，`data.addedTags` 包含 `codex-bridge-test`，Zotero UI 中 Item A 可见该 tag。
@@ -509,10 +509,10 @@ Invoke-RestMethod `
 
 ```powershell
 $tagRemoveDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "item.updateTags"
     requestId = "req_item_update_tags_remove_dry"
@@ -522,7 +522,7 @@ $tagRemoveDryRun = Invoke-RestMethod `
       removeTags = @("codex-bridge-test")
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $tagRemoveExecuteBody = @{
   name = "item.updateTags"
@@ -540,12 +540,12 @@ $tagRemoveExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $tagRemoveExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 ```
 
 预期：返回 `ok: true`，`data.removedTags` 包含 `codex-bridge-test`，Zotero UI 中 Item A 不再显示该 tag。
@@ -554,20 +554,20 @@ Invoke-RestMethod `
 
 ```powershell
 $noteDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "note.createChild"
     requestId = "req_note_create_child_dry"
     input = @{
       zoteroItemKey = $itemAKey
-      content = "Codex bridge child note runtime test"
+      content = "Local MCP bridge child note runtime test"
       contentFormat = "text"
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $noteDryRun.data.plan.planId
 $noteDryRun.data.plan.confirmation.token
@@ -585,7 +585,7 @@ $noteExecuteBody = @{
   mode = "execute"
   input = @{
     zoteroItemKey = $itemAKey
-    content = "Codex bridge child note runtime test"
+    content = "Local MCP bridge child note runtime test"
     contentFormat = "text"
   }
   confirmation = @{
@@ -595,12 +595,12 @@ $noteExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 $noteExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $noteExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $noteExecute.data.noteKey
 ```
@@ -611,10 +611,10 @@ $noteExecute.data.noteKey
 
 ```powershell
 $attachments = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.getForItem"
     requestId = "req_attachment_get_for_item"
@@ -622,7 +622,7 @@ $attachments = Invoke-RestMethod `
       zoteroItemKey = $itemAKey
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $attachments.data.attachments
 ```
@@ -635,10 +635,10 @@ $attachments.data.attachments
 $attachmentKey = "FQ8474SV"
 
 $attachmentGet = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.get"
     requestId = "req_attachment_get"
@@ -646,7 +646,7 @@ $attachmentGet = Invoke-RestMethod `
       attachmentKey = $attachmentKey
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $attachmentGet.data | Select-Object attachmentKey,parentZoteroItemKey,title,filename,contentType,attachmentMode,filePath
 ```
@@ -659,10 +659,10 @@ $attachmentGet.data | Select-Object attachmentKey,parentZoteroItemKey,title,file
 $samplePdfPath = "H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\tests\fixtures\attachments\sample-paper.pdf"
 
 $attachmentAddDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.addFile"
     requestId = "req_attachment_add_file_copy_dry"
@@ -672,7 +672,7 @@ $attachmentAddDryRun = Invoke-RestMethod `
       attachmentMode = "copy"
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $attachmentAddDryRun.data.plan.planId
 $attachmentAddDryRun.data.plan.confirmation.token
@@ -700,12 +700,12 @@ $attachmentAddExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 $attachmentAddExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $attachmentAddExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $attachmentAddExecute.data.attachmentKey
 ```
@@ -719,10 +719,10 @@ $samplePdfAttachmentKey = "FQ8474SV"
 $itemBKey = "K7P8J5XF"
 
 $attachmentMoveDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.moveToItem"
     requestId = "req_attachment_move_to_item_dry"
@@ -731,7 +731,7 @@ $attachmentMoveDryRun = Invoke-RestMethod `
       targetZoteroItemKey = $itemBKey
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $attachmentMoveDryRun.data.before
 $attachmentMoveDryRun.data.after
@@ -757,12 +757,12 @@ $attachmentMoveExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 $attachmentMoveExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $attachmentMoveExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $attachmentMoveExecute.data
 ```
@@ -775,26 +775,26 @@ $attachmentMoveExecute.data
 $samplePdfAttachmentKey = "FQ8474SV"
 
 $attachmentRenameDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.rename"
     requestId = "req_attachment_rename_dry"
     input = @{
       attachmentKey = $samplePdfAttachmentKey
-      title = "Codex Bridge Runtime PDF"
+      title = "Local MCP Bridge Runtime PDF"
       renameFile = $false
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $attachmentRenameDryRun.data.before
 $attachmentRenameDryRun.data.after
 ```
 
-预期：返回 `ok: true`，`data.mode` 为 `dry-run`，`data.after.title` 为 `Codex Bridge Runtime PDF`，`data.after.action` 为 `rename` 或已相同时为 `skip`。
+预期：返回 `ok: true`，`data.mode` 为 `dry-run`，`data.after.title` 为 `Local MCP Bridge Runtime PDF`，`data.after.action` 为 `rename` 或已相同时为 `skip`。
 
 dry-run 后再 execute：
 
@@ -805,7 +805,7 @@ $attachmentRenameExecuteBody = @{
   mode = "execute"
   input = @{
     attachmentKey = $samplePdfAttachmentKey
-    title = "Codex Bridge Runtime PDF"
+    title = "Local MCP Bridge Runtime PDF"
     renameFile = $false
   }
   confirmation = @{
@@ -815,52 +815,52 @@ $attachmentRenameExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 $attachmentRenameExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $attachmentRenameExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $attachmentRenameExecute.data
 ```
 
-预期：返回 `ok: true`，`data.title` 为 `Codex Bridge Runtime PDF`。随后用 Item B 的 `attachment.getForItem` 复核该 attachment 的 title。
+预期：返回 `ok: true`，`data.title` 为 `Local MCP Bridge Runtime PDF`。随后用 Item B 的 `attachment.getForItem` 复核该 attachment 的 title。
 
 继续测试 `renameFile: true`。这会同步 sample PDF 的文件名，使用 Zotero 内置 `renameAttachmentFile()`，不覆盖既有文件：
 
 ```powershell
 $attachmentRenameFileDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.rename"
     requestId = "req_attachment_rename_file_dry"
     input = @{
       attachmentKey = $samplePdfAttachmentKey
-      title = "Codex Bridge Runtime PDF File Rename"
+      title = "Local MCP Bridge Runtime PDF File Rename"
       renameFile = $true
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $attachmentRenameFileDryRun.data.before
 $attachmentRenameFileDryRun.data.after
 
 $attachmentRenameFileExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.rename"
     requestId = "req_attachment_rename_file_execute"
     mode = "execute"
     input = @{
       attachmentKey = $samplePdfAttachmentKey
-      title = "Codex Bridge Runtime PDF File Rename"
+      title = "Local MCP Bridge Runtime PDF File Rename"
       renameFile = $true
     }
     confirmation = @{
@@ -868,7 +868,7 @@ $attachmentRenameFileExecute = Invoke-RestMethod `
       confirmationToken = $attachmentRenameFileDryRun.data.plan.confirmation.token
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $attachmentRenameFileExecute.data
 $attachmentRenameFileExecute.data.backup
@@ -882,12 +882,12 @@ Test-Path $attachmentRenameFileExecute.data.backup.manifestPath
 
 ```powershell
 $renamePrefs = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body '{"name":"attachment.renamePreferences.get","requestId":"req_attachment_rename_prefs_get","input":{}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $renamePrefs.data
 ```
@@ -906,25 +906,25 @@ $renamePrefsSetInput = @{
 }
 
 $renamePrefsDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.renamePreferences.set"
     requestId = "req_attachment_rename_prefs_set_dry"
     input = $renamePrefsSetInput
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $renamePrefsDryRun.data.before
 $renamePrefsDryRun.data.after
 
 $renamePrefsExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.renamePreferences.set"
     requestId = "req_attachment_rename_prefs_set_execute"
@@ -935,7 +935,7 @@ $renamePrefsExecute = Invoke-RestMethod `
       confirmationToken = $renamePrefsDryRun.data.plan.confirmation.token
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $renamePrefsExecute.data
 ```
@@ -946,10 +946,10 @@ $renamePrefsExecute.data
 
 ```powershell
 $zoteroRenameDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.runZoteroRename"
     requestId = "req_attachment_run_zotero_rename_dry"
@@ -957,16 +957,16 @@ $zoteroRenameDryRun = Invoke-RestMethod `
       attachmentKey = $samplePdfAttachmentKey
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $zoteroRenameDryRun.data.before
 $zoteroRenameDryRun.data.after
 
 $zoteroRenameExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.runZoteroRename"
     requestId = "req_attachment_run_zotero_rename_execute"
@@ -979,7 +979,7 @@ $zoteroRenameExecute = Invoke-RestMethod `
       confirmationToken = $zoteroRenameDryRun.data.plan.confirmation.token
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $zoteroRenameExecute.data
 $zoteroRenameExecute.data.backup
@@ -995,12 +995,12 @@ if ($zoteroRenameExecute.data.skipped -eq $false) {
 
 ```powershell
 $backupSettings = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body '{"name":"backup.settings.get","requestId":"req_backup_settings_get","input":{}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $backupSettings.data
 ```
@@ -1011,12 +1011,12 @@ $backupSettings.data
 
 ```powershell
 $backupSnapshots = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body '{"name":"backup.snapshot.list","requestId":"req_backup_snapshot_list","input":{"limit":10}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $backupSnapshots.data.snapshotRoot
 $backupSnapshots.data.snapshots | Select-Object -First 3
@@ -1032,22 +1032,22 @@ $restoreBackupId = $backupSnapshots.data.snapshots |
   Select-Object -First 1 -ExpandProperty backupId
 
 $backupRestoreDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "backup.snapshot.restore"
     requestId = "req_backup_snapshot_restore_dry"
     input = @{ backupId = $restoreBackupId }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $backupRestoreExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "backup.snapshot.restore"
     requestId = "req_backup_snapshot_restore_execute"
@@ -1058,7 +1058,7 @@ $backupRestoreExecute = Invoke-RestMethod `
       confirmationToken = $backupRestoreDryRun.data.plan.confirmation.token
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $backupRestoreExecute.data
 ```
@@ -1069,20 +1069,20 @@ $backupRestoreExecute.data
 
 ```powershell
 $backupPruneDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body '{"name":"backup.snapshot.prune","requestId":"req_backup_snapshot_prune_dry","input":{}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $backupPruneDryRun.data.after
 
 $backupPruneExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "backup.snapshot.prune"
     requestId = "req_backup_snapshot_prune_execute"
@@ -1093,7 +1093,7 @@ $backupPruneExecute = Invoke-RestMethod `
       confirmationToken = $backupPruneDryRun.data.plan.confirmation.token
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $backupPruneExecute.data
 ```
@@ -1104,10 +1104,10 @@ $backupPruneExecute.data
 
 ```powershell
 $backupSettingsDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "backup.settings.set"
     requestId = "req_backup_settings_set_dry"
@@ -1120,7 +1120,7 @@ $backupSettingsDryRun = Invoke-RestMethod `
       }
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $backupSettingsDryRun.data.before
 $backupSettingsDryRun.data.after
@@ -1144,12 +1144,12 @@ $backupSettingsExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 $backupSettingsExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $backupSettingsExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $backupSettingsExecute.data
 ```
@@ -1162,10 +1162,10 @@ $backupSettingsExecute.data
 $undoFixturePath = "H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\tests\fixtures\attachments\sample-paper.pdf"
 
 $undoAddDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.addFile"
     requestId = "req_attachment_undo_seed_add_dry"
@@ -1175,7 +1175,7 @@ $undoAddDryRun = Invoke-RestMethod `
       attachmentMode = "copy"
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $undoAddExecuteBody = @{
   name = "attachment.addFile"
@@ -1193,21 +1193,21 @@ $undoAddExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 $undoSeed = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $undoAddExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 Start-Sleep -Milliseconds 1200
 $undoAttachmentKey = $undoSeed.data.attachmentKey
 
 $undoDryRun = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body (@{
     name = "attachment.undoAdded"
     requestId = "req_attachment_undo_added_dry"
@@ -1215,7 +1215,7 @@ $undoDryRun = Invoke-RestMethod `
       attachmentKey = $undoAttachmentKey
     }
   } | ConvertTo-Json -Depth 8 -Compress) `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $undoExecuteBody = @{
   name = "attachment.undoAdded"
@@ -1231,12 +1231,12 @@ $undoExecuteBody = @{
 } | ConvertTo-Json -Depth 8 -Compress
 
 $undoExecute = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body $undoExecuteBody `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $undoDryRun.data.before
 $undoExecute.data
@@ -1248,12 +1248,12 @@ $undoExecute.data
 
 ```powershell
 $duplicatesFind = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body '{"name":"duplicates.find","requestId":"req_duplicates_find_same_doi","input":{"limit":50}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.43"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.53"
 
 $duplicatesFind.data.setCount
 $duplicatesFind.data.sets | Select-Object setId,zoteroItemKeys
@@ -1265,12 +1265,12 @@ $duplicatesFind.data.sets | Select-Object setId,zoteroItemKeys
 
 ```powershell
 $auditList = Invoke-RestMethod `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/command `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/command `
   -Method POST `
   -ContentType "application/json" `
-  -Headers @{"x-zotero-codex-bridge-token"=$token} `
+  -Headers @{"x-zotero-local-mcp-bridge-token"=$token} `
   -Body '{"name":"audit.list","requestId":"req_audit_list","input":{"limit":10}}' `
-  -UserAgent "ZoteroCodexBridge/0.1.31"
+  -UserAgent "ZoteroLocalMcpBridge/0.1.31"
 
 $auditList.data.filePath
 $auditList.data.entries | Select-Object commandName,status,requestId,planId
@@ -1282,8 +1282,8 @@ $auditList.data.entries | Select-Object commandName,status,requestId,planId
 
 遇到以下情况立即停止，不执行真实写命令：
 
-- Zotero 当前 profile 不是 `ZoteroCodexBridgeTest`。
-- Debug Output 未显示 `Zotero Codex Bridge: started`。
+- Zotero 当前 profile 不是 `ZoteroLocalMcpBridgeTest`。
+- Debug Output 未显示 `Zotero Local MCP Bridge: started`。
 - health endpoint 未返回预期文本。
 - command endpoint 鉴权尚未实现。
 - `ZoteroProfile/`、`ZoteroVault/` 或 `ZoteroData/` 指向真实主库或真实附件目录。

@@ -1,17 +1,34 @@
 {
-  "name": "zotero-codex-bridge",
+  "name": "zotero-local-mcp-bridge",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Local-first Zotero management MCP bridge for Codex.",
+  "description": "Local-first Zotero management MCP bridge for local MCP clients.",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PhoenixChenLu/zotero-local-mcp-bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge/issues"
+  },
+  "keywords": [
+    "zotero",
+    "mcp",
+    "model-context-protocol",
+    "research",
+    "reference-manager",
+    "local-first"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "build:zotero-plugin": "node scripts/buildZoteroPlugin.mjs --mode=release",
     "build:zotero-plugin:release": "node scripts/buildZoteroPlugin.mjs --mode=release",
-    "build:zotero-plugin:test": "node scripts/buildZoteroPlugin.mjs --mode=test",
-    "build:zotero-plugin:dev": "node scripts/buildZoteroPlugin.mjs --mode=dev",
+    "install:local": "node scripts/install.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "ensure:test-profile-marker": "node scripts/ensureTestProfileMarker.mjs",
+    "test:mcp-runtime-matrix": "node scripts/mcpRuntimeModeMatrix.mjs",
     "pretest": "npm run ensure:test-profile-marker",
     "test": "vitest run",
     "lint": "eslint ."

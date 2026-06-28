@@ -1,6 +1,6 @@
 import { ZoteroBridgeError } from "./errors.js";
 
-export const BRIDGE_AUTH_HEADER = "x-zotero-codex-bridge-token";
+export const BRIDGE_AUTH_HEADER = "x-zotero-local-mcp-bridge-token";
 export const BRIDGE_AUTH_TOKEN_BYTES = 32;
 
 export type BridgeAuthToken = {

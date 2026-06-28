@@ -1,4 +1,4 @@
-export const projectName = "zotero-codex-bridge";
+export const projectName = "zotero-local-mcp-bridge";
 
 export * from "./audit.js";
 export * from "./auth.js";

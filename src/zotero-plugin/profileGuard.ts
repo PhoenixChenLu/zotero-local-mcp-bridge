@@ -1,7 +1,7 @@
 import type { ProfileMode } from "../shared/commands.js";
 import { ZoteroBridgeError } from "../shared/errors.js";
 
-export const TEST_PROFILE_MARKER_FILE = ".zotero-codex-bridge-test-profile";
+export const TEST_PROFILE_MARKER_FILE = ".zotero-local-mcp-bridge-test-profile";
 
 export type TestProfileGuardOptions = {
   markerPresent: boolean;

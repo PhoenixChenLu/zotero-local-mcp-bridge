@@ -1,12 +1,14 @@
 # Zotero Test Profile
 
-本文件记录 `ZoteroCodexBridgeTest` 测试 profile 的验收前置条件。只有全部检查通过后，才允许执行任何真实 Zotero 写入。
+本文件记录 Zotero Local MCP Bridge 测试 profile 的验收前置条件。只有全部检查通过后，才允许执行任何真实 Zotero 写入。
 
 ## Profile
 
-- Profile name: `ZoteroCodexBridgeTest`
+- Profile name: `ZoteroLocalMcpBridgeTest`
+- Legacy profile name accepted during rename migration: `ZoteroCodexBridgeTest`
 - Required mode: `profileMode: "test"`
-- Required marker file: `ZoteroProfile/.zotero-codex-bridge-test-profile`
+- Required marker file: `ZoteroProfile/.zotero-local-mcp-bridge-test-profile`
+- Legacy marker accepted during rename migration: `ZoteroProfile/.zotero-codex-bridge-test-profile`
 - Profile directory: `H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroProfile`
 - Linked attachment root directory: `H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroVault`
 - Data Directory: `H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData`
@@ -34,7 +36,7 @@ H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData
 
 通过条件：
 
-- `ZoteroProfile/.zotero-codex-bridge-test-profile` 存在。
+- `ZoteroProfile/.zotero-local-mcp-bridge-test-profile` 存在；重命名迁移期插件也接受旧 marker `ZoteroProfile/.zotero-codex-bridge-test-profile`。
 - `npm run test` 会先执行 `npm run ensure:test-profile-marker`，如果 marker 缺失会自动创建。
 - Data Directory 不等于真实 Zotero 主库目录。
 - Data Directory 不在真实 Zotero profile 或真实附件 storage 目录内。
@@ -49,8 +51,8 @@ H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData
 手工在测试 profile 中创建两个普通条目，用于验收 collection、tag、note、attachment 和 attachment move：
 
 ```text
-Item A title: Zotero Codex Bridge Test Item A
-Item B title: Zotero Codex Bridge Test Item B
+Item A title: Zotero Local MCP Bridge Test Item A
+Item B title: Zotero Local MCP Bridge Test Item B
 ```
 
 验收时记录它们的 Zotero item key：
@@ -62,7 +64,7 @@ Item B zoteroItemKey: K7P8J5XF
 
 记录时间：2026-06-26 19:32:46
 
-说明：上述 key 来自 `collection.getItems` 对 `Codex Bridge Acceptance` (`L6UP7MHT`) 的 runtime 读取结果。当前插件只返回 item key，不返回 title；本轮按用户创建 Item A、Item B 并放入 collection 后的返回顺序记录。后续实现 item 详情读取命令后可用 title 再次核验映射。
+说明：上述 key 来自 `collection.getItems` 对 `Local MCP Bridge Acceptance` (`L6UP7MHT`) 的 runtime 读取结果。当前插件只返回 item key，不返回 title；本轮按用户创建 Item A、Item B 并放入 collection 后的返回顺序记录。后续实现 item 详情读取命令后可用 title 再次核验映射。
 
 ## Seed Attachments
 
@@ -84,9 +86,9 @@ Attachment mode: copy
 ```text
 Sample PDF attachmentKey: FQ8474SV
 Current parent item: Item B (K7P8J5XF)
-Current title: Codex Bridge Runtime PDF File Rename 0.1.20
-Current filename: Zotero Codex Bridge Test Item B.pdf
-Current stored file: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData\storage\FQ8474SV\Zotero Codex Bridge Test Item B.pdf
+Current title: Local MCP Bridge Runtime PDF File Rename 0.1.20
+Current filename: Zotero Local MCP Bridge Test Item B.pdf
+Current stored file: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData\storage\FQ8474SV\Zotero Local MCP Bridge Test Item B.pdf
 ```
 
 记录时间：2026-06-26 23:39:03
@@ -109,15 +111,15 @@ Undo dry-run/execute planId: plan_mqv5miqg_6luitvz1hs5
 ```text
 Sample PDF attachmentKey: FQ8474SV
 Current parent item: Item B (K7P8J5XF)
-Current filename after validation: Zotero Codex Bridge Test Item B.pdf
+Current filename after validation: Zotero Local MCP Bridge Test Item B.pdf
 
-Manual rename probe title: Codex Bridge Backup Snapshot Probe 0.1.26
-Manual rename intermediate filename: Codex Bridge Backup Snapshot Probe 0.1.26.pdf
-Manual rename backup file: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\backups\zotero-operations\files\2026-06-26\backup_mqv64zm5_tbuyy69wpl\Zotero Codex Bridge Test Item B.pdf
+Manual rename probe title: Local MCP Bridge Backup Snapshot Probe 0.1.26
+Manual rename intermediate filename: Local MCP Bridge Backup Snapshot Probe 0.1.26.pdf
+Manual rename backup file: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\backups\zotero-operations\files\2026-06-26\backup_mqv64zm5_tbuyy69wpl\Zotero Local MCP Bridge Test Item B.pdf
 Manual rename backup manifest: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\backups\zotero-operations\files\2026-06-26\backup_mqv64zm5_tbuyy69wpl\manifest.json
 
-Zotero auto rename final filename: Zotero Codex Bridge Test Item B.pdf
-Zotero auto rename backup file: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\backups\zotero-operations\files\2026-06-26\backup_mqv64zwi_31azl716npb\Codex Bridge Backup Snapshot Probe 0.1.26.pdf
+Zotero auto rename final filename: Zotero Local MCP Bridge Test Item B.pdf
+Zotero auto rename backup file: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\backups\zotero-operations\files\2026-06-26\backup_mqv64zwi_31azl716npb\Local MCP Bridge Backup Snapshot Probe 0.1.26.pdf
 Zotero auto rename backup manifest: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\backups\zotero-operations\files\2026-06-26\backup_mqv64zwi_31azl716npb\manifest.json
 ```
 
@@ -129,7 +131,7 @@ Zotero auto rename backup manifest: H:\ProgramDocument\MixLanguage\Zotero-codex-
 Restore backupId: backup_mqv64zm5_tbuyy69wpl
 Restored attachmentKey: FQ8474SV
 Parent item: Item B (K7P8J5XF)
-Target file path: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData\storage\FQ8474SV\Zotero Codex Bridge Test Item B.pdf
+Target file path: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData\storage\FQ8474SV\Zotero Local MCP Bridge Test Item B.pdf
 Dry-run/execute planId: plan_mqv778zc_36cpcv1o0oz
 Snapshot state after restore: backup file and manifest remain present
 ```
@@ -158,12 +160,12 @@ Retained snapshot: backup_mqv64zwi_31azl716npb
 
 ```text
 Item A zoteroItemKey: 7N4QZKCM
-Item A title: Zotero Codex Bridge Test Item A
+Item A title: Zotero Local MCP Bridge Test Item A
 Item A itemType: document
 Item A noteKeys: GGQPGKYF
 
 Item B zoteroItemKey: K7P8J5XF
-Item B title: Zotero Codex Bridge Test Item B
+Item B title: Zotero Local MCP Bridge Test Item B
 Item B itemType: document
 Item B attachmentKeys: FQ8474SV
 ```
@@ -173,10 +175,10 @@ Item B attachmentKeys: FQ8474SV
 `0.1.31` runtime 验收中验证了 `item.search`、`attachment.get` 和 linked attachment 写入/undo：
 
 ```text
-item.search query: Zotero Codex Bridge Test Item
+item.search query: Zotero Local MCP Bridge Test Item
 item.search collectionKey: L6UP7MHT
 item.search itemType: document
-item.search result titles: Zotero Codex Bridge Test Item A | Zotero Codex Bridge Test Item B
+item.search result titles: Zotero Local MCP Bridge Test Item A | Zotero Local MCP Bridge Test Item B
 
 attachment.get attachmentKey: FQ8474SV
 attachment.get parent: Item B (K7P8J5XF)
@@ -197,7 +199,7 @@ Linked probe state after undo: moved to Zotero trash by attachment.undoAdded; It
 
 ```text
 Import/export collectionKey: VZ3P3YEL
-Import/export collection title: Codex Bridge Import Export 0.1.37 Runtime 191156
+Import/export collection title: Local MCP Bridge Import Export 0.1.37 Runtime 191156
 
 Existing test item export:
 export.bibtex length: 942
@@ -205,13 +207,13 @@ export.ris length: 688
 export.cslJson length: 1321
 
 Imported BibTeX item key: IH8MPEN8
-Imported BibTeX title: Codex Bridge Import BibTeX Runtime 0.1.38
+Imported BibTeX title: Local MCP Bridge Import BibTeX Runtime 0.1.38
 
 Imported RIS item key: YYV6EX7A
-Imported RIS title: Codex Bridge Import RIS Runtime 0.1.38
+Imported RIS title: Local MCP Bridge Import RIS Runtime 0.1.38
 
 Imported CSL JSON item key: JUQANXNE
-Imported CSL JSON title: Codex Bridge Import CSL JSON Runtime 0.1.38
+Imported CSL JSON title: Local MCP Bridge Import CSL JSON Runtime 0.1.38
 
 collection.getItems contains imported keys: true
 collection item count after import: 3
@@ -232,13 +234,13 @@ data.after.estimatedItemCount: 1
 ```text
 PDF attachmentKey: FQ8474SV
 PDF parent item: Item B (K7P8J5XF)
-PDF file path: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData\storage\FQ8474SV\Zotero Codex Bridge Test Item B.pdf
+PDF file path: H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\ZoteroData\storage\FQ8474SV\Zotero Local MCP Bridge Test Item B.pdf
 annotation.list before create count: 0
 
 Created annotationKey: W6RH6YKC
 annotationType: highlight
-annotationText: Codex Bridge annotation runtime 0.1.39
-annotationComment before update: Created by Zotero Codex Bridge runtime validation 0.1.39
+annotationText: Local MCP Bridge annotation runtime 0.1.39
+annotationComment before update: Created by Zotero Local MCP Bridge runtime validation 0.1.39
 annotationColor before update: #ffd400
 annotationPageLabel: 1
 annotationSortIndex: 00000|000000|00000
@@ -247,7 +249,7 @@ create dry-run/execute planId: plan_mqwcsmpj_a8slvgqtwk
 annotation.list after create count: 1
 
 annotation.update planId: plan_mqwct2jf_5na0m16yncn
-annotationComment after update: Updated by Zotero Codex Bridge runtime validation 0.1.39
+annotationComment after update: Updated by Zotero Local MCP Bridge runtime validation 0.1.39
 annotationColor after update: #ff6666
 annotation.list after update count: 1
 ```
@@ -258,7 +260,7 @@ annotation.list after update count: 1
 
 遇到以下情况立即停止，不执行写操作：
 
-- 当前 profile 不是 `ZoteroCodexBridgeTest`。
+- 当前 profile 不是 `ZoteroLocalMcpBridgeTest`，也不是迁移期既有的 `ZoteroCodexBridgeTest`。
 - 插件报告 `profileMode` 不是 `test`。
 - Zotero UI 中出现真实主库数据。
 - dry-run 未返回 `planId` 或 `confirmationToken`。

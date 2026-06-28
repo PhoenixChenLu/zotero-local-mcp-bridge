@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180" role="img" aria-label="Zotero Codex Bridge fixture image">
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180" role="img" aria-label="Zotero Local MCP Bridge fixture image">
   <rect width="320" height="180" fill="#f5f5f5"/>
   <rect x="24" y="24" width="272" height="132" fill="#ffffff" stroke="#333333"/>
-  <text x="40" y="90" font-family="Arial, sans-serif" font-size="20" fill="#111111">Zotero Codex Bridge</text>
+  <text x="40" y="90" font-family="Arial, sans-serif" font-size="20" fill="#111111">Zotero Local MCP Bridge</text>
   <text x="40" y="120" font-family="Arial, sans-serif" font-size="14" fill="#444444">Attachment fixture image</text>
 </svg>

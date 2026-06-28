@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* global IOUtils, PathUtils, Zotero, Components, __ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__, __ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__, navigator */
+/* global IOUtils, PathUtils, Zotero, Components, __ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__, __ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__, navigator */
 
-var ZoteroCodexBridge = {
-  id: "zotero-codex-bridge@example.com",
-  version: "0.1.43",
-  healthPath: "/zotero-codex-bridge/health",
-  commandPath: "/zotero-codex-bridge/command",
-  authHeader: "x-zotero-codex-bridge-token",
-  expectedAuthToken: __ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__,
-  runtimeRoot: __ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__,
+var ZoteroLocalMcpBridge = {
+  id: "zotero-local-mcp-bridge@example.com",
+  version: "0.1.56",
+  mcpPath: "/zotero-local-mcp-bridge/mcp",
+  authHeader: "x-zotero-local-mcp-bridge-token",
+  expectedAuthToken: __ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__,
+  runtimeRoot: __ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__,
   dryRunTtlMs: 30 * 60 * 1000,
   confirmations: {},
   started: false,
@@ -17,14 +16,18 @@ var ZoteroCodexBridge = {
 
 var cachedExpectedAuthToken;
 
-var TEST_PROFILE_MARKER_FILE = ".zotero-codex-bridge-test-profile";
+var TEST_PROFILE_MARKER_FILE = ".zotero-local-mcp-bridge-test-profile";
+var LEGACY_TEST_PROFILE_MARKER_FILE = ".zotero-codex-bridge-test-profile";
 var REAL_PROFILE_UNLOCK_DEFAULT_TTL_MINUTES = 30;
 var REAL_PROFILE_UNLOCK_MAX_TTL_MINUTES = 120;
 var REAL_PROFILE_UNLOCK_CONFIRMATION = "I understand and authorize temporary real-library write access";
-var REAL_PROFILE_PREFERENCE_MODE = "extensions.zotero-codex-bridge.profileMode";
+var REAL_PROFILE_PREFERENCE_MODE = "extensions.zotero-local-mcp-bridge.profileMode";
 var REAL_PROFILE_DEFAULT_MODE = "real-locked";
 var REAL_PROFILE_STATE_PATH_PARTS = ["runtime", "safety", "real-profile-state.json"];
-var BRIDGE_OPERATION_MODE_PREFERENCE = "extensions.zotero-codex-bridge.operationMode";
+var BRIDGE_RUNTIME_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.runtimeRoot";
+var BRIDGE_AUDIT_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.auditRoot";
+var BRIDGE_BACKUP_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.backupRoot";
+var BRIDGE_OPERATION_MODE_PREFERENCE = "extensions.zotero-local-mcp-bridge.operationMode";
 var BRIDGE_OPERATION_MODE_DEFAULT = "readonly";
 var BRIDGE_OPERATION_MODES = {
   readonly: true,
@@ -37,19 +40,19 @@ var EXPORT_TRANSLATOR_IDS = {
   cslJson: "bc03b4fe-436d-4a1f-ba59-de4d2d7a63f7"
 };
 
-var ZoteroCodexBridgeSafetyStateCommands = {
+var ZoteroLocalMcpBridgeSafetyStateCommands = {
   "safety.unlockRealProfile": true,
   "safety.lockRealProfile": true
 };
 
-var ZoteroCodexBridgeDefaultBackupPolicy = {
+var ZoteroLocalMcpBridgeDefaultBackupPolicy = {
   retentionDays: 30,
   maxLocalBytes: 10 * 1024 * 1024 * 1024,
   enableTimeLimit: true,
   enableSpaceLimit: true
 };
 
-var ZoteroCodexBridgeProfileWriteCommands = {
+var ZoteroLocalMcpBridgeProfileWriteCommands = {
   "collection.create": true,
   "collection.rename": true,
   "collection.move": true,
@@ -83,7 +86,7 @@ var ZoteroCodexBridgeProfileWriteCommands = {
   "backup.snapshot.prune": true
 };
 
-var ZoteroCodexBridgeWriteCommands = {
+var ZoteroLocalMcpBridgeWriteCommands = {
   "collection.create": true,
   "collection.rename": true,
   "collection.move": true,
@@ -119,9 +122,65 @@ var ZoteroCodexBridgeWriteCommands = {
   "safety.lockRealProfile": true
 };
 
+var ZoteroLocalMcpBridgeCommandNames = [
+  "collection.create",
+  "collection.rename",
+  "collection.move",
+  "collection.getTree",
+  "collection.getItems",
+  "collection.addItems",
+  "collection.removeItems",
+  "item.get",
+  "item.search",
+  "search.advanced",
+  "savedSearch.list",
+  "savedSearch.get",
+  "savedSearch.create",
+  "savedSearch.update",
+  "citation.format",
+  "item.create",
+  "item.updateFields",
+  "item.updateCreators",
+  "item.setCollections",
+  "item.updateTags",
+  "item.trash",
+  "import.bibtex",
+  "import.ris",
+  "import.cslJson",
+  "export.bibtex",
+  "export.ris",
+  "export.cslJson",
+  "annotation.list",
+  "annotation.create",
+  "annotation.update",
+  "note.createChild",
+  "attachment.get",
+  "attachment.getForItem",
+  "attachment.addFile",
+  "attachment.moveToItem",
+  "attachment.rename",
+  "attachment.runZoteroRename",
+  "attachment.undoAdded",
+  "attachment.trash",
+  "attachment.renamePreferences.get",
+  "attachment.renamePreferences.set",
+  "backup.settings.get",
+  "backup.settings.set",
+  "backup.snapshot.list",
+  "backup.snapshot.restore",
+  "backup.snapshot.prune",
+  "collection.trash",
+  "duplicates.find",
+  "duplicates.merge",
+  "audit.list",
+  "safety.getProfileStatus",
+  "safety.unlockRealProfile",
+  "safety.lockRealProfile"
+];
+
 function log(message) {
   if (typeof Zotero !== "undefined" && Zotero.debug) {
-    Zotero.debug(`Zotero Codex Bridge: ${message}`);
+    Zotero.debug(`Zotero Local MCP Bridge: ${message}`);
   }
 }
 
@@ -130,10 +189,10 @@ function install() {
 }
 
 function startup(data) {
-  ZoteroCodexBridge.started = true;
+  ZoteroLocalMcpBridge.started = true;
+  persistRuntimeRootPreference();
   registerPreferencePane(data || {});
-  registerHealthEndpoint();
-  registerCommandEndpoint();
+  registerMcpEndpoint();
   log("started");
 }
 
@@ -147,7 +206,7 @@ function onMainWindowUnload({ window }) {
 
 function shutdown() {
   unregisterEndpoints();
-  ZoteroCodexBridge.started = false;
+  ZoteroLocalMcpBridge.started = false;
   log("stopped");
 }
 
@@ -167,47 +226,301 @@ function registerPreferencePane(data) {
   }
 
   Zotero.PreferencePanes.register({
-    pluginID: ZoteroCodexBridge.id,
+    pluginID: ZoteroLocalMcpBridge.id,
     src: data.rootURI + "preferences.xhtml",
-    scripts: [data.rootURI + "preferences.js"]
+    scripts: [data.rootURI + "preferences.js"],
+    stylesheets: [data.rootURI + "preferences.css"]
   });
   log("preference pane registered");
 }
 
-function registerHealthEndpoint() {
+function registerMcpEndpoint() {
   if (typeof Zotero === "undefined" || !Zotero.Server || !Zotero.Server.Endpoints) {
-    log("server unavailable for health endpoint");
+    log("server unavailable for MCP endpoint");
     return;
   }
 
-  var endpoint = Zotero.Server.Endpoints[ZoteroCodexBridge.healthPath] = function () {};
-  endpoint.prototype = {
-    supportedMethods: ["GET"],
-    init: async function (req) {
-      log(`health endpoint ${req.method}`);
-      return [
-        200,
-        "text/plain",
-        "zotero-codex-bridge ok " + ZoteroCodexBridge.version + " zotero-codex-bridge@example.com test"
-      ];
-    }
-  };
-  ZoteroCodexBridge.registeredPaths.push(ZoteroCodexBridge.healthPath);
-}
-
-function registerCommandEndpoint() {
-  if (typeof Zotero === "undefined" || !Zotero.Server || !Zotero.Server.Endpoints) {
-    log("server unavailable for command endpoint");
-    return;
-  }
-
-  var endpoint = Zotero.Server.Endpoints[ZoteroCodexBridge.commandPath] = function () {};
+  var endpoint = Zotero.Server.Endpoints[ZoteroLocalMcpBridge.mcpPath] = function () {};
   endpoint.prototype = {
     supportedMethods: ["POST"],
-    init: async function (req) {
+    init: handleMcpEndpointRequest
+  };
+  ZoteroLocalMcpBridge.registeredPaths.push(ZoteroLocalMcpBridge.mcpPath);
+}
+
+async function handleMcpEndpointRequest(req) {
+  log(`MCP endpoint ${req.method}`);
+  if ((req.method || "POST").toUpperCase() !== "POST") {
+    return mcpHttpResponse(405, {
+      jsonrpc: "2.0",
+      id: null,
+      error: {
+        code: -32600,
+        message: "MCP endpoint only accepts POST"
+      }
+    });
+  }
+
+  var contentType = getHeader(req.headers || {}, "content-type");
+  if (!contentType || contentType.indexOf("application/json") !== 0) {
+    return mcpHttpResponse(415, {
+      jsonrpc: "2.0",
+      id: null,
+      error: {
+        code: -32600,
+        message: "MCP endpoint only accepts application/json"
+      }
+    });
+  }
+
+  var payload;
+  try {
+    payload = getRequestJson(req);
+  } catch (error) {
+    return mcpHttpResponse(400, {
+      jsonrpc: "2.0",
+      id: null,
+      error: {
+        code: -32700,
+        message: error.message || "MCP request body is not valid JSON"
+      }
+    });
+  }
+
+  if (Array.isArray(payload)) {
+    var batchResults = [];
+    for (var i = 0; i < payload.length; i += 1) {
+      var batchResult = await handleMcpJsonRpc(payload[i]);
+      if (batchResult) {
+        batchResults.push(batchResult);
+      }
+    }
+    return mcpHttpResponse(batchResults.length > 0 ? 200 : 202, batchResults);
+  }
+
+  var result = await handleMcpJsonRpc(payload);
+  if (!result) {
+    return [202, "application/json", ""];
+  }
+  return mcpHttpResponse(200, result);
+}
+
+async function handleMcpJsonRpc(payload) {
+  var id = payload && Object.prototype.hasOwnProperty.call(payload, "id") ? payload.id : null;
+  if (!payload || payload.jsonrpc !== "2.0" || typeof payload.method !== "string") {
+    return mcpJsonRpcError(id, -32600, "Invalid MCP JSON-RPC request");
+  }
+
+  try {
+    if (payload.method === "initialize") {
+      return mcpJsonRpcResult(id, {
+        protocolVersion: payload.params && payload.params.protocolVersion ? payload.params.protocolVersion : "2025-06-18",
+        capabilities: {
+          tools: {
+            listChanged: false
+          }
+        },
+        serverInfo: {
+          name: "zotero-local-mcp-bridge",
+          version: ZoteroLocalMcpBridge.version
+        }
+      });
+    }
+
+    if (payload.method === "notifications/initialized") {
+      return null;
+    }
+
+    if (payload.method === "tools/list") {
+      return mcpJsonRpcResult(id, {
+        tools: createMcpToolDescriptors()
+      });
+    }
+
+    if (payload.method === "tools/call") {
+      return mcpJsonRpcResult(id, await handleMcpToolCall(payload.params || {}, id));
+    }
+
+    return mcpJsonRpcError(id, -32601, "Unsupported MCP method: " + payload.method);
+  } catch (error) {
+    return mcpJsonRpcError(
+      id,
+      -32603,
+      error && error.message ? error.message : "Internal MCP endpoint error",
+      error && error.code ? { code: error.code } : undefined
+    );
+  }
+}
+
+async function handleMcpToolCall(params, requestId) {
+  var toolName = params.name;
+  if (typeof toolName !== "string" || toolName.length === 0) {
+    throw commandError("MCP_TOOL_NAME_REQUIRED", "MCP tools/call requires params.name", 400);
+  }
+
+  var commandName = commandNameFromMcpToolName(toolName);
+  if (!commandName) {
+    throw commandError("MCP_TOOL_UNKNOWN", "Unknown Zotero Local MCP Bridge tool: " + toolName, 404);
+  }
+
+  var args = params.arguments && typeof params.arguments === "object" ? params.arguments : {};
+  var commandInput = args.input && typeof args.input === "object"
+    ? args.input
+    : extractMcpCommandInput(args);
+  var commandPayload = {
+    name: commandName,
+    requestId: typeof requestId === "string" || typeof requestId === "number" ? "mcp_" + requestId : "mcp_request",
+    input: commandInput,
+    mode: args.mode,
+    confirmation: args.confirmation
+  };
+  var commandResponse = await executeInternalCommandPayload(commandPayload);
+  var isError = !commandResponse.ok;
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(commandResponse, null, 2)
+      }
+    ],
+    structuredContent: commandResponse,
+    isError: isError
+  };
+}
+
+async function executeInternalCommandPayload(commandPayload) {
+  var response = await handleCommandEndpointRequest({
+    internal: true,
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    data: commandPayload
+  });
+  if (!Array.isArray(response) || typeof response[2] !== "string") {
+    throw commandError("INTERNAL_COMMAND_RESPONSE_INVALID", "Internal command handler returned an invalid response", 500);
+  }
+  return JSON.parse(response[2]);
+}
+
+function createMcpToolDescriptors() {
+  return ZoteroLocalMcpBridgeCommandNames.map(function (commandName) {
+    return {
+      name: mcpToolNameFromCommandName(commandName),
+      title: commandName,
+      description: describeMcpTool(commandName),
+      inputSchema: createMcpToolInputSchema(),
+      annotations: {
+        readOnlyHint: !isWriteCommandName(commandName),
+        destructiveHint: isHighRiskMcpCommand(commandName),
+        idempotentHint: !isWriteCommandName(commandName),
+        openWorldHint: false
+      }
+    };
+  });
+}
+
+function createMcpToolInputSchema() {
+  return {
+    type: "object",
+    properties: {
+      input: {
+        type: "object",
+        additionalProperties: true
+      },
+      mode: {
+        type: "string",
+        enum: ["dry-run", "execute"]
+      },
+      confirmation: {
+        type: "object",
+        properties: {
+          planId: { type: "string" },
+          confirmationToken: { type: "string" }
+        },
+        required: ["planId", "confirmationToken"],
+        additionalProperties: false
+      }
+    },
+    additionalProperties: true
+  };
+}
+
+function describeMcpTool(commandName) {
+  if (isWriteCommandName(commandName)) {
+    return "Write command for Zotero Local MCP Bridge. Call without mode or with mode=dry-run first; execute requires the returned planId and confirmationToken.";
+  }
+  return "Read command for Zotero Local MCP Bridge. Executes through the Zotero plugin internal command table.";
+}
+
+function mcpToolNameFromCommandName(commandName) {
+  return "zotero_" + commandName.replace(/([a-z0-9])([A-Z])/g, "$1_$2").replace(/\./g, "_").toLowerCase();
+}
+
+function commandNameFromMcpToolName(toolName) {
+  for (var i = 0; i < ZoteroLocalMcpBridgeCommandNames.length; i += 1) {
+    var commandName = ZoteroLocalMcpBridgeCommandNames[i];
+    if (mcpToolNameFromCommandName(commandName) === toolName) {
+      return commandName;
+    }
+  }
+  return "";
+}
+
+function extractMcpCommandInput(args) {
+  var input = {};
+  Object.keys(args).forEach(function (key) {
+    if (key !== "mode" && key !== "confirmation") {
+      input[key] = args[key];
+    }
+  });
+  return input;
+}
+
+function isHighRiskMcpCommand(commandName) {
+  return commandName.indexOf(".trash") > 0
+    || commandName === "duplicates.merge"
+    || commandName === "backup.snapshot.restore"
+    || commandName === "backup.snapshot.prune"
+    || commandName === "safety.unlockRealProfile";
+}
+
+function mcpJsonRpcResult(id, result) {
+  if (id === null || id === undefined) {
+    return null;
+  }
+  return {
+    jsonrpc: "2.0",
+    id: id,
+    result: result
+  };
+}
+
+function mcpJsonRpcError(id, code, message, data) {
+  return {
+    jsonrpc: "2.0",
+    id: id === undefined ? null : id,
+    error: {
+      code: code,
+      message: message,
+      data: data
+    }
+  };
+}
+
+function mcpHttpResponse(status, body) {
+  return [
+    status,
+    "application/json",
+    typeof body === "string" ? body : JSON.stringify(body)
+  ];
+}
+
+async function handleCommandEndpointRequest(req) {
       log(`command endpoint ${req.method}`);
+      var internalCommand = req.internal === true;
       var contentType = getHeader(req.headers || {}, "content-type");
-      var authToken = getHeader(req.headers || {}, ZoteroCodexBridge.authHeader);
+      var authToken = getHeader(req.headers || {}, ZoteroLocalMcpBridge.authHeader);
 
       if (!contentType || contentType.indexOf("application/json") !== 0) {
         return [
@@ -226,27 +539,29 @@ function registerCommandEndpoint() {
         ];
       }
 
-      if (!authToken) {
+      if (!internalCommand && !authToken) {
         return jsonCommandResponse(401, "unknown", "unknown", undefined, {
           code: "COMMAND_AUTH_REQUIRED",
           message: "Command endpoint requires local auth token"
         });
       }
 
-      var expectedAuthToken;
-      try {
-        expectedAuthToken = await getExpectedAuthToken();
-      } catch (error) {
-        return jsonCommandResponse(error.status || 503, "unknown", "unknown", undefined, {
-          code: error.code || "COMMAND_AUTH_TOKEN_MISSING",
-          message: error.message || "Bridge auth token is missing from runtime config directory"
-        });
-      }
-      if (authToken !== expectedAuthToken) {
-        return jsonCommandResponse(403, "unknown", "unknown", undefined, {
-          code: "COMMAND_AUTH_INVALID",
-          message: "Command endpoint auth token is invalid"
-        });
+      if (!internalCommand) {
+        var expectedAuthToken;
+        try {
+          expectedAuthToken = await getExpectedAuthToken();
+        } catch (error) {
+          return jsonCommandResponse(error.status || 503, "unknown", "unknown", undefined, {
+            code: error.code || "COMMAND_AUTH_TOKEN_MISSING",
+            message: error.message || "Bridge auth token is missing from runtime config directory"
+          });
+        }
+        if (authToken !== expectedAuthToken) {
+          return jsonCommandResponse(403, "unknown", "unknown", undefined, {
+            code: "COMMAND_AUTH_INVALID",
+            message: "Command endpoint auth token is invalid"
+          });
+        }
       }
 
       var payload;
@@ -271,11 +586,11 @@ function registerCommandEndpoint() {
       } catch (error) {
         return jsonCommandResponse(error.status || 500, commandName, requestId, undefined, {
           code: error.code || "COMMAND_CONTEXT_FAILED",
-          message: error.message || "Failed to read Zotero Codex Bridge command context"
+          message: error.message || "Failed to read Zotero Local MCP Bridge command context"
         });
       }
 
-      if (ZoteroCodexBridgeProfileWriteCommands[commandName] && !ZoteroCodexBridgeSafetyStateCommands[commandName]) {
+      if (ZoteroLocalMcpBridgeProfileWriteCommands[commandName] && !ZoteroLocalMcpBridgeSafetyStateCommands[commandName]) {
         try {
           assertOperationWritePermission(operationMode, commandName);
           assertProfileWritePermission(profileMode, testProfileMarkerPresent, commandName);
@@ -1223,7 +1538,7 @@ function registerCommandEndpoint() {
         } catch (error) {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "BACKUP_SETTINGS_READ_FAILED",
-            message: error.message || "Failed to read Zotero Codex Bridge backup settings"
+            message: error.message || "Failed to read Zotero Local MCP Bridge backup settings"
           });
         }
       }
@@ -1239,7 +1554,7 @@ function registerCommandEndpoint() {
         } catch (error) {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "BACKUP_SETTINGS_SET_FAILED",
-            message: error.message || "Failed to set Zotero Codex Bridge backup settings"
+            message: error.message || "Failed to set Zotero Local MCP Bridge backup settings"
           });
         }
       }
@@ -1250,7 +1565,7 @@ function registerCommandEndpoint() {
         } catch (error) {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "BACKUP_SNAPSHOT_LIST_FAILED",
-            message: error.message || "Failed to read Zotero Codex Bridge backup snapshots"
+            message: error.message || "Failed to read Zotero Local MCP Bridge backup snapshots"
           });
         }
       }
@@ -1277,7 +1592,7 @@ function registerCommandEndpoint() {
         } catch (error) {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "BACKUP_SNAPSHOT_RESTORE_FAILED",
-            message: error.message || "Failed to restore Zotero Codex Bridge backup snapshot"
+            message: error.message || "Failed to restore Zotero Local MCP Bridge backup snapshot"
           });
         }
       }
@@ -1293,7 +1608,7 @@ function registerCommandEndpoint() {
         } catch (error) {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "BACKUP_SNAPSHOT_PRUNE_FAILED",
-            message: error.message || "Failed to prune Zotero Codex Bridge backup snapshots"
+            message: error.message || "Failed to prune Zotero Local MCP Bridge backup snapshots"
           });
         }
       }
@@ -1304,7 +1619,7 @@ function registerCommandEndpoint() {
         } catch (error) {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "AUDIT_LIST_FAILED",
-            message: error.message || "Failed to read Zotero Codex Bridge audit log"
+            message: error.message || "Failed to read Zotero Local MCP Bridge audit log"
           });
         }
       }
@@ -1313,9 +1628,7 @@ function registerCommandEndpoint() {
         code: "COMMAND_ENDPOINT_NOT_IMPLEMENTED",
         message: "Only collection getTree/getItems/create/rename/move/addItems/removeItems, item get/search/updateTags, advanced search, saved search, citation formatting, import/export, annotation list/create/update, note.createChild, attachment get/getForItem/add/move/rename/runZoteroRename/undoAdded, attachment rename preferences, backup settings/snapshot list/restore/prune, audit.list, and safety.getProfileStatus/unlockRealProfile/lockRealProfile are connected in this runtime build"
       });
-    }
-  };
-  ZoteroCodexBridge.registeredPaths.push(ZoteroCodexBridge.commandPath);
+    
 }
 
 function getRequestJson(req) {
@@ -1573,7 +1886,8 @@ async function isTestProfileMarkerPresent() {
     return false;
   }
 
-  return await fileExists(PathUtils.join(profileDir, TEST_PROFILE_MARKER_FILE));
+  return await fileExists(PathUtils.join(profileDir, TEST_PROFILE_MARKER_FILE)) ||
+    await fileExists(PathUtils.join(profileDir, LEGACY_TEST_PROFILE_MARKER_FILE));
 }
 
 function resolveProfileDirectory() {
@@ -2617,12 +2931,14 @@ function createCollectionCreateDryRun(input) {
 }
 
 function createWriteDryRunPlan(operation, normalizedInput, resolvedTargets, warnings, before, after, riskLevel) {
+  var resolvedRiskLevel = riskLevel || "low";
+  var operationMode = getBridgeOperationMode();
   var inputHash = hashInput(normalizedInput);
-  var expiresAt = new Date(Date.now() + ZoteroCodexBridge.dryRunTtlMs).toISOString();
+  var expiresAt = new Date(Date.now() + ZoteroLocalMcpBridge.dryRunTtlMs).toISOString();
   var planId = "plan_" + randomId();
   var confirmationToken = "confirm_" + randomId();
 
-  ZoteroCodexBridge.confirmations[planId] = {
+  ZoteroLocalMcpBridge.confirmations[planId] = {
     inputHash: inputHash,
     confirmationToken: confirmationToken,
     expiresAt: expiresAt
@@ -2633,12 +2949,13 @@ function createWriteDryRunPlan(operation, normalizedInput, resolvedTargets, warn
     plan: {
       planId: planId,
       operation: operation,
-      riskLevel: riskLevel || "low",
+      riskLevel: resolvedRiskLevel,
       inputHash: inputHash,
       resolvedTargets: resolvedTargets,
       warnings: warnings || [],
       requiresBackup: true,
       expiresAt: expiresAt,
+      agentApproval: createAgentApprovalPolicy(operationMode, operation, resolvedRiskLevel),
       confirmation: {
         token: confirmationToken,
         expiresAt: expiresAt
@@ -2646,6 +2963,31 @@ function createWriteDryRunPlan(operation, normalizedInput, resolvedTargets, warn
     },
     before: before,
     after: after
+  };
+}
+
+function createAgentApprovalPolicy(operationMode, operation, riskLevel) {
+  var requiresUserApproval = operationMode === "askforapprove";
+  var requiredText = null;
+
+  if (requiresUserApproval && riskLevel === "high") {
+    requiredText = "CONFIRM";
+  }
+
+  if (riskLevel === "critical") {
+    requiresUserApproval = true;
+    requiredText = operation;
+  }
+
+  return {
+    layer: "agent",
+    operationMode: operationMode,
+    required: requiresUserApproval,
+    requiredText: requiredText,
+    mayAutoExecute: !requiresUserApproval,
+    reason: requiresUserApproval
+      ? "Agent must ask the user before execute and pass the returned planId and confirmationToken unchanged."
+      : "Agent may continue to execute after dry-run according to its own policy, but execute still requires planId and confirmationToken."
   };
 }
 
@@ -5079,13 +5421,13 @@ function stripRuntimeFields(input) {
 }
 
 function validateStoredConfirmation(input, confirmation) {
-  var stored = ZoteroCodexBridge.confirmations[confirmation.planId];
+  var stored = ZoteroLocalMcpBridge.confirmations[confirmation.planId];
   if (!stored) {
     throw commandError("PLAN_NOT_FOUND", "Dry-run plan was not found", 404);
   }
 
   if (new Date(stored.expiresAt).getTime() < Date.now()) {
-    delete ZoteroCodexBridge.confirmations[confirmation.planId];
+    delete ZoteroLocalMcpBridge.confirmations[confirmation.planId];
     throw commandError("PLAN_EXPIRED", "Dry-run plan has expired", 410);
   }
 
@@ -5097,7 +5439,7 @@ function validateStoredConfirmation(input, confirmation) {
     throw commandError("CONFIRMATION_TOKEN_INVALID", "Confirmation token is invalid", 403);
   }
 
-  delete ZoteroCodexBridge.confirmations[confirmation.planId];
+  delete ZoteroLocalMcpBridge.confirmations[confirmation.planId];
 }
 
 function assertConfirmationPresent(confirmation) {
@@ -5157,7 +5499,7 @@ async function readBackupSettings() {
   var filePath = backupSettingsFilePath();
   if (!(await fileExists(filePath))) {
     return {
-      policy: cloneBackupPolicy(ZoteroCodexBridgeDefaultBackupPolicy),
+      policy: cloneBackupPolicy(ZoteroLocalMcpBridgeDefaultBackupPolicy),
       filePath: filePath,
       defaultsUsed: true
     };
@@ -5215,7 +5557,7 @@ async function executeBackupSettingsSet(input, confirmation) {
   await Zotero.File.putContentsAsync(filePath, JSON.stringify({
     policy: normalized.policy,
     updatedAt: new Date().toISOString(),
-    updatedBy: ZoteroCodexBridge.id
+    updatedBy: ZoteroLocalMcpBridge.id
   }, null, 2) + "\n");
 
   return {
@@ -5291,19 +5633,19 @@ function isLikelyWindowsPlatform() {
 }
 
 function resolveBridgeRuntimeRoot() {
-  if (typeof ZoteroCodexBridge === "object" &&
-    ZoteroCodexBridge &&
-    typeof ZoteroCodexBridge.runtimeRoot === "string" &&
-    ZoteroCodexBridge.runtimeRoot.trim().length > 0) {
-    return ZoteroCodexBridge.runtimeRoot;
+  if (typeof ZoteroLocalMcpBridge === "object" &&
+    ZoteroLocalMcpBridge &&
+    typeof ZoteroLocalMcpBridge.runtimeRoot === "string" &&
+    ZoteroLocalMcpBridge.runtimeRoot.trim().length > 0) {
+    return ZoteroLocalMcpBridge.runtimeRoot;
   }
 
-  var explicitEnv = getEnvironmentValue("ZOTERO_CODEX_BRIDGE_RUNTIME_DIR");
+  var explicitEnv = getEnvironmentValue("ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_DIR");
   if (explicitEnv) {
     return explicitEnv;
   }
 
-  var explicitPreference = getPreferenceValue("extensions.zotero-codex-bridge.runtimeRoot");
+  var explicitPreference = getPreferenceValue(BRIDGE_RUNTIME_ROOT_PREFERENCE);
   if (explicitPreference && typeof explicitPreference === "string" && explicitPreference.trim().length > 0) {
     return explicitPreference;
   }
@@ -5312,15 +5654,15 @@ function resolveBridgeRuntimeRoot() {
   if (isLikelyWindowsPlatform()) {
     var localAppData = getEnvironmentValue("LOCALAPPDATA");
     var appData = getEnvironmentValue("APPDATA");
-    return PathUtils.join(appData || localAppData || home || "", "zotero-codex-bridge");
+    return PathUtils.join(appData || localAppData || home || "", "zotero-local-mcp-bridge");
   }
 
   if (typeof navigator === "object" && typeof navigator.platform === "string" && /^mac/i.test(navigator.platform)) {
-    return PathUtils.join(home || "", "Library", "Application Support", "zotero-codex-bridge");
+    return PathUtils.join(home || "", "Library", "Application Support", "zotero-local-mcp-bridge");
   }
 
   var xdgState = getEnvironmentValue("XDG_STATE_HOME") || getEnvironmentValue("XDG_DATA_HOME") || (home ? PathUtils.join(home, ".local", "share") : "");
-  return PathUtils.join(xdgState, "zotero-codex-bridge");
+  return PathUtils.join(xdgState, "zotero-local-mcp-bridge");
 }
 
 function resolveAuthTokenPath() {
@@ -5332,8 +5674,8 @@ async function getExpectedAuthToken() {
     return cachedExpectedAuthToken;
   }
 
-  if (typeof ZoteroCodexBridge.expectedAuthToken === "string" && ZoteroCodexBridge.expectedAuthToken.length >= 32) {
-    cachedExpectedAuthToken = String(ZoteroCodexBridge.expectedAuthToken);
+  if (typeof ZoteroLocalMcpBridge.expectedAuthToken === "string" && ZoteroLocalMcpBridge.expectedAuthToken.length >= 32) {
+    cachedExpectedAuthToken = String(ZoteroLocalMcpBridge.expectedAuthToken);
     return cachedExpectedAuthToken;
   }
 
@@ -5372,13 +5714,53 @@ function getPreferenceValue(name) {
   }
 
   try {
+    var globalValue = Zotero.Prefs.get(name, true);
+    if (globalValue !== undefined) {
+      return globalValue;
+    }
+  } catch (error) {
+    // Fall back to the older single-argument form below.
+  }
+
+  try {
     return Zotero.Prefs.get(name);
   } catch (error) {
     return undefined;
   }
 }
 
+function setPreferenceValue(name, value) {
+  if (typeof Zotero === "undefined" || !Zotero.Prefs || !Zotero.Prefs.set) {
+    return;
+  }
+
+  try {
+    Zotero.Prefs.set(name, value, true);
+  } catch (error) {
+    try {
+      Zotero.Prefs.set(name, value);
+    } catch (fallbackError) {
+      log("preference write failed for " + name);
+    }
+  }
+}
+
+function persistRuntimeRootPreference() {
+  if (typeof ZoteroLocalMcpBridge.runtimeRoot !== "string" || ZoteroLocalMcpBridge.runtimeRoot.trim().length === 0) {
+    return;
+  }
+
+  setPreferenceValue(BRIDGE_RUNTIME_ROOT_PREFERENCE, ZoteroLocalMcpBridge.runtimeRoot);
+}
+
 function backupRootPath() {
+  var explicitPreference = getPreferenceValue(BRIDGE_BACKUP_ROOT_PREFERENCE);
+  if (isAllowedBridgeOutputRoot(explicitPreference)) {
+    return explicitPreference.trim();
+  } else if (typeof explicitPreference === "string" && explicitPreference.trim().length > 0) {
+    log("ignored unsafe backupRoot preference");
+  }
+
   return PathUtils.join(resolveBridgeRuntimeRoot(), "runtime", "backups", "zotero-operations");
 }
 
@@ -5426,7 +5808,7 @@ async function createBackupFileSnapshot(commandName, input) {
     backupId: backupId,
     commandName: commandName,
     createdAt: createdAt,
-    createdBy: ZoteroCodexBridge.id,
+    createdBy: ZoteroLocalMcpBridge.id,
     attachmentKey: input.attachmentKey,
     parentZoteroItemKey: input.parentZoteroItemKey,
     sourceFilePath: input.filePath,
@@ -5547,7 +5929,8 @@ async function createBackupSnapshotRestoreDryRun(input) {
       action: "restore-file",
       targetFilePath: normalized.targetFilePath,
       sourceBackupFilePath: normalized.backupFilePath
-    }
+    },
+    "high"
   );
 }
 
@@ -5665,7 +6048,8 @@ async function createBackupSnapshotPruneDryRun(input) {
       deleteCount: normalized.deleteSnapshots.length,
       deleteSnapshots: normalized.deleteSnapshots,
       freedBytes: normalized.freedBytes
-    }
+    },
+    "high"
   );
 }
 
@@ -5913,7 +6297,65 @@ async function readAuditList(input) {
 }
 
 function auditRootPath() {
+  var explicitPreference = getPreferenceValue(BRIDGE_AUDIT_ROOT_PREFERENCE);
+  if (isAllowedBridgeOutputRoot(explicitPreference)) {
+    return explicitPreference.trim();
+  } else if (typeof explicitPreference === "string" && explicitPreference.trim().length > 0) {
+    log("ignored unsafe auditRoot preference");
+  }
+
   return PathUtils.join(resolveBridgeRuntimeRoot(), "runtime", "logs", "audit");
+}
+
+function isAllowedBridgeOutputRoot(candidatePath) {
+  if (typeof candidatePath !== "string" || candidatePath.trim().length === 0) {
+    return false;
+  }
+
+  var candidate = normalizePathForComparison(candidatePath);
+  var unsafeRoots = getUnsafeBridgeOutputRoots().map(normalizePathForComparison).filter(Boolean);
+  for (var i = 0; i < unsafeRoots.length; i += 1) {
+    if (candidate === unsafeRoots[i] || candidate.indexOf(unsafeRoots[i] + "/") === 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function getUnsafeBridgeOutputRoots() {
+  var roots = [
+    PathUtils.join(resolveBridgeRuntimeRoot(), "ZoteroProfile"),
+    PathUtils.join(resolveBridgeRuntimeRoot(), "ZoteroData"),
+    PathUtils.join(resolveBridgeRuntimeRoot(), "ZoteroVault")
+  ];
+
+  try {
+    if (Zotero.DataDirectory && Zotero.DataDirectory.dir) {
+      roots.push(Zotero.DataDirectory.dir);
+      roots.push(PathUtils.join(Zotero.DataDirectory.dir, "storage"));
+    }
+  } catch (error) {
+    // Best-effort safety root detection.
+  }
+
+  try {
+    var linkedAttachmentRoot = Zotero.Prefs.get("baseAttachmentPath", true) || Zotero.Prefs.get("baseAttachmentPath");
+    if (typeof linkedAttachmentRoot === "string" && linkedAttachmentRoot.trim().length > 0) {
+      roots.push(linkedAttachmentRoot);
+    }
+  } catch (error) {
+    // Best-effort safety root detection.
+  }
+
+  return roots;
+}
+
+function normalizePathForComparison(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  var normalized = value.trim().replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+  return normalized;
 }
 
 function auditFilePathForDate(date) {
@@ -6009,7 +6451,7 @@ function isAttachmentAddAuditForKey(event, attachmentKey) {
 }
 
 function isWriteCommandName(commandName) {
-  return !!ZoteroCodexBridgeWriteCommands[commandName];
+  return !!ZoteroLocalMcpBridgeWriteCommands[commandName];
 }
 
 function collectAuditFilePaths(value) {
@@ -6090,13 +6532,14 @@ function emptyAffected() {
   };
 }
 
-function unregisterEndpoints() {
+async function unregisterEndpoints() {
   if (typeof Zotero === "undefined" || !Zotero.Server || !Zotero.Server.Endpoints) {
     return;
   }
 
-  for (var i = 0; i < ZoteroCodexBridge.registeredPaths.length; i += 1) {
-    delete Zotero.Server.Endpoints[ZoteroCodexBridge.registeredPaths[i]];
+  for (var i = 0; i < ZoteroLocalMcpBridge.registeredPaths.length; i += 1) {
+    delete Zotero.Server.Endpoints[ZoteroLocalMcpBridge.registeredPaths[i]];
   }
-  ZoteroCodexBridge.registeredPaths = [];
+  ZoteroLocalMcpBridge.registeredPaths = [];
 }
+

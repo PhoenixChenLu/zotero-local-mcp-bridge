@@ -1,4 +1,4 @@
-export const zoteroPluginPackage = "zotero-codex-bridge-plugin";
+export const zoteroPluginPackage = "zotero-local-mcp-bridge-plugin";
 
 export * from "./commandRegistry.js";
 export * from "./commands/attachmentCommands.js";

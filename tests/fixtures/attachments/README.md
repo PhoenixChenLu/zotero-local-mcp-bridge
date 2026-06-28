@@ -1,6 +1,6 @@
 # Attachment Fixtures
 
-这些文件用于 `ZoteroCodexBridgeTest` 手工验收，不能用于真实主库。
+这些文件用于 `ZoteroLocalMcpBridgeTest` 手工验收，不能用于真实主库。
 
 当前仓库内提供文本可审查 fixtures：
 

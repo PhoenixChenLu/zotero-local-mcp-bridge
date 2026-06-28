@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
@@ -8,8 +8,10 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
-const xpiPath = path.resolve("dist", "zotero-codex-bridge.xpi");
+const xpiPath = path.resolve("dist", "zotero-local-mcp-bridge.xpi");
 const runtimeAuthTokenPath = path.resolve("runtime", "auth", "bridge-token");
+const supportedLocalesPath = path.resolve("src", "zotero-plugin", "locale", "supportedLocales.json");
+const fluentResourceName = "zotero-local-mcp-bridge.ftl";
 
 describe("Zotero plugin package", () => {
   it("declares compatibility with Zotero 9", async () => {
@@ -24,32 +26,64 @@ describe("Zotero plugin package", () => {
       };
     };
 
-    expect(manifest.applications.zotero.id).toBe("zotero-codex-bridge@example.com");
+    expect(manifest.applications.zotero.id).toBe("zotero-local-mcp-bridge@example.com");
     expect(manifest.applications.zotero.update_url).toBe(
-      "https://example.com/zotero-codex-bridge-local-test/updates.json"
+      "https://example.com/zotero-local-mcp-bridge-local-test/updates.json"
     );
     expect(manifest.applications.zotero.strict_min_version).toBe("7.0");
     expect(manifest.applications.zotero.strict_max_version).toBe("9.0.*");
   });
 
-  it("registers Zotero connector server health and command endpoints", async () => {
+  it("registers only the plugin-hosted Zotero connector MCP endpoint", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.43"');
+    expect(bootstrap).toContain('version: "0.1.56"');
     expect(bootstrap).toContain("Zotero.PreferencePanes.register");
     expect(bootstrap).toContain('src: data.rootURI + "preferences.xhtml"');
     expect(bootstrap).toContain('scripts: [data.rootURI + "preferences.js"]');
+    expect(bootstrap).toContain('stylesheets: [data.rootURI + "preferences.css"]');
     expect(bootstrap).toContain('BRIDGE_OPERATION_MODE_DEFAULT = "readonly"');
+    expect(bootstrap).toContain('BRIDGE_RUNTIME_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.runtimeRoot"');
+    expect(bootstrap).toContain('BRIDGE_AUDIT_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.auditRoot"');
+    expect(bootstrap).toContain('BRIDGE_BACKUP_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.backupRoot"');
+    expect(bootstrap).toContain("isAllowedBridgeOutputRoot(explicitPreference)");
+    expect(bootstrap).toContain('PathUtils.join(resolveBridgeRuntimeRoot(), "ZoteroData")');
+    expect(bootstrap).toContain('PathUtils.join(Zotero.DataDirectory.dir, "storage")');
+    expect(bootstrap).toContain("persistRuntimeRootPreference()");
+    expect(bootstrap).toContain("Zotero.Prefs.set(name, value, true)");
     expect(bootstrap).toContain("function getBridgeOperationMode");
     expect(bootstrap).toContain("assertOperationWritePermission(operationMode, commandName)");
     expect(bootstrap).toContain('"OPERATION_MODE_READONLY"');
     expect(bootstrap).toContain("operationMode: operationMode");
     expect(bootstrap).toContain("dryRunRequired: true");
     expect(bootstrap).toContain("auditEnabled: true");
-    expect(bootstrap).toContain('"zotero-codex-bridge ok " + ZoteroCodexBridge.version');
-    expect(bootstrap).toContain('healthPath: "/zotero-codex-bridge/health"');
-    expect(bootstrap).toContain('commandPath: "/zotero-codex-bridge/command"');
-    expect(bootstrap).toContain('"text/plain"');
+    expect(bootstrap).toContain("function createAgentApprovalPolicy");
+    expect(bootstrap).toContain('layer: "agent"');
+    expect(bootstrap).toContain('operationMode === "askforapprove"');
+    expect(bootstrap).toContain('requiredText = "CONFIRM"');
+    expect(bootstrap).toContain("requiredText = operation");
+    expect(bootstrap).toContain('mcpPath: "/zotero-local-mcp-bridge/mcp"');
+    expect(bootstrap).toContain("function registerMcpEndpoint");
+    expect(bootstrap).toContain("function handleMcpEndpointRequest");
+    expect(bootstrap).toContain("function handleMcpJsonRpc");
+    expect(bootstrap).toContain("function handleMcpToolCall");
+    expect(bootstrap).toContain('payload.method === "initialize"');
+    expect(bootstrap).toContain('payload.method === "tools/list"');
+    expect(bootstrap).toContain('payload.method === "tools/call"');
+    expect(bootstrap).toContain("createMcpToolDescriptors()");
+    expect(bootstrap).toContain("executeInternalCommandPayload(commandPayload)");
+    expect(bootstrap).toContain("extractMcpCommandInput(args)");
+    expect(bootstrap).toContain('replace(/([a-z0-9])([A-Z])/g, "$1_$2")');
+    expect(bootstrap).toContain("Zotero.Server.Endpoints[ZoteroLocalMcpBridge.mcpPath]");
+    expect(bootstrap).not.toContain('healthPath: "/zotero-local-mcp-bridge/health"');
+    expect(bootstrap).not.toContain('commandPath: "/zotero-local-mcp-bridge/command"');
+    expect(bootstrap).not.toContain("function registerHealthEndpoint");
+    expect(bootstrap).not.toContain("function registerCommandEndpoint");
+    expect(bootstrap).not.toContain("Zotero.Server.Endpoints[ZoteroLocalMcpBridge.healthPath]");
+    expect(bootstrap).not.toContain("Zotero.Server.Endpoints[ZoteroLocalMcpBridge.commandPath]");
+    expect(bootstrap).not.toContain("startMcpSidecar");
+    expect(bootstrap).not.toContain("stopMcpSidecar");
+    expect(bootstrap).not.toContain("23120");
     expect(bootstrap).toContain('commandName === "collection.getTree"');
     expect(bootstrap).toContain('commandName === "collection.create"');
     expect(bootstrap).toContain('commandName === "collection.rename"');
@@ -113,7 +147,8 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("getPreferenceValue(REAL_PROFILE_PREFERENCE_MODE)");
     expect(bootstrap).toContain("await isTestProfileMarkerPresent()");
     expect(bootstrap).toContain('return "test"');
-    expect(bootstrap).toContain('getPreferenceValue("extensions.zotero-codex-bridge.runtimeRoot")');
+    expect(bootstrap).toContain('LEGACY_TEST_PROFILE_MARKER_FILE = ".zotero-codex-bridge-test-profile"');
+    expect(bootstrap).toContain("getPreferenceValue(BRIDGE_RUNTIME_ROOT_PREFERENCE)");
     expect(bootstrap).toContain('REAL_PROFILE_STATE_PATH_PARTS = ["runtime", "safety", "real-profile-state.json"]');
     expect(bootstrap).toContain("PathUtils.join.apply(PathUtils, [resolveBridgeRuntimeRoot()].concat(REAL_PROFILE_STATE_PATH_PARTS))");
     expect(bootstrap).not.toContain('if (preferenceMode === "real-unlocked")');
@@ -167,7 +202,7 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("collection.deleted = true");
     expect(bootstrap).toContain("findBridgeAttachmentAddAudit");
     expect(bootstrap).toContain("attachment.parentKey = normalized.targetZoteroItemKey");
-    expect(bootstrap).toContain('return PathUtils.join(appData || localAppData || home || "", "zotero-codex-bridge");');
+    expect(bootstrap).toContain('return PathUtils.join(appData || localAppData || home || "", "zotero-local-mcp-bridge");');
     expect(bootstrap).toContain("var localAppData = getEnvironmentValue(\"LOCALAPPDATA\");");
     expect(bootstrap).toContain('var appData = getEnvironmentValue("APPDATA");');
     expect(bootstrap).toContain("renameAttachmentFile");
@@ -187,10 +222,9 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("CONFIRMATION_REQUIRED");
     expect(bootstrap).toContain("Zotero.Collections.getByLibrary");
     expect(bootstrap).toContain("return [");
-    expect(bootstrap).toContain("Zotero.Server.Endpoints[ZoteroCodexBridge.healthPath]");
     expect(bootstrap).toContain("function onMainWindowLoad");
     expect(bootstrap).toContain("function onMainWindowUnload");
-    expect(bootstrap).toContain("runtimeRoot: __ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__");
+    expect(bootstrap).toContain("runtimeRoot: __ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
     expect(bootstrap).not.toContain("runtimeRoot: resolveBridgeRuntimeRoot(),");
     expect(bootstrap).toContain("var expectedAuthToken;");
     expect(bootstrap).toContain("try {");
@@ -215,10 +249,12 @@ describe("Zotero plugin package", () => {
     expect(stdout).toContain("preferences.xhtml");
     expect(stdout).toContain("preferences.js");
     expect(stdout).toContain("preferences.css");
+    expect(stdout).toContain(`locale/en-US/${fluentResourceName}`);
+    expect(stdout).toContain(`locale/zh-CN/${fluentResourceName}`);
 
     const bootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
-    expect(bootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__");
-    expect(bootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__");
+    expect(bootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
+    expect(bootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
     expect(bootstrap.stdout).not.toContain("H:\\\\ProgramDocument\\\\MixLanguage\\\\Zotero-codex-bridge");
   });
 
@@ -227,19 +263,124 @@ describe("Zotero plugin package", () => {
     const preferences = await readFile(path.resolve("src", "zotero-plugin", "preferences.xhtml"), "utf8");
     const script = await readFile(path.resolve("src", "zotero-plugin", "preferences.js"), "utf8");
 
-    expect(prefs).toContain('pref("extensions.zotero-codex-bridge.operationMode", "readonly")');
-    expect(prefs).toContain('pref("extensions.zotero-codex-bridge.realProfileUnlockTtlMinutes", 30)');
-    expect(prefs).toContain('pref("extensions.zotero-codex-bridge.fileBackupEnabled", true)');
-    expect(prefs).toContain('pref("extensions.zotero-codex-bridge.backupMaxLocalBytes", 10737418240)');
+    expect(prefs).toContain('pref("extensions.zotero-local-mcp-bridge.operationMode", "readonly")');
+    expect(prefs).toContain('pref("extensions.zotero-local-mcp-bridge.realProfileUnlockTtlMinutes", 30)');
+    expect(prefs).toContain('pref("extensions.zotero-local-mcp-bridge.fileBackupEnabled", true)');
+    expect(prefs).toContain('pref("extensions.zotero-local-mcp-bridge.backupMaxLocalGb", 10)');
+    expect(prefs).not.toContain('pref("extensions.zotero-local-mcp-bridge.backupMaxLocalBytes", 10737418240)');
     expect(preferences).toContain('value="readonly"');
     expect(preferences).toContain('value="askforapprove"');
     expect(preferences).toContain('value="yolo"');
-    expect(preferences).toContain("Dry-run and audit are always enabled");
-    expect(preferences).toContain("Enable file-level backup and undo");
-    expect(preferences).toContain("Copy to Zotero storage");
+    expect(preferences).not.toContain("Dry-run and audit are always enabled");
+    expect(preferences).not.toContain("Enable file-level backup and undo");
+    expect(preferences).not.toContain("Copy to Zotero storage");
+    expect(preferences).not.toContain("<?xml");
+    expect(preferences).not.toContain("<caption");
+    expect(preferences).toContain('rel="localization"');
+    expect(preferences).toContain(`href="${fluentResourceName}"`);
+    expect(preferences).toContain('data-l10n-id="zotero-local-mcp-bridge-title"');
+    expect(preferences).not.toContain("<html:h2>Zotero Local MCP Bridge</html:h2>");
+    expect(preferences).not.toContain('label="Enable file-level backup and undo"');
+    expect(preferences).not.toContain('label="Choose..."');
+    expect(preferences).not.toContain('onload="ZoteroLocalMcpBridgePreferences.init()"');
+    expect(preferences).toContain('id="zcb-run-mode-help"');
+    expect(preferences).toContain('class="zcb-help-button"');
+    expect(preferences).toContain('tooltip="zcb-run-mode-tooltip"');
+    expect(preferences).toContain('id="zcb-run-mode-tooltip"');
+    expect(preferences).toContain('class="zcb-tooltip-description"');
+    expect(preferences).not.toContain('id="zcb-run-mode-help-popover"');
+    expect(preferences).not.toContain('class="zcb-help-popover"');
+    expect(preferences).not.toContain('tooltiptext="readonly blocks all write commands');
+    expect(preferences).not.toContain('id="zcb-run-mode-help-text"');
+    expect(preferences).toContain('id="zcb-runtime-root-choose"');
+    expect(preferences).toContain('id="zcb-audit-path-choose"');
+    expect(preferences).toContain('id="zcb-backup-path-choose"');
+    expect(preferences).toContain('class="directory-path zcb-path-control"');
+    expect(preferences).not.toContain('class="zcb-folder-icon"');
+    expect(preferences).not.toContain("ZoteroLocalMcpBridgePreferences.chooseRuntimeRoot()");
+    expect(preferences).toContain('data-l10n-id="zotero-local-mcp-bridge-choose-directory"');
+    expect(script).toContain("Zotero.Prefs.get(fullName, true)");
+    expect(script).toContain("Zotero.Prefs.set(prefPrefix + name, value, true)");
+    expect(script).toContain("var injectedRuntimeRoot = __ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
+    expect(script).toContain("persistInjectedRuntimeRootIfNeeded()");
+    expect(script).toContain('getPref("runtimeRoot", "")');
+    expect(script).toContain("function resolveDefaultRuntimeRoot");
+    expect(script).toContain('getEnvironmentValue("APPDATA")');
+    expect(script).toContain('getEnvironmentValue("LOCALAPPDATA")');
+    expect(script).toContain('["zotero-local-mcp-bridge"]');
+    expect(script).toContain('chooseDirectory("runtimeRoot"');
+    expect(script).toContain('chooseDirectory("auditRoot"');
+    expect(script).toContain('chooseDirectory("backupRoot"');
+    expect(script).toContain('element.addEventListener("click", run)');
+    expect(script).toContain("function addTooltipHelpListener");
+    expect(script).toContain('addTooltipHelpListener("zcb-run-mode-help", "zcb-run-mode-tooltip")');
+    expect(script).toContain('tooltip.openPopup(button, "after_start", 0, 0, false, false)');
+    expect(script).not.toContain('button.addEventListener("mouseenter", show)');
+    expect(script).toContain('button.addEventListener("mouseleave", hide)');
+    expect(script).toContain("now - lastToggleAt < 100");
+    expect(script).toContain("function filePickerFolderMode");
+    expect(script).toContain("function scheduleInit");
+    expect(script).toContain("scheduleInit(0)");
+    expect(script).toContain("setPathElementValue");
+    expect(script).toContain("Components.interfaces.nsIFilePicker.modeGetFolder");
+    expect(script).toContain('ChromeUtils.importESModule("chrome://zotero/content/modules/filePicker.mjs")');
+    expect(script).toContain("globalThis.ZoteroLocalMcpBridgePreferences");
+    expect(script).not.toContain("DOMContentLoaded");
     expect(script).toContain('setPref("operationMode"');
+    expect(script).toContain("function getBackupMaxLocalGb");
+    expect(script).toContain('getPref("backupMaxLocalGb", 10)');
     expect(script).toContain('setPref("backupMaxLocalBytes"');
+    expect(script).toContain("String(gbValue * bytesPerGb)");
     expect(script).toContain('setPref("defaultAttachmentMode"');
+  });
+
+  it("packages Fluent localization resources for every Zotero locale", async () => {
+    const supportedLocales = JSON.parse(await readFile(supportedLocalesPath, "utf8")) as string[];
+    expect(supportedLocales).toEqual([
+      "af-ZA", "ar", "bg-BG", "br", "ca-AD", "cs-CZ", "da-DK", "de", "el-GR", "en-GB", "en-US", "es-ES",
+      "et-EE", "eu-ES", "fa", "fi-FI", "fr-FR", "gl-ES", "he-IL", "hr-HR", "hu-HU", "id-ID", "is-IS",
+      "it-IT", "ja-JP", "km", "ko-KR", "lt-LT", "mn-MN", "nb-NO", "nl-NL", "nn-NO", "pl-PL", "pt-BR",
+      "pt-PT", "ro-RO", "ru-RU", "sk-SK", "sl-SI", "sr-RS", "sv-SE", "ta", "th-TH", "tr-TR", "uk-UA",
+      "vi-VN", "zh-CN", "zh-TW"
+    ]);
+
+    const sourceLocales = await readdir(path.resolve("src", "zotero-plugin", "locale"), { withFileTypes: true });
+    const sourceLocaleNames = sourceLocales.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+    expect(sourceLocaleNames).toEqual([...supportedLocales].sort());
+
+    const enUs = await readFile(path.resolve("src", "zotero-plugin", "locale", "en-US", fluentResourceName), "utf8");
+    for (const locale of supportedLocales) {
+      const localeSourcePath = path.resolve("src", "zotero-plugin", "locale", locale, fluentResourceName);
+      const localeSource = await readFile(localeSourcePath, "utf8");
+      expect(localeSource).toContain("zotero-local-mcp-bridge-run-mode =");
+      expect(localeSource).toContain("zotero-local-mcp-bridge-choose-directory =");
+      if (locale !== "en-US") {
+        expect(localeSource).not.toBe(enUs);
+      }
+    }
+
+    const buildScript = await readFile(path.resolve("scripts", "buildZoteroPlugin.mjs"), "utf8");
+    expect(buildScript).toContain("Missing Zotero Local MCP Bridge localization resource");
+    expect(buildScript).not.toContain("fallback");
+
+    await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });
+    const { stdout } = await execFileAsync("tar", ["-tf", xpiPath], { windowsHide: true });
+    for (const locale of supportedLocales) {
+      expect(stdout).toContain(`locale/${locale}/${fluentResourceName}`);
+    }
+
+    const zhCn = await execFileAsync("tar", ["-xOf", xpiPath, `locale/zh-CN/${fluentResourceName}`], {
+      windowsHide: true
+    });
+    expect(zhCn.stdout).toContain("zotero-local-mcp-bridge-title = Zotero Local MCP Bridge");
+    expect(zhCn.stdout).toContain("zotero-local-mcp-bridge-run-mode =");
+    expect(zhCn.stdout).toContain(".value = 运行模式");
+
+    const frFr = await execFileAsync("tar", ["-xOf", xpiPath, `locale/fr-FR/${fluentResourceName}`], {
+      windowsHide: true
+    });
+    expect(frFr.stdout).toContain("zotero-local-mcp-bridge-run-mode =");
+    expect(frFr.stdout).toContain(".value = Mode d'exécution");
   });
 
   it("keeps release build artifact free of embedded local tokens", async () => {
@@ -254,19 +395,25 @@ describe("Zotero plugin package", () => {
 
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });
       const releaseBootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
+      const releasePreferences = await execFileAsync("tar", ["-xOf", xpiPath, "preferences.js"], { windowsHide: true });
       expect(releaseBootstrap.stdout).toContain("expectedAuthToken: null");
       expect(releaseBootstrap.stdout).toContain("runtimeRoot: null");
       expect(releaseBootstrap.stdout).not.toContain(tokenForTestBuild);
-      expect(releaseBootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__");
-      expect(releaseBootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__");
+      expect(releaseBootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
+      expect(releaseBootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
+      expect(releasePreferences.stdout).toContain("var injectedRuntimeRoot = null");
+      expect(releasePreferences.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
 
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs", "--test"], { windowsHide: true });
       const testBootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
+      const testPreferences = await execFileAsync("tar", ["-xOf", xpiPath, "preferences.js"], { windowsHide: true });
       expect(testBootstrap.stdout).toContain(`expectedAuthToken: "${tokenForTestBuild}"`);
       expect(testBootstrap.stdout).toContain('runtimeRoot: "H:\\\\ProgramDocument\\\\MixLanguage\\\\Zotero-codex-bridge"');
       expect(testBootstrap.stdout).not.toContain("expectedAuthToken: null");
-      expect(testBootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_AUTH_TOKEN__");
-      expect(testBootstrap.stdout).not.toContain("__ZOTERO_CODEX_BRIDGE_RUNTIME_ROOT__");
+      expect(testBootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
+      expect(testBootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
+      expect(testPreferences.stdout).toContain('var injectedRuntimeRoot = "H:\\\\ProgramDocument\\\\MixLanguage\\\\Zotero-codex-bridge"');
+      expect(testPreferences.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
 
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });
       const rebuiltReleaseBootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
@@ -284,3 +431,4 @@ describe("Zotero plugin package", () => {
     }
   });
 });
+

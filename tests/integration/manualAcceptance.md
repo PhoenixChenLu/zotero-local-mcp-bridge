@@ -1,25 +1,25 @@
 # Manual Acceptance
 
-本文件用于在 `ZoteroCodexBridgeTest` 中逐项验收第一版闭环。所有写操作必须先 dry-run，再 execute。
+本文件用于在 Zotero Local MCP Bridge 隔离测试 profile 中逐项验收第一版闭环。所有写操作必须先 dry-run，再 execute。
 
 ## 0. Preflight
 
-- [ ] Zotero 已启动，当前 profile 是 `ZoteroCodexBridgeTest`。
-- [ ] `ZoteroProfile/.zotero-codex-bridge-test-profile` 存在。
+- [ ] Zotero 已启动，当前 profile 是 `ZoteroLocalMcpBridgeTest`，或迁移期既有的 `ZoteroCodexBridgeTest`。
+- [ ] `ZoteroProfile/.zotero-local-mcp-bridge-test-profile` 存在。
 - [ ] `tests/integration/zoteroTestProfile.md` 中的 `ZoteroProfile/`、`ZoteroVault/`、`ZoteroData/` 已填写并确认不是真实主库或真实附件根目录。
 - [ ] `ZoteroProfile/`、`ZoteroVault/`、`ZoteroData/` 已被 `.gitignore` 和 ESLint ignore 排除。
-- [ ] `npm run build:zotero-plugin` 已生成 `dist/zotero-codex-bridge.xpi`。
-- [ ] `dist/zotero-codex-bridge.xpi` 已安装到 `ZoteroCodexBridgeTest`。
+- [ ] `npm run build:zotero-plugin` 已生成 `dist/zotero-local-mcp-bridge.xpi`。
+- [ ] `dist/zotero-local-mcp-bridge.xpi` 已安装到隔离测试 profile。
 - [ ] 安装后已重启 Zotero。
-- [ ] PowerShell 使用非浏览器 User-Agent 能访问 `http://127.0.0.1:23119/zotero-codex-bridge/health`。
-- [ ] health endpoint 返回 `zotero-codex-bridge ok 0.1.31 zotero-codex-bridge@example.com test`。
+- [ ] PowerShell 使用非浏览器 User-Agent 能访问 `http://127.0.0.1:23119/zotero-local-mcp-bridge/health`。
+- [ ] health endpoint 返回 `zotero-local-mcp-bridge ok 0.1.31 zotero-local-mcp-bridge@example.com test`。
 - [ ] `profileMode` 为 `test`。
 - [ ] 插件 HTTP 绑定为 `127.0.0.1:23119`。
 - [ ] 已完成 `tests/integration/zoteroPluginDevelopmentInstall.md` 中的开发加载或 XPI 安装路径确认。
-- [ ] `/zotero-codex-bridge/command` 已实现本机请求鉴权，未带鉴权的 command 请求会被拒绝。
+- [ ] `/zotero-local-mcp-bridge/command` 已实现本机请求鉴权，未带鉴权的 command 请求会被拒绝。
 - [ ] `docs/zotero-api-source-audit.md` 已记录本轮将验收的真实 Zotero API 调用依据。
-- [ ] 带本机 token 的 `/zotero-codex-bridge/command` 可以执行只读 `collection.getTree`。
-- [ ] token 错误的 `/zotero-codex-bridge/command` 返回 `COMMAND_AUTH_INVALID`。
+- [ ] 带本机 token 的 `/zotero-local-mcp-bridge/command` 可以执行只读 `collection.getTree`。
+- [ ] token 错误的 `/zotero-local-mcp-bridge/command` 返回 `COMMAND_AUTH_INVALID`。
 - [ ] `collection.create` 未带 confirmation execute 时返回 `CONFIRMATION_REQUIRED`。
 - [ ] `collection.create` dry-run 返回 `planId` 和 `confirmationToken`。
 - [ ] MCP server 可以列出第一版受控 tools。
@@ -27,7 +27,7 @@
 
 ## 1. Collection And Subcollection
 
-- [ ] dry-run `collection.create` 创建顶层 collection：`Codex Bridge Acceptance`
+- [ ] dry-run `collection.create` 创建顶层 collection：`Local MCP Bridge Acceptance`
 - [ ] execute 后 Zotero UI 可见顶层 collection。
 - [ ] dry-run `collection.create` 创建 subcollection：`Attachments`
 - [ ] execute 后 Zotero UI 可见 subcollection。

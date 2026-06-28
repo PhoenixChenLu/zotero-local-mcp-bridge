@@ -1,103 +1,102 @@
-<?xml version="1.0"?>
 <vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       xmlns:html="http://www.w3.org/1999/xhtml"
-      id="zotero-codex-bridge-preferences"
-      class="zotero-codex-bridge-preferences">
-  <html:link rel="stylesheet" href="preferences.css"/>
+      id="zotero-local-mcp-bridge-preferences"
+      class="zotero-local-mcp-bridge-preferences">
+  <linkset>
+    <html:link rel="localization" href="zotero-local-mcp-bridge.ftl"/>
+  </linkset>
 
   <groupbox>
-    <caption label="Zotero Codex Bridge"/>
-    <description>Configure local bridge safety settings. Dry-run and audit are always enabled.</description>
-    <grid>
-      <columns>
-        <column/>
-        <column flex="1"/>
-      </columns>
-      <rows>
-        <row align="center">
-          <label value="Run mode"/>
-          <menulist id="zcb-operation-mode" preference="extensions.zotero-codex-bridge.operationMode">
-            <menupopup>
-              <menuitem label="readonly" value="readonly"/>
-              <menuitem label="askforapprove" value="askforapprove"/>
-              <menuitem label="yolo" value="yolo"/>
-            </menupopup>
-          </menulist>
-        </row>
-        <row align="center">
-          <label value="Real-profile unlock TTL"/>
-          <hbox align="center">
-            <html:input id="zcb-real-profile-ttl" type="number" min="1" max="120" preference="extensions.zotero-codex-bridge.realProfileUnlockTtlMinutes"/>
-            <label value="minutes"/>
-          </hbox>
-        </row>
-        <row align="center">
-          <label value="File backup / undo"/>
-          <checkbox id="zcb-file-backup-enabled" label="Enable file-level backup and undo" preference="extensions.zotero-codex-bridge.fileBackupEnabled"/>
-        </row>
-        <row align="center">
-          <label value="Backup retention"/>
-          <hbox align="center">
-            <html:input id="zcb-backup-retention-days" type="number" min="1" preference="extensions.zotero-codex-bridge.backupRetentionDays"/>
-            <label value="days"/>
-          </hbox>
-        </row>
-        <row align="center">
-          <label value="Backup space limit"/>
-          <hbox align="center">
-            <html:input id="zcb-backup-max-gb" type="number" min="1"/>
-            <label value="GB"/>
-          </hbox>
-        </row>
-        <row align="center">
-          <label value="Limits"/>
-          <vbox>
-            <checkbox id="zcb-backup-time-limit" label="Apply time limit" preference="extensions.zotero-codex-bridge.backupEnableTimeLimit"/>
-            <checkbox id="zcb-backup-space-limit" label="Apply space limit before time limit" preference="extensions.zotero-codex-bridge.backupEnableSpaceLimit"/>
-          </vbox>
-        </row>
-        <row align="center">
-          <label value="Default attachment mode"/>
-          <menulist id="zcb-default-attachment-mode" preference="extensions.zotero-codex-bridge.defaultAttachmentMode">
-            <menupopup>
-              <menuitem label="Copy to Zotero storage" value="copy"/>
-              <menuitem label="Linked file" value="linked"/>
-            </menupopup>
-          </menulist>
-        </row>
-        <row align="center">
-          <label value="Attachment duplicate check"/>
-          <checkbox id="zcb-attachment-duplicate-check" label="Check duplicate file paths before adding attachments" preference="extensions.zotero-codex-bridge.attachmentDuplicateCheckEnabled"/>
-        </row>
-      </rows>
-    </grid>
+    <label><html:h2 data-l10n-id="zotero-local-mcp-bridge-title"/></label>
+    <description data-l10n-id="zotero-local-mcp-bridge-description"/>
+
+    <vbox class="zcb-setting-list">
+      <hbox class="zcb-setting-row" align="center">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-run-mode"/>
+        <menulist id="zcb-operation-mode" preference="extensions.zotero-local-mcp-bridge.operationMode">
+          <menupopup>
+            <menuitem data-l10n-id="zotero-local-mcp-bridge-mode-readonly" value="readonly"/>
+            <menuitem data-l10n-id="zotero-local-mcp-bridge-mode-askforapprove" value="askforapprove"/>
+            <menuitem data-l10n-id="zotero-local-mcp-bridge-mode-yolo" value="yolo"/>
+          </menupopup>
+        </menulist>
+        <button id="zcb-run-mode-help"
+                class="zcb-help-button"
+                data-l10n-id="zotero-local-mcp-bridge-run-mode-help"
+                tooltip="zcb-run-mode-tooltip"/>
+        <tooltip id="zcb-run-mode-tooltip">
+          <description class="zcb-tooltip-description" data-l10n-id="zotero-local-mcp-bridge-run-mode-tooltip"/>
+        </tooltip>
+      </hbox>
+
+      <hbox class="zcb-setting-row" align="center">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-real-profile-ttl"/>
+        <html:input id="zcb-real-profile-ttl" type="number" min="1" max="120" preference="extensions.zotero-local-mcp-bridge.realProfileUnlockTtlMinutes"/>
+        <label data-l10n-id="zotero-local-mcp-bridge-minutes"/>
+      </hbox>
+
+      <hbox class="zcb-setting-row" align="center">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-file-backup-undo"/>
+        <checkbox id="zcb-file-backup-enabled" data-l10n-id="zotero-local-mcp-bridge-file-backup-enabled" preference="extensions.zotero-local-mcp-bridge.fileBackupEnabled"/>
+      </hbox>
+
+      <hbox class="zcb-setting-row" align="center">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-backup-retention"/>
+        <html:input id="zcb-backup-retention-days" type="number" min="1" preference="extensions.zotero-local-mcp-bridge.backupRetentionDays"/>
+        <label data-l10n-id="zotero-local-mcp-bridge-days"/>
+      </hbox>
+
+      <hbox class="zcb-setting-row" align="center">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-backup-space-limit"/>
+        <html:input id="zcb-backup-max-gb" type="number" min="1"/>
+        <label value="GB"/>
+      </hbox>
+
+      <hbox class="zcb-setting-row" align="start">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-limits"/>
+        <vbox>
+          <checkbox id="zcb-backup-time-limit" data-l10n-id="zotero-local-mcp-bridge-apply-time-limit" preference="extensions.zotero-local-mcp-bridge.backupEnableTimeLimit"/>
+          <checkbox id="zcb-backup-space-limit" data-l10n-id="zotero-local-mcp-bridge-apply-space-limit-before-time" preference="extensions.zotero-local-mcp-bridge.backupEnableSpaceLimit"/>
+        </vbox>
+      </hbox>
+
+      <hbox class="zcb-setting-row" align="center">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-default-attachment-mode"/>
+        <menulist id="zcb-default-attachment-mode" preference="extensions.zotero-local-mcp-bridge.defaultAttachmentMode">
+          <menupopup>
+            <menuitem data-l10n-id="zotero-local-mcp-bridge-attachment-mode-copy" value="copy"/>
+            <menuitem data-l10n-id="zotero-local-mcp-bridge-attachment-mode-linked" value="linked"/>
+          </menupopup>
+        </menulist>
+      </hbox>
+
+      <hbox class="zcb-setting-row" align="center">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-attachment-duplicate-check"/>
+        <checkbox id="zcb-attachment-duplicate-check" data-l10n-id="zotero-local-mcp-bridge-attachment-duplicate-enabled" preference="extensions.zotero-local-mcp-bridge.attachmentDuplicateCheckEnabled"/>
+      </hbox>
+    </vbox>
   </groupbox>
 
   <groupbox>
-    <caption label="Paths"/>
-    <grid>
-      <columns>
-        <column/>
-        <column flex="1"/>
-      </columns>
-      <rows>
-        <row align="center">
-          <label value="Runtime root"/>
-          <html:input id="zcb-runtime-root" readonly="readonly"/>
-        </row>
-        <row align="center">
-          <label value="Audit path"/>
-          <html:input id="zcb-audit-path" readonly="readonly"/>
-        </row>
-        <row align="center">
-          <label value="Backup path"/>
-          <html:input id="zcb-backup-path" readonly="readonly"/>
-        </row>
-      </rows>
-    </grid>
-  </groupbox>
+    <label><html:h2 data-l10n-id="zotero-local-mcp-bridge-paths-title"/></label>
+    <vbox class="zcb-setting-list">
+      <hbox class="zcb-setting-row zcb-path-row" align="center">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-runtime-root"/>
+        <html:input type="text" id="zcb-runtime-root" readonly="true" tabindex="0" class="directory-path zcb-path-control"/>
+        <button id="zcb-runtime-root-choose" data-l10n-id="zotero-local-mcp-bridge-choose-directory"/>
+      </hbox>
 
-  <description class="zcb-warning">
-    readonly blocks all write commands. yolo still requires explicit confirmation for future unrecoverable operations.
-  </description>
+      <hbox class="zcb-setting-row zcb-path-row" align="center">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-audit-directory"/>
+        <html:input type="text" id="zcb-audit-path" readonly="true" tabindex="0" class="directory-path zcb-path-control"/>
+        <button id="zcb-audit-path-choose" data-l10n-id="zotero-local-mcp-bridge-choose-directory"/>
+      </hbox>
+
+      <hbox class="zcb-setting-row zcb-path-row" align="center">
+        <label class="zcb-setting-label" data-l10n-id="zotero-local-mcp-bridge-backup-directory"/>
+        <html:input type="text" id="zcb-backup-path" readonly="true" tabindex="0" class="directory-path zcb-path-control"/>
+        <button id="zcb-backup-path-choose" data-l10n-id="zotero-local-mcp-bridge-choose-directory"/>
+      </hbox>
+    </vbox>
+  </groupbox>
 </vbox>

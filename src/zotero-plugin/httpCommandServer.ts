@@ -5,8 +5,8 @@ import type { CommandRegistry, PluginCommandRequest } from "./commandRegistry.js
 
 export const DEFAULT_PLUGIN_HTTP_HOST = "127.0.0.1";
 export const DEFAULT_PLUGIN_HTTP_PORT = 23119;
-export const PLUGIN_HTTP_HEALTH_PATH = "/zotero-codex-bridge/health";
-export const PLUGIN_HTTP_COMMAND_PATH = "/zotero-codex-bridge/command";
+export const PLUGIN_HTTP_HEALTH_PATH = "/zotero-local-mcp-bridge/health";
+export const PLUGIN_HTTP_COMMAND_PATH = "/zotero-local-mcp-bridge/command";
 
 export type HttpJsonResponse = {
   status: number;

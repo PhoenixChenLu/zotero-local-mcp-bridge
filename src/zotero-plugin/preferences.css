@@ -1,15 +1,62 @@
-.zotero-codex-bridge-preferences {
-  padding: 12px;
+@namespace html url("http://www.w3.org/1999/xhtml");
+
+.zotero-local-mcp-bridge-preferences {
+  padding: 16px;
 }
 
-.zotero-codex-bridge-preferences groupbox {
-  margin-bottom: 12px;
+.zotero-local-mcp-bridge-preferences groupbox {
+  margin-bottom: 18px;
 }
 
-.zotero-codex-bridge-preferences input[readonly] {
-  min-width: 34em;
+.zotero-local-mcp-bridge-preferences html|h2 {
+  margin: 0 0 10px;
 }
 
-.zcb-warning {
-  color: #8a4b00;
+.zotero-local-mcp-bridge-preferences .zcb-setting-list {
+  margin-top: 12px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-setting-row {
+  margin: 7px 0;
+  gap: 10px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-setting-label {
+  min-width: 170px;
+}
+
+.zotero-local-mcp-bridge-preferences input[type="number"] {
+  width: 90px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-path-row {
+  gap: 10px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-path-row .zcb-setting-label {
+  min-width: 145px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-path-control {
+  width: 13.6em;
+  min-width: 0;
+  background-repeat: no-repeat;
+  background-position: 8px center;
+  padding-left: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-help-button {
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  padding: 0;
+  margin-inline-start: 4px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-tooltip-description {
+  max-width: 440px;
+  white-space: normal;
 }

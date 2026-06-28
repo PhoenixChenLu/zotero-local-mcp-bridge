@@ -49,7 +49,7 @@ describe("ensureProfileWrite", () => {
 
 describe("ensureTestProfile edge", () => {
   it("returns stable marker file path reference", () => {
-    expect(TEST_PROFILE_MARKER_FILE).toBe(".zotero-codex-bridge-test-profile");
+    expect(TEST_PROFILE_MARKER_FILE).toBe(".zotero-local-mcp-bridge-test-profile");
   });
 });
 

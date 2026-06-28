@@ -4,6 +4,6 @@ import { projectName } from "../../src/shared/index.js";
 
 describe("project scaffold", () => {
   it("exposes the shared package identity", () => {
-    expect(projectName).toBe("zotero-codex-bridge");
+    expect(projectName).toBe("zotero-local-mcp-bridge");
   });
 });
