@@ -1,11 +1,10 @@
 # Zotero Plugin Development Install
 
-本文件记录 `ZoteroLocalMcpBridgeTest` 中插件开发加载路径。依据 Zotero 官方插件开发文档的 “Setting Up a Plugin Development Environment” 小节，以及官方 sample `zotero/make-it-red` README。
+本文件记录 `ZoteroLocalMcpBridgeTest` 中插件开发加载路径。依据 Zotero 官方插件开发文档的 “Setting Up a Plugin Development Environment” 小节。
 
 官方来源：
 
 - https://www.zotero.org/support/dev/client_coding/plugin_development#setting_up_a_plugin_development_environment
-- `references/official/zotero/make-it-red/README.md`
 
 ## Current XPI Path
 

@@ -1,199 +1,200 @@
+<div align="center">
+
 # Zotero Local MCP Bridge
 
-**本地优先的 Zotero 管理 MCP 桥接工具。**
+通过 Zotero 插件内置 MCP 端点，让本地智能体安全管理本地 Zotero 文库。
 
-[![License: AGPL-3.0-or-later](https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg)](LICENSE)
-[![Node.js >=22](https://img.shields.io/badge/Node.js-%3E%3D22-339933.svg)](package.json)
-[![Zotero](https://img.shields.io/badge/Zotero-9.x-CC2936.svg)](docs/compatibility-matrix.md)
-[![Local First](https://img.shields.io/badge/local--first-no%20cloud%20writes-2E7D32.svg)](#安全模型)
+<p align="center">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg"></a>
+  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.56-4c78a8.svg"></a>
+  <a href="https://www.zotero.org/"><img alt="Zotero" src="https://img.shields.io/badge/Zotero-9.x-cc2936.svg"></a>
+  <a href="#工作机制"><img alt="MCP" src="https://img.shields.io/badge/MCP-plugin--hosted-2e7d32.svg"></a>
+  <a href="#工作范围"><img alt="Local First" src="https://img.shields.io/badge/local--first-loopback--only-2e7d32.svg"></a>
+  <a href="https://github.com/PhoenixChenLu/zotero-local-mcp-bridge/pulls"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"></a>
+  <a href="skills/zotero-local-mcp-bridge-zh-cn/SKILL.md"><img alt="Codex ready" src="https://img.shields.io/badge/Codex-ready-111827.svg"></a>
+  <a href="skills/zotero-local-mcp-bridge-zh-cn/SKILL.md"><img alt="OpenCode ready" src="https://img.shields.io/badge/OpenCode-ready-111827.svg"></a>
+  <a href="skills/zotero-local-mcp-bridge-zh-cn/SKILL.md"><img alt="Claude Code ready" src="https://img.shields.io/badge/Claude%20Code-ready-111827.svg"></a>
+</p>
 
-简体中文 · [English](README.md)
+AGPL-3.0-or-later · 插件版本 0.1.56 · Zotero 9.x · 插件内置 MCP · 本地回环访问
 
-Zotero Local MCP Bridge 让本地 AI Agent 通过 Zotero 插件内置的 HTTP MCP endpoint 管理本地 Zotero 文库。它面向研究写作自动化场景，重点是受控读写、导入导出、附件管理、PDF annotation、审计、备份和撤销。
+**简体中文** · [English](README.md)
 
-## 它能做什么
+[能做什么](#能做什么) · [不能做什么](#不能做什么) · [工作范围](#工作范围) · [工作机制](#工作机制) · [快速开始](#快速开始) · [使用示例](#使用示例) · [支持作者](#支持作者) · [开源协议](#开源协议)
 
-- 读取和搜索本地 Zotero 条目、collection、保存搜索、附件、annotation 和审计记录。
-- 创建和编辑 item、creator、字段、tag、note、collection 和 collection membership。
-- 导入和导出 BibTeX、RIS、CSL JSON。
-- 通过 Zotero 生成 citation 和 bibliography。
-- 添加、移动、重命名和读取附件。
-- 调用 Zotero 内置附件自动重命名能力。
-- 读取、创建和更新受支持的 PDF annotation。
-- 所有写操作强制经过 dry-run 和 confirmation。
-- 在 Zotero 数据目录之外保存审计日志和文件级 backup snapshot。
+</div>
 
-## 工作方式
+---
+
+## ✨ 能做什么
+
+Zotero Local MCP Bridge 让支持 MCP 的智能体通过 Zotero 本身管理本地 Zotero 文库。它不是绕过 Zotero 的数据库脚本，而是一个运行在 Zotero 插件内部的本地 MCP 入口。
+
+| 范围 | 能力 |
+|---|---|
+| 📚 条目与分类 | 读取、搜索、创建、编辑条目；管理字段、作者、标签、笔记、分类和分类成员关系 |
+| 📎 附件 | 添加、移动、重命名、读取附件；调用 Zotero 内置附件自动重命名 |
+| 📝 标注与引用 | 读取、创建和更新受支持的 PDF 标注；通过 Zotero 生成引用和参考文献 |
+| 🔁 导入导出 | 支持 BibTeX、RIS、CSL JSON 的导入和导出 |
+| 🔎 搜索 | 支持基础搜索、高级搜索、保存搜索读取和维护 |
+| 🛡️ 安全流程 | 所有写操作强制 dry-run；支持批准、审计、文件级备份和撤销 |
+| 🧩 重复项 | 支持重复项发现和受控合并 |
+
+> [!NOTE]
+> 写操作不会直接执行。智能体会先拿到 dry-run 计划、警告、受影响目标和确认信息；在需要批准的模式下，必须得到用户批准后才会执行。
+
+---
+
+## 🚫 不能做什么
+
+| 不支持 | 原因 |
+|---|---|
+| 管理联网 Zotero 文库 | 本项目不通过 Zotero Web API 写入，也不管理远程 Zotero 账号 |
+| 使用 `ZOTERO_API_KEY` | 本项目不要求、不读取、不保存 Zotero API key |
+| 直接写 `zotero.sqlite` | 所有变更都应通过 Zotero 内部 API 完成 |
+| 暴露任意 JavaScript eval | 普通管理能力必须来自插件内部命令表 |
+| 管理 group library | 当前公开范围只覆盖本地用户文库 |
+| 永久删除或清空 trash | 当前仅支持 Zotero trash 或受控合并，不做不可恢复擦除 |
+| 直接删除既有附件文件 | 附件文件操作必须受 backup/undo 和安全边界约束 |
+
+---
+
+## 📍 工作范围
+
+本插件面向同一台机器上的 Zotero Desktop 和本地 MCP 客户端。MCP 端点注册在 Zotero 自带本地 connector server 上，只走本地回环地址。
+
+| 项目 | 当前设定 |
+|---|---|
+| 运行位置 | Zotero 插件内部 |
+| 访问地址 | `http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp` |
+| 文库范围 | 本地用户文库 |
+| 写入方式 | Zotero 内部 API |
+| 网络模型 | 本地回环，不使用云端写入 |
+| 审计与备份 | 必须位于 Zotero profile、Zotero data directory、linked attachment root 和附件目录之外 |
+
+运行模式在 `设置 -> Zotero Local MCP Bridge` 中配置：
+
+| 模式 | 行为 |
+|---|---|
+| `readonly` | 拒绝所有写入 |
+| `askforapprove` | dry-run 后由智能体向用户请求批准 |
+| `yolo` | 普通写操作可在计划允许时自动执行；高风险或未来不可恢复操作仍需明确确认 |
+
+---
+
+## ⚙️ 工作机制
 
 ```text
-Agent
-  -> MCP tool
-  -> Zotero 插件 HTTP MCP endpoint
-  -> 插件内部命令表
+支持 MCP 的智能体
+  -> MCP 工具调用
+  -> Zotero 本地 connector server
+  -> Zotero Local MCP Bridge 插件端点
+  -> 插件命令表
   -> Zotero 内部 API
 ```
 
-Zotero 插件把 MCP endpoint 注册到 Zotero 自带的本地 connector server 上：
+MCP 端点由 Zotero 插件内部提供：
 
 ```text
 http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 ```
 
-发布路径不再暴露独立 command endpoint，也不默认启动 Node/Python sidecar。
+不需要另外启动 Node、Python 或 sidecar MCP 进程。启动 Zotero 就会启动插件端点，关闭 Zotero 就会停止它。发布版本只暴露 MCP 工具，不再暴露旧的私有 command endpoint。
 
-## 快速开始
+---
 
-### 1. 安装 Zotero 插件
+## 🚀 快速开始
 
-从 GitHub Releases 下载最新版 XPI：
+### 1. 下载发布文件
 
-```text
-zotero-local-mcp-bridge.xpi
-```
+从 [GitHub Releases](https://github.com/PhoenixChenLu/zotero-local-mcp-bridge/releases) 下载：
 
-在 Zotero 中安装：
+| 文件 | 用途 |
+|---|---|
+| `zotero-local-mcp-bridge.xpi` | Zotero 插件 |
+| 中文 skill | 给中文智能体使用 |
+| 英文 skill | 给英文智能体使用 |
 
-```text
-Tools -> Plugins -> Install Add-on From File
-```
+### 2. 安装 Zotero 插件
 
-安装后重启 Zotero。
-
-如果你从源码仓库安装，可以使用本地安装助手：
-
-```powershell
-npm install
-npm run install:local -- --build
-```
-
-它会构建 release XPI 并打开 XPI 所在文件夹，但不会静默修改 Zotero profile。详见 [安装说明](docs/installation.md)。
-
-正式发布准备三种安装方式：
-
-1. npm 全局安装：`npm install -g zotero-local-mcp-bridge` 后运行 `zotero-local-mcp-bridge setup`
-2. clone 源码并本地构建
-3. 直接下载 GitHub Release 中的 XPI 和 skill artifact
-
-### 2. 检查 MCP endpoint 是否启动
-
-重启 Zotero 后，向插件内 MCP endpoint 发送 JSON-RPC initialize 请求：
-
-```powershell
-Invoke-WebRequest `
-  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp `
-  -Method POST `
-  -ContentType "application/json" `
-  -Body '{"jsonrpc":"2.0","id":"init","method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"manual-probe","version":"0.0.0"}}}' `
-  -UserAgent "ZoteroLocalMcpBridge" `
-  -UseBasicParsing
-```
-
-预期返回包含：
+打开 Zotero 插件管理器：
 
 ```text
-"serverInfo":{"name":"zotero-local-mcp-bridge"
+工具 -> 插件
 ```
 
-### 3. 连接 MCP 客户端
+将下载的 `zotero-local-mcp-bridge.xpi` 拖入插件管理器窗口，按提示确认安装。安装完成后重启 Zotero。
 
-在 MCP 客户端中配置 Streamable HTTP / HTTP JSON-RPC，地址使用上面的插件内 MCP endpoint。用户不需要额外保持终端命令或手动后台服务运行。
+### 3. 设置运行模式
 
-server 会把每个 Zotero 命令暴露为一个 MCP tool，例如
-`zotero_collection_get_tree` 和 `zotero_item_create`。写入类 tool 默认返回
-dry-run plan；真正执行时必须传回该 plan 的 `planId` 和
-`confirmationToken`。
-
-可发布的通用 Agent skill 位于：
+打开：
 
 ```text
-skills/zotero-local-mcp-bridge/
+设置 -> Zotero Local MCP Bridge
 ```
 
-任何支持 MCP 的 Agent 都应通过这个 skill 了解调用规则。
+首次使用建议选择 `readonly` 或 `askforapprove`。确认你理解 dry-run、批准、审计和备份后，再考虑使用 `yolo`。
 
-## 安全模型
+### 4. 连接 MCP 客户端
 
-Zotero Local MCP Bridge 默认保守。
-
-- 不使用 Zotero Web API 写入。
-- 不需要 `ZOTERO_API_KEY`。
-- 不直接写 `zotero.sqlite`。
-- 不把任意 JavaScript eval 暴露为普通管理工具。
-- 第一版不支持 group library。
-- 所有写操作必须先 dry-run，再 execute。
-- execute 必须提供有效 `planId` 和 `confirmationToken`。
-- 审计日志和 backup 不能写入 Zotero profile、Zotero data directory、linked attachment root 或附件目录。
-- 删除类能力只允许进入 Zotero trash 或受控 merge；不支持永久 erase 或清空 trash。
-
-运行模式：
-
-| 模式 | 行为 |
-| --- | --- |
-| 只读 | 拒绝所有写操作 |
-| 请求批准 | dry-run 后由 Agent/MCP client 向用户请求批准；Zotero 不会为普通写操作弹出确认框 |
-| YOLO | 当 `plan.agentApproval.mayAutoExecute` 为 true 时，Agent/MCP client 可在 dry-run 后自动 execute；不可恢复操作仍需显式确认 |
-
-在 Zotero 中配置：
+把你的 MCP 智能体配置为通过 Streamable HTTP / HTTP JSON-RPC 连接：
 
 ```text
-Zotero Settings -> Zotero Local MCP Bridge
+http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 ```
 
-## 支持的命令范围
+### 5. 安装对应 skill
 
-| 领域 | 示例能力 |
-| --- | --- |
-| Collections | 创建、重命名、移动、读取 tree、读取 items、添加/移除 items、trash |
-| Items | 读取、搜索、创建、更新字段、更新 creators、设置 collections、tag、trash |
-| Search | 高级搜索、保存搜索 list/get/create/update |
-| Citation | citation 和 bibliography 输出 |
-| Import/export | BibTeX、RIS、CSL JSON |
-| Annotations | 读取、创建、更新受支持的 PDF annotation |
-| Notes | 创建 child note |
-| Attachments | 读取、添加文件、移动、重命名、Zotero rename、撤销新增、trash |
-| Backup | 设置、snapshot list、restore、prune |
-| Audit | 读取审计事件 |
-| Safety | profile status、解锁真实 profile、锁定真实 profile |
-| Duplicates | 查找重复项、受控 merge |
+| 语言 | skill |
+|---|---|
+| 中文 | [skills/zotero-local-mcp-bridge-zh-cn/SKILL.md](skills/zotero-local-mcp-bridge-zh-cn/SKILL.md) |
+| English | [skills/zotero-local-mcp-bridge/SKILL.md](skills/zotero-local-mcp-bridge/SKILL.md) |
 
-字段级命令格式见 [Agent skill](skills/zotero-local-mcp-bridge/SKILL.md)。
+告诉智能体通过 Zotero Local MCP Bridge 使用 Zotero。需要批准时，智能体应只用简短语句说明即将执行的操作，并等待用户批准。
 
-## 文档
+---
 
-- [Agent skill](skills/zotero-local-mcp-bridge/SKILL.md)
-- [安装说明](docs/installation.md)
-- [MCP 发布说明](docs/mcp-publication.md)
-- [Zotero 插件发布说明](docs/zotero-plugin-publication.md)
-- [兼容矩阵](docs/compatibility-matrix.md)
-- [隐私说明](PRIVACY.md)
-- [安全策略](SECURITY.md)
-- [路线图](docs/roadmap-complete-zotero-coverage.md)
-- [赞助说明](docs/sponsorship.md)
+## 🧪 使用示例
 
-## 开发命令
+| 你可以这样要求智能体 | 预期行为 |
+|---|---|
+| 列出我的 Zotero 分类树 | 只读查询，不触发写入确认 |
+| 在“当前项目”下新建“待读文献”子分类 | 先 dry-run，再请求批准 |
+| 给这个条目添加这个 PDF 附件 | 先解析条目和文件路径，再 dry-run 附件操作 |
+| 把选中条目导出为 BibTeX | 只读导出，不需要写入确认 |
+| 用指定样式生成参考文献 | 通过 Zotero citation formatter 输出 |
 
-```powershell
-npm run typecheck
-npm run lint
-npm run build
-npm run build:zotero-plugin:release
+批准模式下，单个写操作会通过 Agent 像这样交互：
+
+```text
+即将给“当前项目”新建名为“待读文献”的子分类，需要批准执行。
 ```
 
-## 环境要求
+多个待批准操作会使用编号表格，让用户可以批准全部，也可以通过编号批准其中一部分：
 
-- Node.js 22 或更新版本。
-- 当前主要目标运行时是 Zotero 9.x。
-- 建议先使用只读模式，并在启用写操作前审查 dry-run 计划。
+```text
+以下操作需要批准：
 
-## 赞助
+| 编号 | 操作 |
+|---:|---|
+| 1 | 删除“旧项目”下的“临时分类”（移入 Zotero trash） |
+| 2 | 合并重复条目“Smith 2024”和“Smith 2024 copy” |
+| 3 | 将“Zotero MCP 设计笔记”添加到“当前项目 / 待读文献” |
+```
 
-计划使用的个人赞助渠道：
+可回复“全部批准执行”，或回复“批准 1 和 3，拒绝 2”。
 
-- Ko-fi
-- 爱发电
+---
 
-真实链接会在维护者创建对应页面后启用。本项目当前不使用 fiscal host。
+## ❤️ 支持作者
 
-## 许可证
+<div align="center">
+  <a id="ko-fi-support" href="https://ko-fi.com/"><img alt="Ko-fi" src="https://img.shields.io/badge/Ko--fi-Support%20Author-ff5e5b?logo=kofi&logoColor=white"></a>
+  <a id="afdian-support" href="https://afdian.com/"><img alt="爱发电" src="https://img.shields.io/badge/%E7%88%B1%E5%8F%91%E7%94%B5-%E6%94%AF%E6%8C%81%E4%BD%9C%E8%80%85-946ce6"></a>
+</div>
 
-AGPL-3.0-or-later。见 [LICENSE](LICENSE)。
+---
+
+## 📄 开源协议
+
+Zotero Local MCP Bridge 使用 AGPL-3.0-or-later 协议。见 [LICENSE](LICENSE)。

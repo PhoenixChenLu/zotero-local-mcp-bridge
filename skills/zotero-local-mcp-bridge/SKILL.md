@@ -5,7 +5,7 @@ description: Safely manage a local Zotero library through the Zotero Local MCP B
 
 # Zotero Local MCP Bridge
 
-Use Zotero through the plugin-hosted MCP endpoint, not by calling private Zotero plugin commands directly. The MCP layer owns tool discovery, JSON-RPC call shape, dry-run, confirmation, audit, backup, undo, and agent-facing tool schemas. The Zotero plugin owns the MCP endpoint, internal command table, and Zotero internal API execution.
+Use Zotero through the plugin-hosted MCP endpoint. Do not call private Zotero plugin command endpoints directly. The MCP layer owns tool discovery, JSON-RPC call shape, dry-run, confirmation, audit, backup, undo, and agent-facing tool schemas. The Zotero plugin owns the MCP endpoint, the internal command table, and Zotero internal API execution.
 
 ## Required Path
 
@@ -15,7 +15,7 @@ Use this path for normal work:
 Agent -> MCP tool -> Zotero plugin HTTP MCP endpoint -> plugin command table -> Zotero internal API
 ```
 
-Do not call `/zotero-local-mcp-bridge/command` directly from the agent. Current release builds do not expose that private endpoint. Direct HTTP diagnostics are allowed only for the MCP endpoint itself when setup is broken.
+Do not call `/zotero-local-mcp-bridge/command` directly from the agent. Current release builds do not expose that private endpoint. Direct HTTP diagnostics are allowed only when the MCP endpoint itself is broken.
 
 Never use:
 
@@ -30,38 +30,25 @@ Never use:
 Before changing Zotero state:
 
 1. Confirm the plugin-hosted MCP endpoint exposes Zotero tools.
-2. Prefer a health/status tool if one is available; otherwise use the documented MCP read/status tool.
+2. Prefer a health or status tool when available; otherwise use the documented MCP read/status tool.
 3. Check `safety.getProfileStatus` when available.
 4. Confirm the user is operating on the intended local user library or test profile.
 5. If Zotero is not reachable, ask the user to open Zotero and ensure the plugin is installed and enabled.
 
-Tool names are generated from command names as `zotero_` plus dot-separated and camelCase command segments converted to snake_case. Examples:
+Tool names are generated from command names as `zotero_` plus dot-separated and camelCase command segments converted to snake_case. Always use the tool list actually exposed by the MCP client instead of inventing names from memory.
+
+Examples:
 
 - `collection.getTree` -> `zotero_collection_get_tree`
 - `item.search` -> `zotero_item_search`
 - `attachment.addFile` -> `zotero_attachment_add_file`
 - `backup.snapshot.list` -> `zotero_backup_snapshot_list`
 
-Always use the tool list actually exposed by the MCP client instead of inventing names from memory.
-
 ## MCP Call Format
-
-The internal command name is the source of truth. MCP tool names are generated as:
-
-```text
-zotero_<command-name-converted-to-snake-case>
-```
-
-Convert camelCase segments to snake_case. Examples:
-
-- `collection.getTree` -> `zotero_collection_get_tree`
-- `savedSearch.create` -> `zotero_saved_search_create`
-- `attachment.addFile` -> `zotero_attachment_add_file`
-- `backup.snapshot.restore` -> `zotero_backup_snapshot_restore`
 
 Read commands execute directly with their input fields.
 
-Write commands use this two-step shape:
+Write commands use dry-run first:
 
 ```json
 {
@@ -93,7 +80,7 @@ Pass command input fields directly as MCP tool arguments, with optional top-leve
 
 ## Supported Commands
 
-Use this table as the first reference for operation format. `R` means read-only; `W` means write and requires dry-run before execute.
+Use this table as the first reference for operation format. `R` means read-only. `W` means write and requires dry-run before execute.
 
 | Command | MCP tool | R/W | Input fields |
 |---|---|---:|---|
@@ -160,7 +147,7 @@ Useful read groups:
 - Collections: `collection.getTree`, `collection.getItems`
 - Items: `item.get`, `item.search`, `search.advanced`
 - Saved searches: `savedSearch.list`, `savedSearch.get`
-- Citations/exports: `citation.format`, `export.bibtex`, `export.ris`, `export.cslJson`
+- Citations and exports: `citation.format`, `export.bibtex`, `export.ris`, `export.cslJson`
 - Annotations: `annotation.list`
 - Attachments: `attachment.get`, `attachment.getForItem`
 - Preferences and history: `attachment.renamePreferences.get`, `backup.settings.get`, `backup.snapshot.list`, `audit.list`, `duplicates.find`, `safety.getProfileStatus`
@@ -173,7 +160,7 @@ All writes must follow this sequence:
 
 1. Call the MCP tool in dry-run mode.
 2. Read the returned plan, warnings, affected targets, `planId`, `confirmationToken`, and `plan.agentApproval`.
-3. Present a concise summary to the user when `plan.agentApproval.required` is true.
+3. Present a short approval request when `plan.agentApproval.required` is true; do not dump plan IDs, tokens, hashes, or full target lists unless the user asks for details.
 4. Execute only with the matching `planId`, `confirmationToken`, and unchanged input.
 5. Report the result, audit location if returned, and any undo plans.
 
@@ -212,6 +199,65 @@ High-risk operations must stop for user confirmation:
 
 For high-risk operations in ask-for-approval mode, ask for `CONFIRM` when `plan.agentApproval.requiredText` is `CONFIRM`. For any future unrecoverable operation, require the exact command name as confirmation.
 
+## Approval Interaction Protocol
+
+Keep approval prompts brief and action-focused. State what will happen in user language, not in raw MCP fields.
+
+For one pending operation, use one sentence:
+
+```text
+I am about to create a subcollection named "<child collection>" under "<parent collection>". Approve execution?
+```
+
+Other single-operation examples:
+
+```text
+I am about to add "<item>" to "<collection>". Approve execution?
+I am about to move "<attachment>" under "<item>". Approve execution?
+I am about to move "<subcollection>" under "<collection>" to Zotero trash. This is not permanent deletion. Approve execution?
+```
+
+For high-risk operations, append the required confirmation text:
+
+```text
+This is a high-risk operation. To approve, reply CONFIRM.
+```
+
+For multiple pending operations, use a compact table with stable operation numbers:
+
+```text
+The following operations need approval:
+
+| No. | Operation |
+|---:|---|
+| 1 | Move subcollection "<subcollection>" under "<collection>" to Zotero trash |
+| 2 | Merge duplicate items "<master item>" and "<duplicate item>" |
+| 3 | Add "<item>" to "<collection> / <subcollection>" |
+
+Reply "approve all", or reply "approve 1 and 3, reject 2".
+```
+
+Accept these user replies:
+
+- `approve all`: execute every listed operation.
+- `approve 1 and 3`: execute only the listed operation numbers; leave all other pending operations unexecuted.
+- `reject 2`: reject that operation; if other operations remain ambiguous, ask once for the remaining numbers.
+- `cancel` / `reject all`: execute nothing.
+- `CONFIRM`: for a single high-risk operation, treat as approval only when `plan.agentApproval.requiredText` is `CONFIRM`.
+- Exact command name: for future unrecoverable operations, treat as approval only when it exactly matches `plan.agentApproval.requiredText`.
+
+When executing a subset, use the original dry-run input and confirmation for each approved operation. Do not regenerate a dry-run unless the plan expired, the user changes the requested operation, or the current Zotero state must be re-read for safety.
+
+Keep technical details available but hidden by default. Show `planId`, `confirmationToken`, `inputHash`, raw JSON, full affected key lists, or audit internals only when the user asks for details, when debugging, or when a safety block occurs.
+
+After execution, report concise results:
+
+```text
+Executed 1 and 3; rejected 2 and did not execute it.
+```
+
+If any approved operation fails, report the failed operation number and reason, then stop before retrying.
+
 ## Plugin Settings And Permission Blocks
 
 The user-facing settings live in Zotero:
@@ -239,7 +285,7 @@ When permission is blocked, stop and give a concrete setting action:
 | Blocked condition | Agent behavior | User-facing instruction |
 |---|---|---|
 | Run mode is `readonly` and the user requests a write | Do not execute or retry. | Ask the user to open Zotero Settings -> Zotero Local MCP Bridge and change Run mode to `Ask for approval` or `YOLO` if they want writes enabled. |
-| User asks to bypass dry-run | Refuse. | Explain that Dry-run is mandatory and cannot be disabled. |
+| User asks to bypass dry-run | Refuse. | Explain that dry-run is mandatory and cannot be disabled. |
 | Write requires approval | Stop after dry-run. | Ask the user to approve the dry-run plan; for high-risk operations ask for `CONFIRM` if required. |
 | Real profile is locked | Do not write. | Explain that the real profile is locked. If the user explicitly wants real-profile writes, use `safety.unlockRealProfile` and respect TTL. |
 | Real profile unlock is expired | Re-check status and stop. | Ask the user to unlock again only if they still want real-profile writes. |
@@ -302,7 +348,7 @@ Do not write audit logs or backups into Zotero profile, Zotero data directory, l
 
 ## Batch Behavior
 
-Batch operations are capped by the MCP/project settings, currently 50 objects. If a batch partially fails, report:
+Batch operations are capped by MCP/project settings, currently 50 objects. If a batch partially fails, report:
 
 - Completed items.
 - Failed items.
@@ -323,13 +369,13 @@ I found <count> matching Zotero records. Key results: ...
 For a write dry-run:
 
 ```text
-Dry-run plan: <operation>, targets <summary>, risk <level>. Confirmation required: <yes/no>. Main warnings: ...
+I am about to <describe the operation in one sentence>. Approve execution?
 ```
 
 For a write execute:
 
 ```text
-Executed <operation>. Affected: <keys/counts>. Audit: <path/id if available>. Undo: <available/not available>.
+Executed: <describe the completed operation in one sentence>.
 ```
 
 For blocked work:

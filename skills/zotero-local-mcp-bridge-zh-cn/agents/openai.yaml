@@ -1,0 +1,4 @@
+interface:
+  display_name: "Zotero Local MCP Bridge 中文版"
+  short_description: "通过本地 MCP bridge 安全使用 Zotero"
+  default_prompt: "使用 Zotero Local MCP Bridge 中文版技能，通过 MCP tools 管理 Zotero，并遵守 dry-run、确认、审计和 backup 保护。"

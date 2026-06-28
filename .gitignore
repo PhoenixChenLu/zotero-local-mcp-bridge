@@ -1,6 +1,11 @@
 node_modules/
 dist/
 coverage/
+.codegraph/
+.claude/
+.cursor/
+TaskDocs/
+references/official/
 runtime/
 runtime/auth/bridge-token
 runtime/logs/audit/*.jsonl

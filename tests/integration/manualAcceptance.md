@@ -17,7 +17,6 @@
 - [ ] 插件 HTTP 绑定为 `127.0.0.1:23119`。
 - [ ] 已完成 `tests/integration/zoteroPluginDevelopmentInstall.md` 中的开发加载或 XPI 安装路径确认。
 - [ ] `/zotero-local-mcp-bridge/command` 已实现本机请求鉴权，未带鉴权的 command 请求会被拒绝。
-- [ ] `docs/zotero-api-source-audit.md` 已记录本轮将验收的真实 Zotero API 调用依据。
 - [ ] 带本机 token 的 `/zotero-local-mcp-bridge/command` 可以执行只读 `collection.getTree`。
 - [ ] token 错误的 `/zotero-local-mcp-bridge/command` 返回 `COMMAND_AUTH_INVALID`。
 - [ ] `collection.create` 未带 confirmation execute 时返回 `CONFIRMATION_REQUIRED`。
