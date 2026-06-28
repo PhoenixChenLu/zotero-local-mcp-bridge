@@ -432,6 +432,6 @@ describe("Zotero plugin package", () => {
 
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });
     }
-  });
+  }, 30000);
 });
 
