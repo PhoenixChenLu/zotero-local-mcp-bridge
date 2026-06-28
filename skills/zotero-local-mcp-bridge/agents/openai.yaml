@@ -1,0 +1,4 @@
+interface:
+  display_name: "Zotero Local MCP Bridge"
+  short_description: "Use Zotero safely through the local MCP bridge"
+  default_prompt: "Use the Zotero Local MCP Bridge skill to manage Zotero through MCP tools with dry-run, confirmation, audit, and backup safeguards."

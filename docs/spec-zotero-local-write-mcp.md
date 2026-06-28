@@ -5,12 +5,12 @@
 
 ## Objective
 
-构建一个让 Codex 能够安全管理本机 Zotero user library 的本地工具链。核心用户是本机研究写作工作流中的 Codex 使用者，需要在不使用 Zotero Web API、不直接改写 `zotero-data/`、不混淆 Zotero item key 与 BibTeX key、不破坏 Zotero 作为主系统边界的前提下，完成 collection、subcollection、item、tag、note、attachment 等 Zotero 管理操作。
+构建一个让本机 MCP 客户端能够安全管理本机 Zotero user library 的本地工具链。核心场景是本机研究写作工作流中的受控自动化客户端，其中 Codex 是当前主要客户端和后续专用 skill 的目标环境；但插件与 MCP 接口应保持通用，不限定只能由 Codex 使用。所有操作必须在不使用 Zotero Web API、不直接改写 `zotero-data/`、不混淆 Zotero item key 与 BibTeX key、不破坏 Zotero 作为主系统边界的前提下，完成 collection、subcollection、item、tag、note、attachment 等 Zotero 管理操作。
 
 第一版目标是建立简洁、干净、可扩展的最小闭环：
 
 - 通过 Zotero 插件内部预定义命令表执行所有写操作。
-- 外部 MCP server 只暴露受控 tool schema，不向普通管理流程暴露任意 Zotero JS eval。
+- 插件内 MCP adapter 只暴露受控 tool schema，不向普通管理流程暴露任意 Zotero JS eval。
 - 支持本地 user library 的 collection/subcollection 创建、层级移动、重命名、查询与 item 归档关系管理。
 - 支持 item 加入/移出 collection、tag 添加/移除、创建 child note。
 - 支持附件写入、附件移动、附件重命名、调用 Zotero 内置附件自动重命名能力。
@@ -22,12 +22,13 @@
 
 - Zotero：Zotero 7 或更新版本。
 - Zotero 插件：TypeScript/JavaScript，XPI 打包，运行在 Zotero privileged plugin context。
-- 插件通信：采用本机 HTTP。可以研究 `introfini/mcp-server-zotero-dev` 的 Zotero 插件内部执行思路，但本项目不直接照搬或引用其 RDP 实现；目标是更小、更专注、更容易审计。
-- 插件 HTTP 入口优先注册到 Zotero connector server，默认本机地址为 `127.0.0.1:23119`，endpoint 命名空间为 `/zotero-codex-bridge/*`。这是 Zotero 插件内部注册的本机 endpoint，不是 Zotero Web API。
+- 插件设置界面本地化：使用 Zotero/Firefox Fluent `.ftl` 资源，跟随 Zotero 应用 UI 语言。
+- 插件通信：采用插件内 HTTP MCP endpoint。可以研究 `introfini/mcp-server-zotero-dev` 的 Zotero 插件内部执行思路，但本项目不直接照搬或引用其 RDP 实现；目标是更小、更专注、更容易审计。
+- 插件 HTTP 入口注册到 Zotero connector server，默认本机地址为 `127.0.0.1:23119`，发布入口为 `/zotero-local-mcp-bridge/mcp`。这是 Zotero 插件内部注册的本机 endpoint，不是 Zotero Web API。
 - Zotero 运行时第一验收目标为用户当前测试环境：Zotero 9.0.5 64-bit on Windows。Zotero 7/8 兼容性后续进入兼容矩阵，不作为第一阶段阻塞项。
-- 插件开发期优先增加 extension proxy/source-load 路径以减少重复打包安装；`dist/zotero-codex-bridge.xpi` 仍作为安装包和回归验收路径。
-- MCP server：优先 Node.js/TypeScript。
-- MCP transport：优先 stdio 外部 server；后续根据 Codex 本机 MCP 支持能力修订。
+- 插件开发期优先增加 extension proxy/source-load 路径以减少重复打包安装；`dist/zotero-local-mcp-bridge.xpi` 仍作为安装包和回归验收路径。
+- MCP host：默认由 Zotero 插件内置实现，直接处理 MCP JSON-RPC `initialize`、`tools/list`、`tools/call`。
+- MCP transport：优先 HTTP / Streamable HTTP 兼容路径；不默认启动 Node/Python sidecar，不额外监听 `23120`。
 - 文档与计划：`docs/` 与 `TaskDocs/`。
 
 ## Commands
@@ -78,8 +79,7 @@ H:\ProgramDocument\MixLanguage\Zotero-codex-bridge\
 
 ```text
 src\
-├── zotero-plugin\             # Zotero 内部插件，持有命令表和实际 Zotero API 写入逻辑
-├── mcp-server\                # 外部 MCP server，负责 tool schema、参数校验、审计和调用插件命令
+├── zotero-plugin\             # Zotero 内部插件，持有 MCP endpoint、命令表和实际 Zotero API 写入逻辑
 └── shared\                    # 共享 schema、类型和错误码
 tests\
 ├── unit\
@@ -92,7 +92,7 @@ logs\
 当前测试 profile 目录：
 
 ```text
-ZoteroProfile\                  # ZoteroCodexBridgeTest profile，测试数据，不是源码
+ZoteroProfile\                  # ZoteroLocalMcpBridgeTest 测试 profile；迁移期既有 ZoteroCodexBridgeTest 可继续使用
 ZoteroVault\                    # 已链接附件根目录，测试数据，不是源码
 ZoteroData\                     # Zotero Data Directory，测试数据，不是源码
 ```
@@ -217,8 +217,8 @@ type ZoteroLocalCommandResult<T> = {
 第一阶段 `0.1.31` 的目标是内部闭环；本节定义发布冻结时的轨道差异：
 
 - **内部测试版（当前状态）**
-  - 运行前提是 `profileMode: "test"` + `ZoteroProfile/.zotero-codex-bridge-test-profile`。
-  - 默认假设用户在 `ZoteroCodexBridgeTest` 测试 profile 进行验收。
+  - 运行前提是 `profileMode: "test"` + `ZoteroProfile/.zotero-local-mcp-bridge-test-profile`。
+  - 默认假设用户在 `ZoteroLocalMcpBridgeTest` 测试 profile 进行验收；重命名迁移期既有 `ZoteroCodexBridgeTest` 可继续使用。
   - 运行文档允许出现本机测试路径示例。
   - 目标是验证核心命令闭环、dry-run/confirmation、audit/backups、undo、命令注册和测试 profile 安全防线。
 
@@ -230,15 +230,15 @@ type ZoteroLocalCommandResult<T> = {
   - 写入后必须可被审计，并在可用时给出 undo/回滚/恢复线索。
   - 公开分发路径需区分：
     - Zotero 插件：GitHub release + 项目主页 + Zotero Forums + update manifest（无官方 Zotero 插件库直接上传入口）。
-    - MCP server：npm 包或等价 artifact + `mcpName` + `server.json` + MCP Registry metadata。
+    - MCP：插件内 HTTP MCP endpoint + 通用 Agent skill；MCP Registry metadata 需等确认支持本地 HTTP endpoint 后再生成。
 
 ### Release Gate（公开发布硬门禁）
 
 - **默认安全行为**：公开发布必须默认 `readonly`；插件设置界面只提供 `readonly`、`askforapprove`、`yolo` 三种运行模式。
-- **确认链路**：任何执行类写命令必须先 dry-run，必须返回可执行差异；执行必须校验未过期 `planId` 和 `confirmationToken`。
+- **确认链路**：任何执行类写命令必须先 dry-run，必须返回可执行差异；执行必须校验未过期 `planId` 和 `confirmationToken`。`askforapprove` 的“ask”发生在 Agent/MCP client 层，不是 Zotero 插件内部弹窗；插件通过 dry-run plan 中的 `agentApproval` 元数据告诉 Agent 是否必须向用户确认。
 - **真实主库防护**：公开版禁止在未解锁情况下连接并改写真实主库。
 - **真实主库临时解锁**：真实主库写入授权 TTL 默认 30 分钟；TTL 到期后可写授权失效，需要重新批准。单个 dry-run plan / confirmation token 默认 10 分钟后过期。
-- **模式行为**：`readonly` 拒绝所有写操作；`askforapprove` 要求写操作确认，普通高风险操作输入 `CONFIRM`，极高危或不可恢复操作输入具体命令名；`yolo` 可自动执行普通写操作和普通高风险操作，但极高危或不可恢复操作仍必须主动确认。
+- **模式行为**：`readonly` 拒绝所有写操作；`askforapprove` 要求 Agent 在每个写操作 dry-run 后向用户确认，普通高风险操作输入 `CONFIRM`，极高危或不可恢复操作输入具体命令名；`yolo` 可由 Agent 在 dry-run 后自动执行普通写操作和普通高风险操作，但极高危或不可恢复操作仍必须主动确认。
 - **设置界面**：公开发布前必须实现 Zotero 插件设置界面，设置规格见 `docs/plugin-settings-ui-spec.md`。
 - **路径隔离**：禁止将审计、backup、undo 写入 Zotero profile、Zotero data directory、linked attachment root、附件目录。
 - **禁止项（Must not）**：
@@ -292,19 +292,20 @@ confirmation 与批量执行：
 - 所有写操作必须先 dry-run。
 - dry-run 不允许关闭。
 - 执行写操作必须提供未过期的 `planId` 和 `confirmationToken`。
-- `confirmationToken` 采用自动 token 机制；在 `askforapprove` 下，普通高风险操作额外要求 `CONFIRM`，极高危或不可恢复操作额外要求输入具体命令名。
-- 在 `yolo` 下，普通写操作和普通高风险操作可免人工确认；极高危或不可恢复操作仍必须主动确认。
+- `confirmationToken` 采用自动 token 机制；dry-run plan 必须返回 `agentApproval`，包含 `layer: "agent"`、`operationMode`、`required`、`requiredText` 和 `mayAutoExecute`。
+- 在 `askforapprove` 下，Agent 必须在聊天/客户端界面展示 dry-run plan 并等待用户确认；普通高风险操作额外要求 `CONFIRM`，极高危或不可恢复操作额外要求输入具体命令名。Zotero 插件当前不弹出 UI 确认框。
+- 在 `yolo` 下，普通写操作和普通高风险操作可由 Agent 在 dry-run 后自动继续 execute；极高危或不可恢复操作仍必须主动确认。
 - dry-run plan 默认 10 分钟后过期，后续可配置。
 - 批量写操作默认尽量执行所有可执行项，不因单项失败中途停止。
 - 批量上限默认 50，暂不提供设置界面调整。
 - 批量完成后必须汇总成功项、失败项、错误详情、审计记录路径，并返回已完成部分可用的 undo 操作清单。
 
-HTTP command endpoint 安全门槛：
+HTTP MCP endpoint 安全门槛：
 
-- `/zotero-codex-bridge/health` 只返回无敏感信息，可作为无鉴权诊断 endpoint。
-- `/zotero-codex-bridge/command` 在接入任何真实写命令前，必须实现本机请求鉴权，例如本项目生成和保存的 secret、请求签名或等价 token。
-- command endpoint 不允许 `allowRequestsFromUnsafeWebContent`。
-- command endpoint 必须拒绝非 `application/json` 请求、未知命令、缺少鉴权的请求和不符合 dry-run/confirmation 流程的 execute 请求。
+- 发布版只暴露 `/zotero-local-mcp-bridge/mcp`，不暴露私有 `/zotero-local-mcp-bridge/command`。
+- MCP endpoint 不允许 `allowRequestsFromUnsafeWebContent`。
+- MCP endpoint 必须拒绝非 `application/json` 请求、未知 MCP method、未知 tool 和不符合 dry-run/confirmation 流程的 execute 请求。
+- 插件内 MCP adapter 将 `zotero_*` tool name 映射到插件内部命令表；外部调用方不能直接调用私有 command payload。
 - 鉴权 secret、审计日志和 backup 均不得写入 Zotero profile、Zotero data directory、linked attachment root 或附件目录。
 
 ## Code Style
@@ -349,7 +350,7 @@ async function createCollection(input: CollectionCreateInput): Promise<{
 约定：
 
 - 插件侧函数名以 Zotero 领域动词命名，例如 `createCollection`、`moveCollection`、`addItemsToCollection`。
-- MCP server 负责输入 schema 校验、审计日志和错误码映射。
+- 插件内 MCP adapter 负责 MCP tool schema、协议错误映射和调用插件内部命令表。
 - 插件侧负责 Zotero API 校验、事务执行和 Zotero 对象解析。
 - 不为第一版引入通用脚本执行接口。
 - 不把高风险能力隐藏在通用参数里，例如 `deleteItems: true`。
@@ -359,13 +360,13 @@ async function createCollection(input: CollectionCreateInput): Promise<{
 - Unit tests：验证 schema、参数校验、命令表分发、错误码映射、审计日志格式。
 - Plugin unit tests：在可测试边界内验证命令输入转换和 Zotero API adapter。
 - Zotero API source audit：每个真实 Zotero 写 adapter 实现前，必须先记录依据的官方文档、官方示例或本机 Zotero 9.0.5 源码位置；附件写入、附件移动和 Zotero 内置自动重命名必须单独审计。
-- Plugin packaging tests：先生成可安装的 `dist/zotero-codex-bridge.xpi`，再进入真实 Zotero UI 验收。
+- Plugin packaging tests：先生成可安装的 `dist/zotero-local-mcp-bridge.xpi`，再进入真实 Zotero UI 验收。
 - Integration tests：在隔离 Zotero test profile 中验证 collection/subcollection/item/tag/note 最小闭环。
-- MCP contract tests：验证 MCP tool schema、stdio transport、错误响应和审计记录。
+- MCP contract tests：验证插件内 HTTP MCP endpoint、tool schema、错误响应和审计记录。
 - Manual acceptance tests：在测试 Zotero profile 中创建 collection tree、移动 subcollection、加入/移出 item、打 tag、创建 child note，并确认 Zotero UI 与读取结果一致。
 - Safety tests：确认不会直接写 `zotero.sqlite`，不会使用 Zotero Web API，不支持 group library，不在 Zotero 数据目录写审计日志。
 - 测试 Zotero profile 由用户手动建立；进入集成测试或首次真实写入前，必须提醒用户先建立并确认测试 profile。
-- 测试 Zotero profile 必须带有本项目 marker 文件：`ZoteroProfile/.zotero-codex-bridge-test-profile`。第一阶段写操作必须同时满足 `profileMode: "test"` 和 marker 存在。
+- 测试 Zotero profile 必须带有本项目 marker 文件：`ZoteroProfile/.zotero-local-mcp-bridge-test-profile`。第一阶段写操作必须同时满足 `profileMode: "test"` 和 marker 存在。
 - Attachment tests：在测试 profile 中验证复制附件、linked file 附件、附件 parent 移动、附件标题重命名、Zotero 内置附件自动重命名、undo 移除本插件刚创建的附件。
 - Batch tests：验证批量操作在单项失败时继续执行剩余对象，最终报告成功、失败、审计和 undo 清单。
 - Backup retention tests：验证时间限制、空间限制和两者同时启用时的清理优先级。
@@ -379,7 +380,7 @@ async function createCollection(input: CollectionCreateInput): Promise<{
   - 审计日志写入本项目目录，例如 `logs/audit/`。
   - 区分 Zotero item key、BibTeX key、collection key。
   - 首次写入测试必须使用用户手动建立并确认的 Zotero test profile。
-  - 测试 profile 必须存在 `ZoteroProfile/.zotero-codex-bridge-test-profile` marker，禁止把该 marker 复制到真实主库。
+  - 测试 profile 必须存在 `ZoteroProfile/.zotero-local-mcp-bridge-test-profile` marker，禁止把该 marker 复制到真实主库。
   - collection/subcollection 相关操作必须保持层级语义清晰。
   - collection move 第一版允许任意单个 collection 改 parent，包括移动为顶层 collection。
   - 所有写操作必须先 dry-run，再通过确认执行。
@@ -407,9 +408,9 @@ async function createCollection(input: CollectionCreateInput): Promise<{
 
 第一版完成时必须满足：
 
-- 能生成可安装到 Zotero 9.0.5 测试 profile 的 `dist/zotero-codex-bridge.xpi`。
+- 能生成可安装到 Zotero 9.0.5 测试 profile 的 `dist/zotero-local-mcp-bridge.xpi`。
 - Zotero 插件可安装到测试 profile，并注册内部命令表。
-- MCP server 可连接插件并列出受控 Zotero 管理 tools。
+- 插件内 HTTP MCP endpoint 可列出受控 Zotero 管理 tools。
 - 能在测试 profile 中创建顶层 collection 和 subcollection。
 - 能任意移动单个 collection 的 parent、重命名 subcollection，并读取正确 collection tree。
 - 能把 item 加入/移出 collection 或 subcollection，且不删除 item。

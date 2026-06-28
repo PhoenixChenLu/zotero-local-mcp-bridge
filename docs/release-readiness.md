@@ -1,108 +1,91 @@
-# 发布就绪与安全边界审查（步骤 2）
+# Release Readiness
 
-日期：2026-06-27
+This checklist defines what must be true before Zotero Local MCP Bridge is
+published for general users.
 
-本文件用于冻结公开发布版需求，限定“内部测试版”和“公开发布版”的差异，作为 `0.1.x` 向公开版本推进的硬门槛。目标是让后续开发能用同一份标准做验收，不再沿用测试版默认行为。
+## Release Channels
 
-## 一、公开发布与内部测试分离
+### Zotero Plugin
 
-### 1. 内部测试版（当前 0.1.31）
+- GitHub Release publishes `dist/zotero-local-mcp-bridge.xpi`.
+- Release notes describe supported Zotero versions and known limits.
+- Checksums are published with the artifact.
+- Installation instructions point to the release artifact.
+- Update metadata is published only after the release path is stable.
+- Zotero Forums announcement does not claim an official plugin-store listing.
 
-- 默认 profile：`ZoteroCodexBridgeTest`。
-- 必须存在本地 marker：`ZoteroProfile/.zotero-codex-bridge-test-profile`。
-- 运行时约束：`profileMode: "test"`。
-- 运行环境：`README`、`spec` 与集成文档明确为“测试 profile 约束”。
-- 写入目标：`logs/audit` 与 `backups/zotero-operations` 使用项目目录下路径。
+### MCP Endpoint
 
-### 2. 公开发布版（目标行为）
+- Plugin-hosted HTTP MCP endpoint is documented.
+- MCP client configuration points to `/zotero-local-mcp-bridge/mcp`.
+- Agent skill path is documented.
+- MCP Registry feasibility for locally hosted HTTP MCP endpoints is verified.
 
-- 默认不写主库、默认只读/安全锁定启动。
-- 所有写操作默认被拦截，只有在安全解锁并显式确认后才放行。
-- 写入流程必须由 dry-run + plan + confirmationToken + execute 组成。
-- 审计和 backup 为公开发布中的硬性可观测性要求。
-- 审计、backup、undo 一律不允许落到 Zotero profile、Zotero data directory、linked attachment root、附件目录。
-- 仍禁止：
-  - Zotero Web API 写入
-  - 直接写 `zotero.sqlite`
-  - 暴露任意 JS eval
-  - 使用/保存 `ZOTERO_API_KEY`
+## Required Validation
 
-## 二、发布分发路径（现实可执行）
+Run before a release candidate:
 
-### Zotero 插件公开分发
+```powershell
+npm ci
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+npm run build:zotero-plugin:release
+```
 
-项目当前没有可直接上传到 Zotero 官方插件库的官方入口。现实可执行路径为：
+Release artifact checks:
 
-1. GitHub Release（发布 XPI 与 Release Note）
-2. 项目主页（源代码、安装说明、兼容矩阵、变更说明）
-3. Zotero Forums 公告（发布说明与社区入口）
-4. `update manifest`（供 zotero 的更新能力消费）
+- XPI contains no local auth token.
+- XPI contains no local absolute project path.
+- XPI contains no local validation profile data.
+- XPI contains localization resources.
+- `package.json` and `package-lock.json` parse as JSON.
+- Funding links are real or disabled.
+- XPI contains `/zotero-local-mcp-bridge/mcp`.
+- XPI does not register `/zotero-local-mcp-bridge/command`.
+- XPI does not include sidecar placeholders or port `23120`.
 
-> 任何公开说明文档必须避免宣称已有官方插件库提交路径，避免误导用户。
+## Runtime Acceptance
 
-### MCP 公开发布路径
+Use a clean Zotero profile for release candidate checks:
 
-- MCP server 公开发布需要可分发 artifact（例如 npm 包）作为启动单元。
-- 必须提供：
-  - `mcpName`
-  - `server.json`
-  - stdio 安装与启动命令文档
-  - MCP Registry metadata
-- MCP Registry 不托管 artifact，仅托管元数据；因此不能把可执行发布物视为已发布，只能通过 npm 等包分发渠道完成 artifact 分发。
+- Plugin installs successfully.
+- Settings page renders.
+- MCP `initialize` responds locally.
+- MCP `tools/list` returns Zotero tools.
+- Read commands work without write unlock.
+- Write commands require dry-run and confirmation.
+- Audit files are written outside Zotero profile/data/attachment folders.
+- Backup files are written outside Zotero profile/data/attachment folders.
+- Read-only mode blocks all writes.
+- Ask-for-approval mode requires explicit approval.
+- YOLO mode still stops for unrecoverable operations.
 
-## 三、公开发布硬性 gate（Release Gate）
+## Safety Requirements
 
-### 必须满足
+- No Zotero Web API writes.
+- No `ZOTERO_API_KEY`.
+- No direct `zotero.sqlite` writes.
+- No arbitrary JavaScript eval as a normal MCP tool.
+- No group library support in the first public release.
+- No permanent erase, empty-trash, or direct deletion of existing attachment
+  files.
+- Every write path uses plugin-defined commands.
+- Every write path supports dry-run before execute.
 
-1. **去除测试 profile 依赖**
-   - 文档、脚本和运行路径不得默认绑定 `H:\ProgramDocument\...` 等本机路径。
-   - 禁止在文档或默认配置中写死当前工作区路径。
-2. **默认安全模式**
-   - 默认 profile 模式为只读或安全锁定（real-locked/safe）。
-   - `execute` 级别写入必须要求 `planId + confirmationToken`。
-3. **确认链路完整**
-   - dry-run 返回包含受影响对象与路径。
-   - execute 前必须校验 plan 未过期并校验输入 hash。
-   - 需保留 confirmation 风险语义（高风险操作更严格）。
-4. **备份与审计**
-   - 备份策略与审计路径必须存在且可见。
-   - backup/audit/undo 三者联动：支持回滚提示和恢复依据。
-5. **路径隔离**
-   - 审计文件不写入 Zotero profile、Zotero data directory、linked attachment root 或附件目录。
-   - backup snapshot 不写入以上高敏感目录。
-6. **硬禁用项**
-   - 禁止 Web API 写入
-   - 禁止直接写 `zotero.sqlite`
-   - 禁止暴露任意 JS eval
-   - 禁止依赖 `ZOTERO_API_KEY`
-7. **真实主库保护**
-   - 真实主库写入默认禁用。
-   - 明确提供解锁动作与风险提示。
-   - 解锁状态变更必须可见，并可回退到锁定状态。
+## Documentation Requirements
 
-## 四、0.1.31 不能直接公开发布的原因
+- `README.md` is user-facing and installation-oriented.
+- `README.zh-CN.md` provides a Chinese user entry point.
+- `SECURITY.md` explains vulnerability reporting and safety boundaries.
+- `PRIVACY.md` explains local data handling.
+- `CHANGELOG.md` contains user-facing release notes.
+- `CONTRIBUTING.md` explains development checks.
+- `docs/compatibility-matrix.md` lists verified environments.
+- `docs/roadmap-complete-zotero-coverage.md` lists remaining scope.
 
-`0.1.31` 仍定位内部测试版，仅满足第一阶段测试闭环，未通过公开发布 gate：
+## Sponsorship
 
-- 仍是以 `ZoteroCodexBridgeTest` 与测试 profile marker 为主要流程前提。
-- 真实发布路径未落地（无 npm registry 分发链路、无成熟 MCP 发布元数据链路、无官方插件库入口）。
-- 缺少公开版本默认只读/安全锁定与真实主库显式解锁的完整交付机制。
-- 部分运行说明与安装说明仍偏向本地开发流，不满足公开文档中的安装与升级体验要求。
-- 若直接公开，会把第一阶段边界误导为可用于真实主库生产场景。
-
-## 五、当前功能缺口（公开版本待实现）
-
-- item 创建与完整元数据编辑已完成第一批 runtime 验收，仍需公开发布级字段兼容矩阵。
-- BibTeX / RIS / CSL 导入导出已完成第一批 runtime 验收，仍需 duplicate/update 导入策略。
-- PDF annotation 读取与写入已完成第一批 runtime 验收，仍需 EPUB/HTML、image/ink、删除等扩展。
-- 高级搜索、保存搜索、引用格式输出已完成第一批 runtime 验收。
-- 真实主库解锁能力（含显式解锁流程、风险回显与回退）
-- Codex 专用 skill
-- 删除与 merge duplicates 已进入受控 trash/merge 第一片实现，仍需 runtime 验收和公开发布安全说明。
-
-## 六、文档与审核一致性要求
-
-- `docs/spec-zotero-local-write-mcp.md`：边界、模式、写入流程与安全限制必须同步。
-- `README.md`：公开发布可读性说明、当前版本状态、原因说明需同步。
-- `TaskDocs/Zotero本地写入MCP开源公开发布计划日志.md`：步骤 2 必须标注为已完成，并记录门禁证据。
-- 任何新增文档不得出现待办占位符，以免影响冻结状态。
+The planned sponsorship channels are Ko-fi and Afdian. They should remain
+disabled in `.github/FUNDING.yml` until the maintainer creates real pages.

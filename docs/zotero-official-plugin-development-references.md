@@ -90,11 +90,11 @@ Zotero.Server.Connector.Ping.prototype = {
 For this project, the next health endpoint revision should follow this shape:
 
 ```js
-var endpoint = Zotero.Server.Endpoints["/zotero-codex-bridge/health"] = function () {};
+var endpoint = Zotero.Server.Endpoints["/zotero-local-mcp-bridge/health"] = function () {};
 endpoint.prototype = {
   supportedMethods: ["GET"],
   init: async function (req) {
-    return [200, "text/plain", "zotero-codex-bridge ok"];
+    return [200, "text/plain", "zotero-local-mcp-bridge ok"];
   }
 };
 ```
@@ -107,8 +107,8 @@ Use a non-browser User-Agent:
 
 ```powershell
 Invoke-WebRequest `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/health `
-  -UserAgent "ZoteroCodexBridge/0.1.x" `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/health `
+  -UserAgent "ZoteroLocalMcpBridge/0.1.x" `
   -UseBasicParsing
 ```
 

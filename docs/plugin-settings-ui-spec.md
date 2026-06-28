@@ -1,4 +1,4 @@
-# Spec: Zotero Codex Bridge 插件设置界面
+# Spec: Zotero Local MCP Bridge 插件设置界面
 
 创建时间：2026-06-28
 
@@ -34,8 +34,8 @@ npm run build:zotero-plugin:test
 
 ```powershell
 Invoke-WebRequest `
-  -Uri http://127.0.0.1:23119/zotero-codex-bridge/health `
-  -UserAgent "ZoteroCodexBridge/<version>" `
+  -Uri http://127.0.0.1:23119/zotero-local-mcp-bridge/health `
+  -UserAgent "ZoteroLocalMcpBridge/<version>" `
   -UseBasicParsing
 ```
 
@@ -46,7 +46,7 @@ Invoke-WebRequest `
 ```text
 src/zotero-plugin/          # Zotero 插件 UI、preferences、设置读取与 guard
 src/shared/                 # 设置 schema、默认值、风险等级类型
-src/mcp-server/             # MCP 调用侧读取/尊重设置策略
+src/zotero-plugin/          # 插件内 MCP endpoint 读取/尊重设置策略
 tests/unit/zotero-plugin/   # 设置 schema、默认值、UI 包内容静态测试
 tests/integration/          # 设置界面手工验收步骤
 docs/                       # 设置界面规格与公开文档
@@ -54,6 +54,19 @@ TaskDocs/                   # 计划日志
 ```
 
 ## Settings Model
+
+## Localization
+
+设置界面必须跟随 Zotero 应用 UI 语言，而不是直接读取 Windows 系统语言。
+
+实现标准：
+
+- 使用 Zotero/Firefox Fluent `.ftl` 资源。
+- `preferences.xhtml` 使用 `data-l10n-id` / `data-l10n-attrs`，避免硬编码主要 UI 文案。
+- 打包产物必须包含本机 Zotero 9.0.5 源码中出现的全部 locale 目录：
+  `af-ZA`、`ar`、`bg-BG`、`br`、`ca-AD`、`cs-CZ`、`da-DK`、`de`、`el-GR`、`en-GB`、`en-US`、`es-ES`、`et-EE`、`eu-ES`、`fa`、`fi-FI`、`fr-FR`、`gl-ES`、`he-IL`、`hr-HR`、`hu-HU`、`id-ID`、`is-IS`、`it-IT`、`ja-JP`、`km`、`ko-KR`、`lt-LT`、`mn-MN`、`nb-NO`、`nl-NL`、`nn-NO`、`pl-PL`、`pt-BR`、`pt-PT`、`ro-RO`、`ru-RU`、`sk-SK`、`sl-SI`、`sr-RS`、`sv-SE`、`ta`、`th-TH`、`tr-TR`、`uk-UA`、`vi-VN`、`zh-CN`、`zh-TW`。
+- 每个 locale 必须在 `src/zotero-plugin/locale/<locale>/zotero-local-mcp-bridge.ftl` 提供独立源文件；构建阶段不允许使用英文 fallback，缺少任一 supported locale 资源时必须失败。
+- `en-US`、`zh-CN`、`zh-TW` 为人工维护基线；其它 locale 先提供第一版本地化文本，后续通过人工校订逐步提升翻译质量。
 
 ### 运行模式
 
@@ -68,9 +81,9 @@ TaskDocs/                   # 计划日志
 - `askforapprove`
   - 推荐的日常可写模式。
   - 所有写操作必须先 dry-run。
-  - 普通写操作在 dry-run 后需要确认。
-  - 普通高风险操作需要用户输入 `CONFIRM`。
-  - 极高危或不可恢复操作需要用户输入具体命令名，例如未来的 `trash.empty`。
+  - 普通写操作在 dry-run 后需要 Agent/MCP client 向用户确认；Zotero 插件当前不弹出内部确认框。
+  - 普通高风险操作需要 Agent/MCP client 要求用户输入 `CONFIRM`。
+  - 极高危或不可恢复操作需要 Agent/MCP client 要求用户输入具体命令名，例如未来的 `trash.empty`。
   - 当前第一版仍不提供永久删除、清空 Zotero trash 或直接删除既有附件文件。
 
 - `yolo`
@@ -94,9 +107,10 @@ TTL 表示临时授权有效期，不是 backup 保存时间，也不是 audit �
 - dry-run 固定开启，不提供关闭选项。
 - 执行类写命令必须校验未过期 `planId`、`confirmationToken` 和 input hash。
 - `askforapprove` 下：
-  - 普通写操作需要确认。
-  - 普通高风险操作需要 `CONFIRM`。
-  - 极高危或不可恢复操作需要输入具体命令名。
+  - 普通写操作需要 Agent/MCP client 确认。
+  - 普通高风险操作需要 Agent/MCP client 要求 `CONFIRM`。
+  - 极高危或不可恢复操作需要 Agent/MCP client 要求输入具体命令名。
+  - dry-run plan 必须返回 `agentApproval` 元数据，作为 Agent 是否可以 execute 的权威策略来源。
 - `yolo` 下：
   - 普通写操作和普通高风险操作不弹出人工确认。
   - 极高危或不可恢复操作仍要求主动确认。
@@ -189,7 +203,7 @@ TTL 表示临时授权有效期，不是 backup 保存时间，也不是 audit �
 
 - 设置界面显示 `readonly`、`askforapprove`、`yolo` 三种模式。
 - `readonly` 下写命令被拒绝。
-- `askforapprove` 下普通高风险操作要求 `CONFIRM`，未来极高危操作要求具体命令名。
+- `askforapprove` 下 Agent/MCP client 必须在每个写操作 dry-run 后询问用户；普通高风险操作要求 `CONFIRM`，未来极高危操作要求具体命令名。
 - `yolo` 下普通写操作和普通高风险操作可免人工确认，但极高危操作仍主动确认。
 - dry-run 与 audit 均不可关闭。
 - backup/undo 可关闭，关闭时 UI 显示明确风险提示。

@@ -23,7 +23,7 @@
 
 ### 1. XPI-only inner loop is not ideal
 
-当前计划把 `dist/zotero-codex-bridge.xpi` 作为进入 Zotero 验收前的主要路径。XPI packaging 仍然必要，但官方插件开发资料更适合开发期使用 extension proxy/source directory 方式加载源码，减少每次修改都重新打包、拖入、重启和版本号递增造成的噪声。
+当前计划把 `dist/zotero-local-mcp-bridge.xpi` 作为进入 Zotero 验收前的主要路径。XPI packaging 仍然必要，但官方插件开发资料更适合开发期使用 extension proxy/source directory 方式加载源码，减少每次修改都重新打包、拖入、重启和版本号递增造成的噪声。
 
 修订：
 
@@ -37,7 +37,7 @@ Zotero connector server 是本机 HTTP server。虽然 Zotero 9.0.5 server 源�
 
 修订：
 
-- 在任何真实写命令接入 `/zotero-codex-bridge/command` 前，必须先实现 command endpoint 鉴权。
+- 在任何真实写命令接入 `/zotero-local-mcp-bridge/command` 前，必须先实现 command endpoint 鉴权。
 - 最低要求：本项目生成的本机 secret、请求签名或等价 token；token 不写入 Zotero profile、Zotero data directory 或附件目录。
 - health endpoint 可保持无敏感信息的 GET；command endpoint 不允许 `allowRequestsFromUnsafeWebContent`。
 - command endpoint 必须只接受 `application/json`，拒绝非 JSON content type 和未知 origin/browser-like 请求。
@@ -68,7 +68,7 @@ Zotero connector server 是本机 HTTP server。虽然 Zotero 9.0.5 server 源�
 修订：
 
 - `ZoteroPluginClient.health()` 返回 plain text。
-- JSON contract 只用于 `/zotero-codex-bridge/command`。
+- JSON contract 只用于 `/zotero-local-mcp-bridge/command`。
 
 ### 6. Compatibility target should be explicit
 
@@ -93,8 +93,8 @@ Zotero connector server 是本机 HTTP server。虽然 Zotero 9.0.5 server 源�
 
 继续进入真实 Zotero 写命令前，必须依次完成：
 
-1. 验证当前测试 XPI 的 health endpoint 在 `ZoteroCodexBridgeTest` 中实际返回 OK。
+1. 验证当前测试 XPI 的 health endpoint 在 `ZoteroLocalMcpBridgeTest` 中实际返回 OK。
 2. 增加开发期 extension proxy/source-load 路径，减少重复 XPI 安装。
-3. 为 `/zotero-codex-bridge/command` 设计并实现本机请求鉴权。
+3. 为 `/zotero-local-mcp-bridge/command` 设计并实现本机请求鉴权。
 4. 对第一批真实 Zotero API 写 adapter 做源码审计，先从 collection tree 和 collection create 开始。
 5. 只在上述步骤通过后，接入第一个真实写命令的 dry-run/execute 闭环。

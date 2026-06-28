@@ -19,7 +19,7 @@
 
 ## Test Profile
 
-第一阶段唯一允许的真实 Zotero 写入目标是用户手动建立的 `ZoteroCodexBridgeTest`。
+第一阶段唯一允许的真实 Zotero 写入目标是用户手动建立的测试 profile。新推荐名称为 `ZoteroLocalMcpBridgeTest`；重命名迁移期既有 `ZoteroCodexBridgeTest` 可继续使用。
 
 本项目下的测试目录：
 
@@ -32,7 +32,7 @@
 写操作必须同时满足：
 
 - `profileMode: "test"`
-- `ZoteroProfile/.zotero-codex-bridge-test-profile` 存在
+- `ZoteroProfile/.zotero-local-mcp-bridge-test-profile` 存在；重命名迁移期可兼容旧 marker `ZoteroProfile/.zotero-codex-bridge-test-profile`
 - dry-run 先返回 `planId` 和 `confirmationToken`
 - execute 使用未过期且 input hash 匹配的 confirmation
 

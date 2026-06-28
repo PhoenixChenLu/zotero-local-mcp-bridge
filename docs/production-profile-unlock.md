@@ -17,7 +17,7 @@ This is not yet a public-release approval for real-library use. Cross-platform m
 ## Profile Modes
 
 - `readonly`: public-safe mode that does not allow Zotero profile writes.
-- `test`: internal acceptance mode. Writes require `.zotero-codex-bridge-test-profile`.
+- `test`: internal acceptance mode. Writes require `.zotero-local-mcp-bridge-test-profile`.
 - `real-locked`: real-profile mode with writes locked. This is the default public-release stance.
 - `real-unlocked`: temporary real-profile write mode after explicit local unlock.
 
