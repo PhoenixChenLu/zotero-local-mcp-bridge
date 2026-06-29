@@ -149,7 +149,7 @@
     return !!getEnvironmentValue("APPDATA") || !!getEnvironmentValue("LOCALAPPDATA");
   }
 
-  function resolveDefaultRuntimeRoot() {
+  function resolveDefaultAppDataRoot() {
     var home = getEnvironmentValue("HOME") || getEnvironmentValue("USERPROFILE");
     if (isLikelyWindowsPlatform()) {
       var appData = getEnvironmentValue("APPDATA");
@@ -163,6 +163,10 @@
 
     var xdgState = getEnvironmentValue("XDG_STATE_HOME") || getEnvironmentValue("XDG_DATA_HOME") || (home ? joinPath(home, [".local", "share"]) : "");
     return joinPath(xdgState, ["zotero-local-mcp-bridge"]);
+  }
+
+  function resolveDefaultRuntimeRoot() {
+    return joinPath(resolveDefaultAppDataRoot(), ["runtime"]);
   }
 
   function getRuntimeRoot() {
@@ -182,12 +186,12 @@
     }
   }
 
-  function getAuditRoot(runtimeRoot) {
-    return getPref("auditRoot", runtimeRoot ? joinPath(runtimeRoot, ["runtime", "logs", "audit"]) : "");
+  function getAuditRoot() {
+    return getPref("auditRoot", joinPath(resolveDefaultAppDataRoot(), ["audit"]));
   }
 
-  function getBackupRoot(runtimeRoot) {
-    return getPref("backupRoot", runtimeRoot ? joinPath(runtimeRoot, ["runtime", "backups", "zotero-operations"]) : "");
+  function getBackupRoot() {
+    return getPref("backupRoot", joinPath(resolveDefaultAppDataRoot(), ["backup"]));
   }
 
   function getBackupMaxLocalGb() {
@@ -324,7 +328,6 @@
     persistInjectedRuntimeRootIfNeeded();
 
     setElementValue("zcb-operation-mode", getPref("operationMode", "readonly"));
-    setElementValue("zcb-real-profile-ttl", getPref("realProfileUnlockTtlMinutes", 30));
     setElementChecked("zcb-file-backup-enabled", getPref("fileBackupEnabled", true));
     setElementValue("zcb-backup-retention-days", getPref("backupRetentionDays", 30));
     setElementValue("zcb-backup-max-gb", getBackupMaxLocalGb());
@@ -339,9 +342,6 @@
       setPref("operationMode", element.value);
     });
     addTooltipHelpListener("zcb-run-mode-help", "zcb-run-mode-tooltip");
-    addChangeListener("zcb-real-profile-ttl", function (element) {
-      setPref("realProfileUnlockTtlMinutes", Math.max(1, Math.min(120, Number(element.value) || 30)));
-    });
     addCommandListener("zcb-file-backup-enabled", function (element) {
       setPref("fileBackupEnabled", !!element.checked);
     });

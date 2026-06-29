@@ -4,7 +4,6 @@ export type BridgeOperationMode = (typeof BRIDGE_OPERATION_MODES)[number];
 
 export const DEFAULT_BRIDGE_SETTINGS = {
   operationMode: "readonly" as BridgeOperationMode,
-  realProfileUnlockTtlMinutes: 30,
   dryRunRequired: true,
   auditEnabled: true,
   fileBackupEnabled: true,

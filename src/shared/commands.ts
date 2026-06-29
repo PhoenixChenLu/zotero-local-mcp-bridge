@@ -52,10 +52,7 @@ export type CommandName =
   | "collection.trash"
   | "duplicates.find"
   | "duplicates.merge"
-  | "audit.list"
-  | "safety.getProfileStatus"
-  | "safety.unlockRealProfile"
-  | "safety.lockRealProfile";
+  | "audit.list";
 
 export type CommandDefinition = {
   name: CommandName;
@@ -63,8 +60,6 @@ export type CommandDefinition = {
   inputFields: readonly string[];
   /** Commands that mutate the Zotero profile/library (including test profile writes). */
   profileWrite?: true;
-  /** Commands that mutate safety unlock state and should not be blocked by Zotero profile write guard. */
-  safetyStateWrite?: true;
 };
 
 export const COMMAND_DEFINITIONS = [
@@ -117,20 +112,7 @@ export const COMMAND_DEFINITIONS = [
   { name: "collection.trash", write: true, profileWrite: true, inputFields: ["collectionKey", "trashDescendentItems"] },
   { name: "duplicates.find", write: false, inputFields: ["limit"] },
   { name: "duplicates.merge", write: true, profileWrite: true, inputFields: ["masterZoteroItemKey", "duplicateZoteroItemKeys"] },
-  { name: "audit.list", write: false, inputFields: ["limit"] },
-  { name: "safety.getProfileStatus", write: false, inputFields: [] },
-  {
-    name: "safety.unlockRealProfile",
-    write: true,
-    safetyStateWrite: true,
-    inputFields: ["profileFingerprint", "confirmationText", "ttlMinutes"]
-  },
-  {
-    name: "safety.lockRealProfile",
-    write: true,
-    safetyStateWrite: true,
-    inputFields: []
-  }
+  { name: "audit.list", write: false, inputFields: ["limit"] }
 ] as const satisfies readonly CommandDefinition[];
 
 export const FIRST_VERSION_COMMAND_NAMES = COMMAND_DEFINITIONS.map((definition) => definition.name);
@@ -141,10 +123,6 @@ export function isWriteCommand(commandName: CommandName): boolean {
 
 export function isProfileWriteCommand(commandName: CommandName): boolean {
   return !!getDefinition(commandName)?.profileWrite;
-}
-
-export function isSafetyStateWriteCommand(commandName: CommandName): boolean {
-  return !!getDefinition(commandName)?.safetyStateWrite;
 }
 
 export function getCommandDefinition(commandName: CommandName): CommandDefinition | undefined {

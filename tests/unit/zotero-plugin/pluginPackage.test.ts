@@ -40,7 +40,7 @@ describe("Zotero plugin package", () => {
   it("registers only the plugin-hosted Zotero connector MCP endpoint", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.56"');
+    expect(bootstrap).toContain('version: "0.1.57"');
     expect(bootstrap).toContain("Zotero.PreferencePanes.register");
     expect(bootstrap).toContain('src: data.rootURI + "preferences.xhtml"');
     expect(bootstrap).toContain('scripts: [data.rootURI + "preferences.js"]');
@@ -58,8 +58,6 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("assertOperationWritePermission(operationMode, commandName)");
     expect(bootstrap).toContain('"OPERATION_MODE_READONLY"');
     expect(bootstrap).toContain("operationMode: operationMode");
-    expect(bootstrap).toContain("dryRunRequired: true");
-    expect(bootstrap).toContain("auditEnabled: true");
     expect(bootstrap).toContain("function createAgentApprovalPolicy");
     expect(bootstrap).toContain('layer: "agent"');
     expect(bootstrap).toContain('operationMode === "askforapprove"');
@@ -137,18 +135,19 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "backup.snapshot.restore"');
     expect(bootstrap).toContain('commandName === "backup.snapshot.prune"');
     expect(bootstrap).toContain('commandName === "audit.list"');
-    expect(bootstrap).toContain('commandName === "safety.getProfileStatus"');
-    expect(bootstrap).toContain('commandName === "safety.unlockRealProfile"');
-    expect(bootstrap).toContain('commandName === "safety.lockRealProfile"');
-    expect(bootstrap).toContain('REAL_PROFILE_UNLOCK_CONFIRMATION');
-    expect(bootstrap).toContain('"PROFILE_UNLOCK_FINGERPRINT_MISMATCH"');
-    expect(bootstrap).toContain('"PROFILE_UNLOCK_CONFIRMATION_REQUIRED"');
-    expect(bootstrap).toContain("function realProfileUnlockError");
-    expect(bootstrap).toContain('requiredText: REAL_PROFILE_UNLOCK_CONFIRMATION');
-    expect(bootstrap).toContain('expectedProfileFingerprint: resolveProfileFingerprint()');
+    expect(bootstrap).toContain('REAL_PROFILE_DEFAULT_MODE = "real-unlocked"');
+    expect(bootstrap).toContain("return REAL_PROFILE_DEFAULT_MODE");
+    expect(bootstrap).not.toContain('commandName === "safety.getProfileStatus"');
+    expect(bootstrap).not.toContain('"safety.unlockRealProfile",');
+    expect(bootstrap).not.toContain('"safety.lockRealProfile",');
+    expect(bootstrap).not.toContain('REAL_PROFILE_UNLOCK_CONFIRMATION');
+    expect(bootstrap).not.toContain('"PROFILE_UNLOCK_FINGERPRINT_MISMATCH"');
+    expect(bootstrap).not.toContain('"PROFILE_UNLOCK_CONFIRMATION_REQUIRED"');
+    expect(bootstrap).not.toContain("function realProfileUnlockError");
     expect(bootstrap).toContain("function commandErrorResponse");
-    expect(bootstrap).toContain('isProfileUnlockActive(state, resolveProfileFingerprint())');
-    expect(bootstrap).toContain('state.profileFingerprint !== profileFingerprint');
+    expect(bootstrap).not.toContain("function isProfileUnlockActive");
+    expect(bootstrap).not.toContain("function readRealProfileUnlockState");
+    expect(bootstrap).not.toContain("function saveRealProfileUnlockState");
     expect(bootstrap).toContain('"COMMAND_CONTEXT_FAILED"');
     expect(bootstrap).toContain("function getPreferenceValue");
     expect(bootstrap).toContain("getPreferenceValue(REAL_PROFILE_PREFERENCE_MODE)");
@@ -156,8 +155,7 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain('return "test"');
     expect(bootstrap).toContain('LEGACY_TEST_PROFILE_MARKER_FILE = ".zotero-codex-bridge-test-profile"');
     expect(bootstrap).toContain("getPreferenceValue(BRIDGE_RUNTIME_ROOT_PREFERENCE)");
-    expect(bootstrap).toContain('REAL_PROFILE_STATE_PATH_PARTS = ["runtime", "safety", "real-profile-state.json"]');
-    expect(bootstrap).toContain("PathUtils.join.apply(PathUtils, [resolveBridgeRuntimeRoot()].concat(REAL_PROFILE_STATE_PATH_PARTS))");
+    expect(bootstrap).not.toContain("REAL_PROFILE_STATE_PATH_PARTS");
     expect(bootstrap).not.toContain('if (preferenceMode === "real-unlocked")');
     expect(bootstrap).toContain("events: entries");
     expect(bootstrap).toContain("createBackupFileSnapshot");
@@ -197,7 +195,7 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("getCollections(true)");
     expect(bootstrap).toContain("backupFilesRootPath");
     expect(bootstrap).toContain("IOUtils.copy");
-    expect(bootstrap).toContain('PathUtils.join(resolveBridgeRuntimeRoot(), "runtime", "backups", "zotero-operations")');
+    expect(bootstrap).toContain('PathUtils.join(resolveBridgeDefaultAppDataRoot(), "backup")');
     expect(bootstrap).toContain('"settings.json"');
     expect(bootstrap).toContain("normalizeBackupPolicy");
     expect(bootstrap).toContain('new Zotero.Item("note")');
@@ -220,7 +218,9 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain("Zotero.File.putContentsAsync");
     expect(bootstrap).toContain("Zotero.File.getContentsAsync");
     expect(bootstrap).toContain("Zotero.File.createDirectoryIfMissingAsync");
-    expect(bootstrap).toContain('PathUtils.join(resolveBridgeRuntimeRoot(), "runtime", "logs", "audit")');
+    expect(bootstrap).toContain('PathUtils.join(resolveBridgeDefaultAppDataRoot(), "runtime")');
+    expect(bootstrap).toContain('PathUtils.join(resolveBridgeRuntimeRoot(), "auth", "bridge-token")');
+    expect(bootstrap).toContain('PathUtils.join(resolveBridgeDefaultAppDataRoot(), "audit")');
     expect(bootstrap).toContain('attachment.setField("title", normalized.title)');
     expect(bootstrap).toContain("note.setNote");
     expect(bootstrap).toContain("noteHtmlPreview");
@@ -271,13 +271,15 @@ describe("Zotero plugin package", () => {
     const script = await readFile(path.resolve("src", "zotero-plugin", "preferences.js"), "utf8");
 
     expect(prefs).toContain('pref("extensions.zotero-local-mcp-bridge.operationMode", "readonly")');
-    expect(prefs).toContain('pref("extensions.zotero-local-mcp-bridge.realProfileUnlockTtlMinutes", 30)');
+    expect(prefs).not.toContain("realProfileUnlockTtlMinutes");
     expect(prefs).toContain('pref("extensions.zotero-local-mcp-bridge.fileBackupEnabled", true)');
     expect(prefs).toContain('pref("extensions.zotero-local-mcp-bridge.backupMaxLocalGb", 10)');
     expect(prefs).not.toContain('pref("extensions.zotero-local-mcp-bridge.backupMaxLocalBytes", 10737418240)');
     expect(preferences).toContain('value="readonly"');
     expect(preferences).toContain('value="askforapprove"');
     expect(preferences).toContain('value="yolo"');
+    expect(preferences).not.toContain("zcb-real-profile-ttl");
+    expect(script).not.toContain("realProfileUnlockTtlMinutes");
     expect(preferences).not.toContain("Dry-run and audit are always enabled");
     expect(preferences).not.toContain("Enable file-level backup and undo");
     expect(preferences).not.toContain("Copy to Zotero storage");
@@ -312,9 +314,15 @@ describe("Zotero plugin package", () => {
     expect(script).toContain("persistInjectedRuntimeRootIfNeeded()");
     expect(script).toContain('getPref("runtimeRoot", "")');
     expect(script).toContain("function resolveDefaultRuntimeRoot");
+    expect(script).toContain("function resolveDefaultAppDataRoot");
     expect(script).toContain('getEnvironmentValue("APPDATA")');
     expect(script).toContain('getEnvironmentValue("LOCALAPPDATA")');
     expect(script).toContain('["zotero-local-mcp-bridge"]');
+    expect(script).toContain('joinPath(resolveDefaultAppDataRoot(), ["runtime"])');
+    expect(script).toContain('joinPath(resolveDefaultAppDataRoot(), ["audit"])');
+    expect(script).toContain('joinPath(resolveDefaultAppDataRoot(), ["backup"])');
+    expect(script).not.toContain('["runtime", "logs", "audit"]');
+    expect(script).not.toContain('["runtime", "backups", "zotero-operations"]');
     expect(script).toContain('chooseDirectory("runtimeRoot"');
     expect(script).toContain('chooseDirectory("auditRoot"');
     expect(script).toContain('chooseDirectory("backupRoot"');

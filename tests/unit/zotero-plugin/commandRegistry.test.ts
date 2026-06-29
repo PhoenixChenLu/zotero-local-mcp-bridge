@@ -64,21 +64,4 @@ describe("CommandRegistry", () => {
     });
   });
 
-  it("does not block safety state commands while real profile is locked", async () => {
-    const registry = new CommandRegistry({ profileMode: "real-locked" });
-    registry.register("safety.lockRealProfile", async () => ({ profileMode: "real-locked" }));
-
-    await expect(
-      registry.execute({
-        name: "safety.lockRealProfile",
-        requestId: "req_5",
-        input: {}
-      })
-    ).resolves.toMatchObject({
-      ok: true,
-      commandName: "safety.lockRealProfile",
-      requestId: "req_5",
-      data: { profileMode: "real-locked" }
-    });
-  });
 });

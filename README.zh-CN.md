@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg"></a>
-  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.56-4c78a8.svg"></a>
+  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.57-4c78a8.svg"></a>
   <a href="https://www.zotero.org/"><img alt="Zotero" src="https://img.shields.io/badge/Zotero-9.x-cc2936.svg"></a>
   <a href="#工作机制"><img alt="MCP" src="https://img.shields.io/badge/MCP-plugin--hosted-2e7d32.svg"></a>
   <a href="#工作范围"><img alt="Local First" src="https://img.shields.io/badge/local--first-loopback--only-2e7d32.svg"></a>
@@ -16,7 +16,7 @@
   <a href="skills/zotero-local-mcp-bridge-zh-cn/SKILL.md"><img alt="Claude Code ready" src="https://img.shields.io/badge/Claude%20Code-ready-111827.svg"></a>
 </p>
 
-AGPL-3.0-or-later · 插件版本 0.1.56 · Zotero 9.x · 插件内置 MCP · 本地回环访问
+AGPL-3.0-or-later · 插件版本 0.1.57 · Zotero 9.x · 插件内置 MCP · 本地回环访问
 
 **简体中文** · [English](README.md)
 
@@ -139,30 +139,41 @@ http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 
 ### 4. 连接 MCP 客户端
 
-把你的 MCP 智能体配置为通过 Streamable HTTP / HTTP JSON-RPC 连接。
+有两种接入方式。推荐优先使用 stdio adapter，因为大多数智能体都稳定支持 stdio MCP；如果你的智能体原生支持 HTTP MCP，也可以不安装 npm 包，直接连接 Zotero 插件端点。
 
-Codex：
+#### 方式 A：stdio MCP
+
+安装 npm adapter：
+
+```bash
+npm install -g zotero-local-mcp-bridge-stdio-adapter
+```
+
+然后在智能体里配置 stdio MCP：
 
 ```toml
 [mcp_servers.zotero-local-mcp-bridge]
-url = "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp"
-startup_timeout_sec = 10
+command = "zotero-local-mcp-bridge-stdio"
+args = []
+startup_timeout_sec = 20
 tool_timeout_sec = 120
 ```
 
-Claude Code：
+通用 stdio MCP 配置：
 
-```bash
-claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
+```json
+{
+  "mcpServers": {
+    "zotero-local-mcp-bridge": {
+      "type": "stdio",
+      "command": "zotero-local-mcp-bridge-stdio",
+      "args": []
+    }
+  }
+}
 ```
 
-通用 HTTP MCP endpoint：
-
-```text
-http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
-```
-
-stdio-only 客户端：
+也可以不全局安装，直接用 `npx`：
 
 ```json
 {
@@ -177,6 +188,29 @@ stdio-only 客户端：
 ```
 
 stdio adapter 是兼容层，会在智能体会话中由智能体启动，并把 stdio MCP 请求转发到 Zotero 插件 HTTP MCP endpoint。它不是 Zotero 插件本体，也不会随 Zotero 启动。
+
+#### 方式 B：HTTP MCP
+
+如果你的智能体支持 Streamable HTTP / HTTP MCP，可以不安装 npm 包，直接连接 Zotero 插件端点：
+
+```text
+http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
+```
+
+Codex 示例：
+
+```toml
+[mcp_servers.zotero-local-mcp-bridge]
+url = "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp"
+startup_timeout_sec = 10
+tool_timeout_sec = 120
+```
+
+Claude Code 示例：
+
+```bash
+claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
+```
 
 ### 5. 安装对应 skill
 

@@ -9,6 +9,7 @@ import {
   listTools,
   resolveEndpoint,
   shouldShowHelp,
+  shouldShowVersion,
   type AdapterOptions
 } from "../../../packages/stdio-adapter/src/index.js";
 
@@ -30,6 +31,12 @@ describe("stdio adapter", () => {
     expect(getHelpText()).toContain("zotero-local-mcp-bridge-stdio [--endpoint <url>]");
     expect(getHelpText()).toContain(defaultZoteroLocalMcpBridgeEndpoint);
     expect(getHelpText()).toContain("ZOTERO_LOCAL_MCP_BRIDGE_ENDPOINT");
+  });
+
+  it("prints version for CLI verification without starting MCP stdio", () => {
+    expect(shouldShowVersion(["--version"])).toBe(true);
+    expect(shouldShowVersion(["-v"])).toBe(true);
+    expect(shouldShowVersion(["--endpoint", "http://localhost/mcp"])).toBe(false);
   });
 
   it("detects direct CLI execution across real files and npm shims", () => {
@@ -89,7 +96,7 @@ describe("stdio adapter", () => {
     await callTool(options, {
       method: "tools/call",
       params: {
-        name: "zotero_safety_get_profile_status",
+        name: "zotero_audit_list",
         arguments: {}
       }
     });
@@ -106,7 +113,7 @@ describe("stdio adapter", () => {
         id: "adapter-tools-call",
         method: "tools/call",
         params: {
-          name: "zotero_safety_get_profile_status",
+          name: "zotero_audit_list",
           arguments: {}
         }
       }

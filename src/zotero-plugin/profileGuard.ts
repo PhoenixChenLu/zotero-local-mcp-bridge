@@ -31,7 +31,7 @@ export function ensureProfileWrite(profileMode: ProfileMode, options: ProfileWri
   if (profileMode === "readonly" || profileMode === "real-locked") {
     throw new ZoteroBridgeError(
       "PROFILE_REAL_LOCKED",
-      "Real-profile write commands are locked. Use safety.unlockRealProfile to unlock with confirmation",
+      "Real-profile write commands are locked by internal profile mode",
       { profileMode }
     );
   }

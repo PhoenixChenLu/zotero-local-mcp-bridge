@@ -14,6 +14,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 export const defaultZoteroLocalMcpBridgeEndpoint = "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp";
+export const adapterVersion = "0.1.57";
 
 export interface AdapterOptions {
   endpoint: string;
@@ -47,6 +48,10 @@ type JsonRpcResponse<T> = JsonRpcSuccess<T> | JsonRpcFailure;
 
 export function shouldShowHelp(args: readonly string[]): boolean {
   return args.includes("--help") || args.includes("-h");
+}
+
+export function shouldShowVersion(args: readonly string[]): boolean {
+  return args.includes("--version") || args.includes("-v");
 }
 
 export function getHelpText(): string {
@@ -150,7 +155,7 @@ export function createAdapterServer(options: AdapterOptions): Server {
   const server = new Server(
     {
       name: "zotero-local-mcp-bridge-stdio-adapter",
-      version: "0.1.56"
+      version: adapterVersion
     },
     {
       capabilities: {
@@ -169,6 +174,11 @@ export function createAdapterServer(options: AdapterOptions): Server {
 export async function runAdapter(args: readonly string[] = process.argv.slice(2), env: NodeJS.ProcessEnv = process.env): Promise<void> {
   if (shouldShowHelp(args)) {
     console.log(getHelpText());
+    return;
+  }
+
+  if (shouldShowVersion(args)) {
+    console.log(adapterVersion);
     return;
   }
 

@@ -31,11 +31,10 @@ description: 通过 Zotero Local MCP Bridge 安全管理本地 Zotero 文库。�
 
 1. 确认插件自带 MCP 端点已暴露 Zotero 工具。
 2. 如果存在健康检查或状态工具，优先使用；否则使用文档化的 MCP 读取或状态工具。
-3. 可用时检查 `safety.getProfileStatus`。
-4. 确认用户正在操作预期的本地用户文库或测试配置文件。
-5. 如果无法连接 Zotero，要求用户打开 Zotero，并确认插件已安装且启用。
+3. 确认用户正在操作预期的本地用户文库。
+4. 如果无法连接 Zotero，要求用户打开 Zotero，并确认插件已安装且启用。
 
-如果当前智能体只能看到本 skill，但工具列表里没有 `zotero_safety_get_profile_status` 或其他 `zotero_*` MCP 工具，不要继续 Zotero 操作。说明用户尚未把 MCP endpoint 注册为工具源：
+如果当前智能体只能看到本 skill，但工具列表里没有 `zotero_*` MCP 工具，不要继续 Zotero 操作。说明用户尚未把 MCP endpoint 注册为工具源：
 
 - Codex / Claude Code：直接注册 `http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp`。
 - OpenCode / stdio-only 客户端：使用 `zotero-local-mcp-bridge-stdio-adapter` 作为兼容层。
@@ -141,9 +140,6 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 | `duplicates.find` | `zotero_duplicates_find` | R | `limit` |
 | `duplicates.merge` | `zotero_duplicates_merge` | W | `masterZoteroItemKey`, `duplicateZoteroItemKeys` |
 | `audit.list` | `zotero_audit_list` | R | `limit` |
-| `safety.getProfileStatus` | `zotero_safety_get_profile_status` | R | 无 |
-| `safety.unlockRealProfile` | `zotero_safety_unlock_real_profile` | W | `profileFingerprint`, `confirmationText`, `ttlMinutes` |
-| `safety.lockRealProfile` | `zotero_safety_lock_real_profile` | W | 无 |
 
 ## 读取操作
 
@@ -157,7 +153,7 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 - 引用和导出：`citation.format`、`export.bibtex`、`export.ris`、`export.cslJson`
 - 标注：`annotation.list`
 - 附件：`attachment.get`、`attachment.getForItem`
-- 偏好和历史：`attachment.renamePreferences.get`、`backup.settings.get`、`backup.snapshot.list`、`audit.list`、`duplicates.find`、`safety.getProfileStatus`
+- 偏好和历史：`attachment.renamePreferences.get`、`backup.settings.get`、`backup.snapshot.list`、`audit.list`、`duplicates.find`
 
 当用户用标题、分类、标签或文件的模糊名称描述目标时，先用读取工具解析为 Zotero key。不要猜测 key。
 
@@ -184,7 +180,6 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 - 附件：添加文件、移动到条目、重命名、运行 Zotero 重命名、撤销已添加附件、移入 trash、设置重命名偏好
 - 备份：设置、恢复快照、清理快照
 - 重复项：合并
-- 安全：解锁或锁定真实配置文件
 
 ## 确认规则
 
@@ -202,7 +197,6 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 - `duplicates.merge`
 - `backup.snapshot.restore`
 - `backup.snapshot.prune`
-- `safety.unlockRealProfile`
 
 在请求批准模式中，如果 `plan.agentApproval.requiredText` 是 `CONFIRM`，高风险操作必须要求用户回复 `CONFIRM`。未来任何不可恢复操作都必须要求输入精确命令名。
 
@@ -281,7 +275,6 @@ Zotero Settings -> Zotero Local MCP Bridge
   - `readonly`：阻止所有写入。
   - `askforapprove`：写入需要 dry-run 和用户批准。
   - `yolo`：普通写入在允许时可 dry-run 后执行，但不可恢复操作仍需要明确确认。
-- **真实配置文件解锁 TTL**：控制明确解锁后真实配置文件写入权限保持多长时间。
 - **文件备份 / 撤销**：控制附件操作是否具备文件级备份能力。
 - **备份保存时间和空间限制**：控制备份清理策略。
 - **默认附件模式**：复制到 Zotero storage 或 linked file。
@@ -294,8 +287,6 @@ Zotero Settings -> Zotero Local MCP Bridge
 | 运行模式是 `readonly`，用户请求写入 | 不执行，也不重试。 | 要求用户打开 Zotero Settings -> Zotero Local MCP Bridge，把运行模式改为 `askforapprove` 或 `yolo`。 |
 | 用户要求绕过 dry-run | 拒绝。 | 说明 dry-run 是强制的，不能关闭。 |
 | 写入需要批准 | dry-run 后停止。 | 要求用户批准 dry-run 计划；高风险操作按要求请求 `CONFIRM`。 |
-| 真实配置文件已锁定 | 不写入。 | 说明真实配置文件已锁定。若用户明确要求真实配置文件写入，使用 `safety.unlockRealProfile` 并遵守 TTL。 |
-| 真实配置文件解锁过期 | 重新检查状态并停止。 | 只有用户仍然需要真实配置文件写入时，才要求再次解锁。 |
 | 附件文件操作前备份或撤销被关闭 | 不假定存在文件级恢复能力。 | 提醒文件级撤销可能不可用；建议用户在插件设置中启用文件备份 / 撤销。 |
 | 备份目录或运行目录无效或不安全 | 不继续有文件风险的写入。 | 要求用户在 Zotero Settings -> Zotero Local MCP Bridge 中修复路径。路径不能位于 Zotero 配置文件、Zotero 数据目录、linked attachment root 或附件目录内部。 |
 | 附件重复检查拦截或警告 | 停止并总结重复项。 | 询问用户是复用既有附件、选择其他文件，还是调整附件重复检查行为。 |
@@ -303,7 +294,6 @@ Zotero Settings -> Zotero Local MCP Bridge
 
 智能体可通过 MCP 检查的设置：
 
-- `safety.getProfileStatus`
 - `backup.settings.get`
 - `attachment.renamePreferences.get`
 - `audit.list`
@@ -312,34 +302,8 @@ Zotero Settings -> Zotero Local MCP Bridge
 
 - `backup.settings.set`
 - `attachment.renamePreferences.set`
-- `safety.unlockRealProfile`
-- `safety.lockRealProfile`
 
 不要自动把 `readonly` 升级为 `askforapprove` 或 `yolo`。不要自动关闭备份、撤销或重复检查。
-
-## 真实配置文件写入
-
-除非用户明确请求真实配置文件写入，否则默认使用测试配置文件或只读行为。
-
-真实配置文件写入之前：
-
-1. 运行 `safety.getProfileStatus`。
-2. 说明当前配置文件模式和目标配置文件。
-3. 如果 `profileMode` 是 `real-locked`，只有用户明确请求真实配置文件写入权限时，才使用 `safety.unlockRealProfile`。
-4. `safety.unlockRealProfile` 必须使用 `safety.getProfileStatus` 返回的 `profileFingerprint`。
-5. `confirmationText` 必须精确等于：
-
-```text
-I understand and authorize temporary real-library write access
-```
-
-6. `ttlMinutes` 默认使用插件返回或设置中的默认值；如果需要显式传入，默认用 `30`，最大不要超过插件允许的 `120`。
-7. 解锁后必须再次运行 `safety.getProfileStatus`，确认 `isRealUnlocked` 为 true，并记录 `unlockExpiresAt`。
-8. 工作流完成或用户要求时，使用 `safety.lockRealProfile` 再次锁定。
-
-不要静默解锁真实配置文件。
-
-如果 `safety.unlockRealProfile` 返回 `PROFILE_UNLOCK_CONFIRMATION_REQUIRED`、`REAL_PROFILE_UNLOCK_FINGERPRINT_REQUIRED`、`PROFILE_UNLOCK_FINGERPRINT_MISMATCH` 或 TTL 相关错误，优先读取错误对象中的 `requiredText`、`expectedProfileFingerprint`、`ttlMinutesDefault`、`ttlMinutesMin`、`ttlMinutesMax`，不要猜测确认文本，也不要通过读取插件源码寻找确认文本。
 
 ## 附件规则
 
@@ -398,7 +362,7 @@ I understand and authorize temporary real-library write access
 被拦截时：
 
 ```text
-已拦截：<具体保护规则>。下一步需要：<打开 Zotero Settings -> Zotero Local MCP Bridge/修改运行模式/提供确认/使用测试配置文件/解锁真实配置文件/修复备份路径>。
+已拦截：<具体保护规则>。下一步需要：<打开 Zotero Settings -> Zotero Local MCP Bridge/修改运行模式/提供确认/修复备份路径>。
 ```
 
 ## Codex 适配说明

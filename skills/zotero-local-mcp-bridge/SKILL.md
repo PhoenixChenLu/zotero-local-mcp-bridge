@@ -31,11 +31,10 @@ Before changing Zotero state:
 
 1. Confirm the plugin-hosted MCP endpoint exposes Zotero tools.
 2. Prefer a health or status tool when available; otherwise use the documented MCP read/status tool.
-3. Check `safety.getProfileStatus` when available.
-4. Confirm the user is operating on the intended local user library or test profile.
-5. If Zotero is not reachable, ask the user to open Zotero and ensure the plugin is installed and enabled.
+3. Confirm the user is operating on the intended local user library.
+4. If Zotero is not reachable, ask the user to open Zotero and ensure the plugin is installed and enabled.
 
-If the current agent can read this skill but the tool list does not include `zotero_safety_get_profile_status` or other `zotero_*` MCP tools, do not continue Zotero operations. Explain that the MCP endpoint has not been registered as a tool source:
+If the current agent can read this skill but the tool list does not include `zotero_*` MCP tools, do not continue Zotero operations. Explain that the MCP endpoint has not been registered as a tool source:
 
 - Codex / Claude Code: register `http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp` directly.
 - OpenCode / stdio-only clients: use `zotero-local-mcp-bridge-stdio-adapter` as the compatibility layer.
@@ -141,9 +140,6 @@ Use this table as the first reference for operation format. `R` means read-only.
 | `duplicates.find` | `zotero_duplicates_find` | R | `limit` |
 | `duplicates.merge` | `zotero_duplicates_merge` | W | `masterZoteroItemKey`, `duplicateZoteroItemKeys` |
 | `audit.list` | `zotero_audit_list` | R | `limit` |
-| `safety.getProfileStatus` | `zotero_safety_get_profile_status` | R | none |
-| `safety.unlockRealProfile` | `zotero_safety_unlock_real_profile` | W | `profileFingerprint`, `confirmationText`, `ttlMinutes` |
-| `safety.lockRealProfile` | `zotero_safety_lock_real_profile` | W | none |
 
 ## Read Operations
 
@@ -157,7 +153,7 @@ Useful read groups:
 - Citations and exports: `citation.format`, `export.bibtex`, `export.ris`, `export.cslJson`
 - Annotations: `annotation.list`
 - Attachments: `attachment.get`, `attachment.getForItem`
-- Preferences and history: `attachment.renamePreferences.get`, `backup.settings.get`, `backup.snapshot.list`, `audit.list`, `duplicates.find`, `safety.getProfileStatus`
+- Preferences and history: `attachment.renamePreferences.get`, `backup.settings.get`, `backup.snapshot.list`, `audit.list`, `duplicates.find`
 
 When a user names a title, collection, tag, or file loosely, first resolve it to Zotero keys with read tools. Do not guess keys.
 
@@ -184,7 +180,6 @@ Writes include:
 - Attachments: add file, move to item, rename, run Zotero rename, undo added, trash, set rename preferences
 - Backup: set settings, restore snapshot, prune snapshots
 - Duplicates: merge
-- Safety: unlock or lock real profile
 
 ## Confirmation Rules
 
@@ -202,7 +197,6 @@ High-risk operations must stop for user confirmation:
 - `duplicates.merge`
 - `backup.snapshot.restore`
 - `backup.snapshot.prune`
-- `safety.unlockRealProfile`
 
 For high-risk operations in ask-for-approval mode, ask for `CONFIRM` when `plan.agentApproval.requiredText` is `CONFIRM`. For any future unrecoverable operation, require the exact command name as confirmation.
 
@@ -281,7 +275,6 @@ Important settings:
   - `readonly`: blocks all writes.
   - `askforapprove`: writes require dry-run and approval.
   - `yolo`: ordinary writes may execute after dry-run when allowed, but unrecoverable operations still require explicit confirmation.
-- **Real-profile unlock TTL**: controls how long real-profile write access remains unlocked after explicit unlock.
 - **File backup / undo**: controls file-level backup availability for attachment operations.
 - **Backup retention and space limit**: controls backup cleanup policy.
 - **Default attachment mode**: copy to Zotero storage or linked file.
@@ -294,8 +287,6 @@ When permission is blocked, stop and give a concrete setting action:
 | Run mode is `readonly` and the user requests a write | Do not execute or retry. | Ask the user to open Zotero Settings -> Zotero Local MCP Bridge and change Run mode to `Ask for approval` or `YOLO` if they want writes enabled. |
 | User asks to bypass dry-run | Refuse. | Explain that dry-run is mandatory and cannot be disabled. |
 | Write requires approval | Stop after dry-run. | Ask the user to approve the dry-run plan; for high-risk operations ask for `CONFIRM` if required. |
-| Real profile is locked | Do not write. | Explain that the real profile is locked. If the user explicitly wants real-profile writes, use `safety.unlockRealProfile` and respect TTL. |
-| Real profile unlock is expired | Re-check status and stop. | Ask the user to unlock again only if they still want real-profile writes. |
 | Backup/undo is disabled before attachment file operations | Do not assume file-level recovery is available. | Warn that file-level undo may not be available; ask the user to enable File backup / undo in plugin settings for safer attachment writes. |
 | Backup directory or runtime path is invalid or unsafe | Do not proceed with file-risk writes. | Ask the user to fix the path in Zotero Settings -> Zotero Local MCP Bridge. Paths must not point inside Zotero profile, Zotero data directory, linked attachment root, or attachment folders. |
 | Attachment duplicate check blocks or warns | Stop and summarize duplicates. | Ask the user whether to reuse existing attachment, choose another file, or adjust attachment duplicate behavior in settings. |
@@ -303,7 +294,6 @@ When permission is blocked, stop and give a concrete setting action:
 
 Settings that an agent may inspect through MCP:
 
-- `safety.getProfileStatus`
 - `backup.settings.get`
 - `attachment.renamePreferences.get`
 - `audit.list`
@@ -312,34 +302,8 @@ Settings that an agent may modify through MCP only after explicit user request a
 
 - `backup.settings.set`
 - `attachment.renamePreferences.set`
-- `safety.unlockRealProfile`
-- `safety.lockRealProfile`
 
 Do not automatically escalate from `readonly` to `askforapprove` or `yolo`. Do not automatically disable backup/undo or duplicate checks.
-
-## Real Profile Writes
-
-Default to the test profile or read-only behavior unless the user explicitly requests real-profile writes.
-
-Before real-profile writes:
-
-1. Run `safety.getProfileStatus`.
-2. Explain the current profile mode and target profile.
-3. If `profileMode` is `real-locked`, use `safety.unlockRealProfile` only if the user explicitly requests real-profile write access.
-4. `safety.unlockRealProfile` must use the `profileFingerprint` returned by `safety.getProfileStatus`.
-5. `confirmationText` must exactly equal:
-
-```text
-I understand and authorize temporary real-library write access
-```
-
-6. Default `ttlMinutes` to the plugin-returned or configured default. If an explicit value is needed, use `30` by default and never exceed the plugin's allowed maximum `120`.
-7. After unlocking, run `safety.getProfileStatus` again, confirm `isRealUnlocked` is true, and record `unlockExpiresAt`.
-8. Lock the profile again with `safety.lockRealProfile` when the workflow is done or the user asks.
-
-Do not silently unlock a real profile.
-
-If `safety.unlockRealProfile` returns `PROFILE_UNLOCK_CONFIRMATION_REQUIRED`, `REAL_PROFILE_UNLOCK_FINGERPRINT_REQUIRED`, `PROFILE_UNLOCK_FINGERPRINT_MISMATCH`, or TTL-related errors, read `requiredText`, `expectedProfileFingerprint`, `ttlMinutesDefault`, `ttlMinutesMin`, and `ttlMinutesMax` from the error object first. Do not guess confirmation text or inspect plugin source code to discover it.
 
 ## Attachment Rules
 
@@ -398,7 +362,7 @@ Executed: <describe the completed operation in one sentence>.
 For blocked work:
 
 ```text
-Blocked: <specific guard>. Required next action: <open Zotero Settings -> Zotero Local MCP Bridge/change Run mode/provide confirmation/use test profile/unlock real profile/fix backup path>.
+Blocked: <specific guard>. Required next action: <open Zotero Settings -> Zotero Local MCP Bridge/change Run mode/provide confirmation/fix backup path>.
 ```
 
 ## Codex Adapter Notes

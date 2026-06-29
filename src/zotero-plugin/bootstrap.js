@@ -3,7 +3,7 @@
 
 var ZoteroLocalMcpBridge = {
   id: "zotero-local-mcp-bridge@example.com",
-  version: "0.1.56",
+  version: "0.1.57",
   mcpPath: "/zotero-local-mcp-bridge/mcp",
   authHeader: "x-zotero-local-mcp-bridge-token",
   expectedAuthToken: __ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__,
@@ -18,12 +18,8 @@ var cachedExpectedAuthToken;
 
 var TEST_PROFILE_MARKER_FILE = ".zotero-local-mcp-bridge-test-profile";
 var LEGACY_TEST_PROFILE_MARKER_FILE = ".zotero-codex-bridge-test-profile";
-var REAL_PROFILE_UNLOCK_DEFAULT_TTL_MINUTES = 30;
-var REAL_PROFILE_UNLOCK_MAX_TTL_MINUTES = 120;
-var REAL_PROFILE_UNLOCK_CONFIRMATION = "I understand and authorize temporary real-library write access";
 var REAL_PROFILE_PREFERENCE_MODE = "extensions.zotero-local-mcp-bridge.profileMode";
-var REAL_PROFILE_DEFAULT_MODE = "real-locked";
-var REAL_PROFILE_STATE_PATH_PARTS = ["runtime", "safety", "real-profile-state.json"];
+var REAL_PROFILE_DEFAULT_MODE = "real-unlocked";
 var BRIDGE_RUNTIME_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.runtimeRoot";
 var BRIDGE_AUDIT_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.auditRoot";
 var BRIDGE_BACKUP_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.backupRoot";
@@ -38,11 +34,6 @@ var EXPORT_TRANSLATOR_IDS = {
   bibtex: "9cb70025-a888-4a29-a210-93ec52da40d4",
   ris: "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7",
   cslJson: "bc03b4fe-436d-4a1f-ba59-de4d2d7a63f7"
-};
-
-var ZoteroLocalMcpBridgeSafetyStateCommands = {
-  "safety.unlockRealProfile": true,
-  "safety.lockRealProfile": true
 };
 
 var ZoteroLocalMcpBridgeDefaultBackupPolicy = {
@@ -117,9 +108,7 @@ var ZoteroLocalMcpBridgeWriteCommands = {
   "attachment.renamePreferences.set": true,
   "backup.settings.set": true,
   "backup.snapshot.restore": true,
-  "backup.snapshot.prune": true,
-  "safety.unlockRealProfile": true,
-  "safety.lockRealProfile": true
+  "backup.snapshot.prune": true
 };
 
 var ZoteroLocalMcpBridgeCommandNames = [
@@ -172,10 +161,7 @@ var ZoteroLocalMcpBridgeCommandNames = [
   "collection.trash",
   "duplicates.find",
   "duplicates.merge",
-  "audit.list",
-  "safety.getProfileStatus",
-  "safety.unlockRealProfile",
-  "safety.lockRealProfile"
+  "audit.list"
 ];
 
 function log(message) {
@@ -481,8 +467,7 @@ function isHighRiskMcpCommand(commandName) {
   return commandName.indexOf(".trash") > 0
     || commandName === "duplicates.merge"
     || commandName === "backup.snapshot.restore"
-    || commandName === "backup.snapshot.prune"
-    || commandName === "safety.unlockRealProfile";
+    || commandName === "backup.snapshot.prune";
 }
 
 function mcpJsonRpcResult(id, result) {
@@ -590,7 +575,7 @@ async function handleCommandEndpointRequest(req) {
         });
       }
 
-      if (ZoteroLocalMcpBridgeProfileWriteCommands[commandName] && !ZoteroLocalMcpBridgeSafetyStateCommands[commandName]) {
+      if (ZoteroLocalMcpBridgeProfileWriteCommands[commandName]) {
         try {
           assertOperationWritePermission(operationMode, commandName);
           assertProfileWritePermission(profileMode, testProfileMarkerPresent, commandName);
@@ -598,47 +583,6 @@ async function handleCommandEndpointRequest(req) {
           return jsonCommandResponse(error.status || 403, commandName, requestId, undefined, {
             code: error.code || "WRITE_FORBIDDEN",
             message: error.message || "Write guard blocked this command"
-          });
-        }
-      }
-
-      if (commandName === "safety.getProfileStatus") {
-        try {
-          return jsonCommandResponse(
-            200,
-            commandName,
-            requestId,
-            await getProfileStatusResponse({
-              profileMode: profileMode,
-              operationMode: operationMode,
-              testProfileMarkerPresent: testProfileMarkerPresent
-            })
-          );
-        } catch (error) {
-          return jsonCommandResponse(error.status || 500, commandName, requestId, undefined, {
-            code: error.code || "SAFETY_PROFILE_STATUS_FAILED",
-            message: error.message || "Failed to read profile safety status"
-          });
-        }
-      }
-
-      if (commandName === "safety.unlockRealProfile") {
-        try {
-          var unlockResult = await executeSafetyUnlockRealProfile(payload.input || {});
-          return jsonCommandResponse(200, commandName, requestId, unlockResult);
-        } catch (error) {
-          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, commandErrorResponse(error, "REAL_PROFILE_UNLOCK_FAILED", "Failed to unlock real-profile write access"));
-        }
-      }
-
-      if (commandName === "safety.lockRealProfile") {
-        try {
-          var lockResult = await executeSafetyLockRealProfile();
-          return jsonCommandResponse(200, commandName, requestId, lockResult);
-        } catch (error) {
-          return jsonCommandResponse(error.status || 500, commandName, requestId, undefined, {
-            code: error.code || "REAL_PROFILE_LOCK_FAILED",
-            message: error.message || "Failed to lock real-profile access"
           });
         }
       }
@@ -1623,7 +1567,7 @@ async function handleCommandEndpointRequest(req) {
 
       return jsonCommandResponse(501, commandName, requestId, undefined, {
         code: "COMMAND_ENDPOINT_NOT_IMPLEMENTED",
-        message: "Only collection getTree/getItems/create/rename/move/addItems/removeItems, item get/search/updateTags, advanced search, saved search, citation formatting, import/export, annotation list/create/update, note.createChild, attachment get/getForItem/add/move/rename/runZoteroRename/undoAdded, attachment rename preferences, backup settings/snapshot list/restore/prune, audit.list, and safety.getProfileStatus/unlockRealProfile/lockRealProfile are connected in this runtime build"
+        message: "Only collection getTree/getItems/create/rename/move/addItems/removeItems, item get/search/updateTags, advanced search, saved search, citation formatting, import/export, annotation list/create/update, note.createChild, attachment get/getForItem/add/move/rename/runZoteroRename/undoAdded, attachment rename preferences, backup settings/snapshot list/restore/prune, and audit.list are connected in this runtime build"
       });
     
 }
@@ -1668,165 +1612,6 @@ function assertOperationWritePermission(operationMode, commandName) {
   }
 }
 
-async function getProfileStatusResponse(context) {
-  var profileMode = context.profileMode || REAL_PROFILE_DEFAULT_MODE;
-  var operationMode = context.operationMode || getBridgeOperationMode();
-  var state = await readRealProfileUnlockState();
-  var profileFingerprint = resolveProfileFingerprint();
-  var unlockExpiresAt = state.expiresAt || null;
-  var unlockTtlMinutes = state.ttlMinutes || null;
-  var unlockActive = state.unlocked && isProfileUnlockActive(state, profileFingerprint);
-  if (profileMode === "real-unlocked" && !unlockActive) {
-    unlockActive = false;
-  }
-
-  return {
-    profileMode: profileMode,
-    operationMode: operationMode,
-    runMode: operationMode,
-    dryRunRequired: true,
-    auditEnabled: true,
-    testProfileMarkerPresent: !!context.testProfileMarkerPresent,
-    isRealUnlocked: unlockActive,
-    profileFingerprint: profileFingerprint,
-    unlockExpiresAt: unlockExpiresAt,
-    unlockTtlMinutes: unlockTtlMinutes,
-    auditPath: auditRootPath(),
-    backupPath: backupRootPath(),
-    runtimeRoot: resolveBridgeRuntimeRoot()
-  };
-}
-
-async function executeSafetyUnlockRealProfile(input) {
-  var normalized = normalizeSafetyUnlockInput(input);
-  var actualFingerprint = resolveProfileFingerprint();
-  if (normalized.profileFingerprint !== actualFingerprint) {
-    throw realProfileUnlockError(
-      "PROFILE_UNLOCK_FINGERPRINT_MISMATCH",
-      "Profile fingerprint does not match the current profile",
-      409,
-      {
-        expectedProfileFingerprint: actualFingerprint,
-        providedProfileFingerprint: normalized.profileFingerprint
-      }
-    );
-  }
-
-  var profileMode = await getProfileMode();
-  if (profileMode === "readonly") {
-    throw realProfileUnlockError("PROFILE_UNLOCK_FORBIDDEN", "Readonly mode cannot be unlocked for real-profile writes", 403, {
-      profileMode: profileMode
-    });
-  }
-
-  if (profileMode === "test") {
-    throw realProfileUnlockError("PROFILE_UNLOCK_FORBIDDEN", "Test mode does not require real-profile unlock", 409, {
-      profileMode: profileMode
-    });
-  }
-
-  var ttlMinutes = normalized.ttlMinutes;
-  var nowMs = Date.now();
-  var expiresAt = new Date(nowMs + ttlMinutes * 60 * 1000).toISOString();
-
-  await saveRealProfileUnlockState({
-    unlocked: true,
-    profileFingerprint: actualFingerprint,
-    unlockedAt: new Date(nowMs).toISOString(),
-    expiresAt: expiresAt,
-    ttlMinutes: ttlMinutes,
-    confirmationText: normalized.confirmationText
-  });
-
-  return {
-    profileMode: "real-unlocked",
-    profileFingerprint: actualFingerprint,
-    unlockExpiresAt: expiresAt,
-    ttlMinutes: ttlMinutes,
-    auditPath: auditRootPath(),
-    backupPath: backupRootPath()
-  };
-}
-
-async function executeSafetyLockRealProfile() {
-  await saveRealProfileUnlockState({
-    unlocked: false,
-    profileFingerprint: resolveProfileFingerprint(),
-    unlockedAt: null,
-    expiresAt: null,
-    ttlMinutes: null,
-    confirmationText: null
-  });
-
-  return {
-    profileMode: "real-locked",
-    profileFingerprint: resolveProfileFingerprint(),
-    auditPath: auditRootPath(),
-    backupPath: backupRootPath()
-  };
-}
-
-function normalizeSafetyUnlockInput(input) {
-  if (!input || typeof input !== "object") {
-    throw realProfileUnlockError("REAL_PROFILE_UNLOCK_INPUT_INVALID", "safety.unlockRealProfile input must be an object", 400);
-  }
-
-  var profileFingerprint = trimString(input.profileFingerprint);
-  if (!profileFingerprint) {
-    throw realProfileUnlockError("REAL_PROFILE_UNLOCK_FINGERPRINT_REQUIRED", "safety.unlockRealProfile requires profileFingerprint", 400, {
-      expectedProfileFingerprint: resolveProfileFingerprint()
-    });
-  }
-
-  if (typeof input.confirmationText !== "string" || input.confirmationText !== REAL_PROFILE_UNLOCK_CONFIRMATION) {
-    throw realProfileUnlockError("PROFILE_UNLOCK_CONFIRMATION_REQUIRED", "safety.unlockRealProfile requires exact confirmation text", 400, {
-      requiredField: "confirmationText",
-      requiredText: REAL_PROFILE_UNLOCK_CONFIRMATION
-    });
-  }
-
-  var ttlMinutes;
-  if (input.ttlMinutes === undefined || input.ttlMinutes === null) {
-    ttlMinutes = REAL_PROFILE_UNLOCK_DEFAULT_TTL_MINUTES;
-  } else if (!Number.isInteger(input.ttlMinutes) || input.ttlMinutes < 1) {
-    throw realProfileUnlockError("REAL_PROFILE_UNLOCK_TTL_INVALID", "ttlMinutes must be a positive integer", 400, {
-      requiredField: "ttlMinutes"
-    });
-  } else if (input.ttlMinutes > REAL_PROFILE_UNLOCK_MAX_TTL_MINUTES) {
-    throw realProfileUnlockError(
-      "REAL_PROFILE_UNLOCK_TTL_OUT_OF_RANGE",
-      "ttlMinutes must be between 1 and " + REAL_PROFILE_UNLOCK_MAX_TTL_MINUTES,
-      400
-    );
-  } else {
-    ttlMinutes = input.ttlMinutes;
-  }
-
-  return {
-    profileFingerprint: profileFingerprint,
-    confirmationText: input.confirmationText,
-    ttlMinutes: ttlMinutes
-  };
-}
-
-function realProfileUnlockError(code, message, status, details) {
-  return commandError(
-    code,
-    message,
-    status,
-    Object.assign(
-      {
-        commandName: "safety.unlockRealProfile",
-        requiredText: REAL_PROFILE_UNLOCK_CONFIRMATION,
-        ttlMinutesDefault: REAL_PROFILE_UNLOCK_DEFAULT_TTL_MINUTES,
-        ttlMinutesMin: 1,
-        ttlMinutesMax: REAL_PROFILE_UNLOCK_MAX_TTL_MINUTES
-      },
-      details || {}
-    )
-  );
-}
-
 function trimString(value) {
   if (typeof value !== "string") {
     return "";
@@ -1845,73 +1630,20 @@ async function getProfileMode() {
     return preferenceMode;
   }
 
+  if (preferenceMode === "real-locked" || preferenceMode === "real-unlocked") {
+    return preferenceMode;
+  }
+
   if (!preferenceMode && await isTestProfileMarkerPresent()) {
     return "test";
   }
 
-  var state = await readRealProfileUnlockState();
-  if (state && state.unlocked && isProfileUnlockActive(state, resolveProfileFingerprint())) {
-    return "real-unlocked";
-  }
-
-  return "real-locked";
+  return REAL_PROFILE_DEFAULT_MODE;
 }
 
 function getBridgeOperationMode() {
   var value = getPreferenceValue(BRIDGE_OPERATION_MODE_PREFERENCE);
   return BRIDGE_OPERATION_MODES[value] ? value : BRIDGE_OPERATION_MODE_DEFAULT;
-}
-
-function isProfileUnlockActive(state, profileFingerprint) {
-  if (!state || !state.unlocked || !state.expiresAt) {
-    return false;
-  }
-
-  if (profileFingerprint && state.profileFingerprint !== profileFingerprint) {
-    return false;
-  }
-
-  var expiresAt = Date.parse(state.expiresAt);
-  if (!Number.isFinite(expiresAt)) {
-    return false;
-  }
-
-  return expiresAt > Date.now();
-}
-
-async function readRealProfileUnlockState() {
-  var statePath = resolveRealProfileStatePath();
-  if (!(await fileExists(statePath))) {
-    return { unlocked: false };
-  }
-
-  try {
-    var contents = await Zotero.File.getContentsAsync(statePath);
-    var parsed = JSON.parse(contents || "{}");
-    if (!parsed || typeof parsed !== "object") {
-      return { unlocked: false, parseError: true };
-    }
-    return {
-      unlocked: !!parsed.unlocked,
-      profileFingerprint: typeof parsed.profileFingerprint === "string" ? parsed.profileFingerprint : "",
-      unlockedAt: typeof parsed.unlockedAt === "string" ? parsed.unlockedAt : "",
-      expiresAt: typeof parsed.expiresAt === "string" ? parsed.expiresAt : "",
-      ttlMinutes: Number.isInteger(parsed.ttlMinutes) ? parsed.ttlMinutes : null
-    };
-  } catch (error) {
-    return { unlocked: false, parseError: true };
-  }
-}
-
-async function saveRealProfileUnlockState(state) {
-  var statePath = resolveRealProfileStatePath();
-  var dir = PathUtils.parent(statePath);
-  await Zotero.File.createDirectoryIfMissingAsync(dir);
-  await Zotero.File.putContentsAsync(statePath, JSON.stringify(state, null, 2) + "\n");
-}
-
-function resolveRealProfileStatePath() {
-  return PathUtils.join.apply(PathUtils, [resolveBridgeRuntimeRoot()].concat(REAL_PROFILE_STATE_PATH_PARTS));
 }
 
 async function isTestProfileMarkerPresent() {
@@ -1954,10 +1686,6 @@ function resolveProfileDirectory() {
   }
 
   return "";
-}
-
-function resolveProfileFingerprint() {
-  return "fp_" + fnv1a(normalizeFilePath(resolveProfileDirectory()).toLowerCase());
 }
 
 function readCollectionTree() {
@@ -5702,10 +5430,14 @@ function resolveBridgeRuntimeRoot() {
     return explicitPreference;
   }
 
+  return PathUtils.join(resolveBridgeDefaultAppDataRoot(), "runtime");
+}
+
+function resolveBridgeDefaultAppDataRoot() {
   var home = getEnvironmentValue("HOME") || getEnvironmentValue("USERPROFILE");
   if (isLikelyWindowsPlatform()) {
-    var localAppData = getEnvironmentValue("LOCALAPPDATA");
     var appData = getEnvironmentValue("APPDATA");
+    var localAppData = getEnvironmentValue("LOCALAPPDATA");
     return PathUtils.join(appData || localAppData || home || "", "zotero-local-mcp-bridge");
   }
 
@@ -5718,7 +5450,7 @@ function resolveBridgeRuntimeRoot() {
 }
 
 function resolveAuthTokenPath() {
-  return PathUtils.join(resolveBridgeRuntimeRoot(), "runtime", "auth", "bridge-token");
+  return PathUtils.join(resolveBridgeRuntimeRoot(), "auth", "bridge-token");
 }
 
 async function getExpectedAuthToken() {
@@ -5813,7 +5545,7 @@ function backupRootPath() {
     log("ignored unsafe backupRoot preference");
   }
 
-  return PathUtils.join(resolveBridgeRuntimeRoot(), "runtime", "backups", "zotero-operations");
+  return PathUtils.join(resolveBridgeDefaultAppDataRoot(), "backup");
 }
 
 function backupSettingsFilePath() {
@@ -6356,7 +6088,7 @@ function auditRootPath() {
     log("ignored unsafe auditRoot preference");
   }
 
-  return PathUtils.join(resolveBridgeRuntimeRoot(), "runtime", "logs", "audit");
+  return PathUtils.join(resolveBridgeDefaultAppDataRoot(), "audit");
 }
 
 function isAllowedBridgeOutputRoot(candidatePath) {

@@ -6,7 +6,7 @@ Use a Zotero plugin-hosted MCP endpoint to let local agents manage a local Zoter
 
 <p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg"></a>
-  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.56-4c78a8.svg"></a>
+  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.57-4c78a8.svg"></a>
   <a href="https://www.zotero.org/"><img alt="Zotero" src="https://img.shields.io/badge/Zotero-9.x-cc2936.svg"></a>
   <a href="#how-it-works"><img alt="MCP" src="https://img.shields.io/badge/MCP-plugin--hosted-2e7d32.svg"></a>
   <a href="#scope"><img alt="Local First" src="https://img.shields.io/badge/local--first-loopback--only-2e7d32.svg"></a>
@@ -16,7 +16,7 @@ Use a Zotero plugin-hosted MCP endpoint to let local agents manage a local Zoter
   <a href="skills/zotero-local-mcp-bridge/SKILL.md"><img alt="Claude Code ready" src="https://img.shields.io/badge/Claude%20Code-ready-111827.svg"></a>
 </p>
 
-AGPL-3.0-or-later · Plugin version 0.1.56 · Zotero 9.x · Plugin-hosted MCP · Local loopback access
+AGPL-3.0-or-later · Plugin version 0.1.57 · Zotero 9.x · Plugin-hosted MCP · Local loopback access
 
 [简体中文](README.zh-CN.md) · **English**
 
@@ -139,30 +139,41 @@ For first use, start with `readonly` or `askforapprove`. Use `yolo` only after y
 
 ### 4. Connect The MCP Client
 
-Configure your MCP-capable agent to connect through Streamable HTTP / HTTP JSON-RPC.
+There are two ways to connect. Prefer the stdio adapter because most agents support stdio MCP reliably. If your agent supports HTTP MCP directly, you can skip the npm package and connect to the Zotero plugin endpoint.
 
-Codex:
+#### Option A: stdio MCP
+
+Install the npm adapter:
+
+```bash
+npm install -g zotero-local-mcp-bridge-stdio-adapter
+```
+
+Then configure stdio MCP in your agent:
 
 ```toml
 [mcp_servers.zotero-local-mcp-bridge]
-url = "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp"
-startup_timeout_sec = 10
+command = "zotero-local-mcp-bridge-stdio"
+args = []
+startup_timeout_sec = 20
 tool_timeout_sec = 120
 ```
 
-Claude Code:
+Generic stdio MCP configuration:
 
-```bash
-claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
+```json
+{
+  "mcpServers": {
+    "zotero-local-mcp-bridge": {
+      "type": "stdio",
+      "command": "zotero-local-mcp-bridge-stdio",
+      "args": []
+    }
+  }
+}
 ```
 
-Generic HTTP MCP endpoint:
-
-```text
-http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
-```
-
-stdio-only clients:
+You can also use `npx` without a global install:
 
 ```json
 {
@@ -177,6 +188,29 @@ stdio-only clients:
 ```
 
 The stdio adapter is a compatibility layer started by the agent session. It forwards stdio MCP requests to the Zotero plugin HTTP MCP endpoint. It is not the Zotero plugin itself and does not start with Zotero.
+
+#### Option B: HTTP MCP
+
+If your agent supports Streamable HTTP / HTTP MCP, you can skip the npm package and connect directly to the Zotero plugin endpoint:
+
+```text
+http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
+```
+
+Codex example:
+
+```toml
+[mcp_servers.zotero-local-mcp-bridge]
+url = "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp"
+startup_timeout_sec = 10
+tool_timeout_sec = 120
+```
+
+Claude Code example:
+
+```bash
+claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
+```
 
 ### 5. Install The Matching Skill
 

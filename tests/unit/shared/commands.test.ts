@@ -60,10 +60,7 @@ describe("shared command definitions", () => {
       "collection.trash",
       "duplicates.find",
       "duplicates.merge",
-      "audit.list",
-      "safety.getProfileStatus",
-      "safety.unlockRealProfile",
-      "safety.lockRealProfile"
+      "audit.list"
     ]);
   });
 
@@ -84,7 +81,6 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("backup.snapshot.list")).toBe(false);
     expect(isWriteCommand("duplicates.find")).toBe(false);
     expect(isWriteCommand("audit.list")).toBe(false);
-    expect(isWriteCommand("safety.getProfileStatus")).toBe(false);
     expect(isWriteCommand("collection.create")).toBe(true);
     expect(isWriteCommand("attachment.addFile")).toBe(true);
     expect(isWriteCommand("attachment.undoAdded")).toBe(true);
@@ -106,8 +102,6 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("attachment.trash")).toBe(true);
     expect(isWriteCommand("collection.trash")).toBe(true);
     expect(isWriteCommand("duplicates.merge")).toBe(true);
-    expect(isWriteCommand("safety.unlockRealProfile")).toBe(true);
-    expect(isWriteCommand("safety.lockRealProfile")).toBe(true);
   });
 
   it("enforces the first-version batch limit", () => {

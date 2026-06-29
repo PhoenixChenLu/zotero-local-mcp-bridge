@@ -5,8 +5,7 @@ import type {
 } from "../shared/commands.js";
 import {
   FIRST_VERSION_COMMAND_NAMES,
-  isProfileWriteCommand,
-  isSafetyStateWriteCommand
+  isProfileWriteCommand
 } from "../shared/commands.js";
 import { ZoteroBridgeError } from "../shared/errors.js";
 import { ensureProfileWrite } from "./profileGuard.js";
@@ -51,7 +50,7 @@ export class CommandRegistry {
       });
     }
 
-    if (isProfileWriteCommand(request.name) && !isSafetyStateWriteCommand(request.name)) {
+    if (isProfileWriteCommand(request.name)) {
       ensureProfileWrite(this.profileMode, { markerPresent: this.testProfileMarkerPresent });
     }
 
