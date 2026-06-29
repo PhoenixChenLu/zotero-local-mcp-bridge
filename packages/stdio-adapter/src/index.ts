@@ -45,6 +45,31 @@ interface JsonRpcFailure {
 
 type JsonRpcResponse<T> = JsonRpcSuccess<T> | JsonRpcFailure;
 
+export function shouldShowHelp(args: readonly string[]): boolean {
+  return args.includes("--help") || args.includes("-h");
+}
+
+export function getHelpText(): string {
+  return [
+    "Zotero Local MCP Bridge stdio adapter",
+    "",
+    "Usage:",
+    "  zotero-local-mcp-bridge-stdio [--endpoint <url>]",
+    "",
+    "Options:",
+    "  --endpoint <url>  Zotero plugin HTTP MCP endpoint.",
+    "                  Default: " + defaultZoteroLocalMcpBridgeEndpoint,
+    "  -h, --help      Show this help message.",
+    "",
+    "Environment:",
+    "  ZOTERO_LOCAL_MCP_BRIDGE_ENDPOINT  Override the default endpoint.",
+    "",
+    "This adapter forwards stdio MCP requests to the Zotero Local MCP Bridge",
+    "HTTP MCP endpoint hosted inside Zotero Desktop. Start Zotero and enable",
+    "the plugin before using this adapter from an MCP client."
+  ].join("\n");
+}
+
 export function resolveEndpoint(args: readonly string[], env: NodeJS.ProcessEnv = process.env): string {
   const endpointFlagIndex = args.indexOf("--endpoint");
   if (endpointFlagIndex >= 0) {
@@ -142,6 +167,11 @@ export function createAdapterServer(options: AdapterOptions): Server {
 }
 
 export async function runAdapter(args: readonly string[] = process.argv.slice(2), env: NodeJS.ProcessEnv = process.env): Promise<void> {
+  if (shouldShowHelp(args)) {
+    console.log(getHelpText());
+    return;
+  }
+
   const endpoint = resolveEndpoint(args, env);
   const server = createAdapterServer({ endpoint });
   await server.connect(new StdioServerTransport());

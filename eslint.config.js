@@ -7,6 +7,7 @@ export default [
   {
     ignores: [
       "dist/**",
+      "packages/*/dist/**",
       "node_modules/**",
       "runtime/**",
       "references/**",

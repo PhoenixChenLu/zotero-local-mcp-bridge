@@ -4,9 +4,11 @@ import {
   callTool,
   callZoteroHttpMcp,
   defaultZoteroLocalMcpBridgeEndpoint,
+  getHelpText,
   isDirectRun,
   listTools,
   resolveEndpoint,
+  shouldShowHelp,
   type AdapterOptions
 } from "../../../packages/stdio-adapter/src/index.js";
 
@@ -19,6 +21,15 @@ describe("stdio adapter", () => {
     );
     expect(resolveEndpoint([], {})).toBe(defaultZoteroLocalMcpBridgeEndpoint);
     expect(() => resolveEndpoint(["--endpoint"], {})).toThrow("--endpoint requires a URL");
+  });
+
+  it("prints help for CLI verification without starting MCP stdio", () => {
+    expect(shouldShowHelp(["--help"])).toBe(true);
+    expect(shouldShowHelp(["-h"])).toBe(true);
+    expect(shouldShowHelp(["--endpoint", "http://localhost/mcp"])).toBe(false);
+    expect(getHelpText()).toContain("zotero-local-mcp-bridge-stdio [--endpoint <url>]");
+    expect(getHelpText()).toContain(defaultZoteroLocalMcpBridgeEndpoint);
+    expect(getHelpText()).toContain("ZOTERO_LOCAL_MCP_BRIDGE_ENDPOINT");
   });
 
   it("detects direct CLI execution across real files and npm shims", () => {
