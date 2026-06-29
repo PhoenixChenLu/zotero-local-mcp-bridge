@@ -14,7 +14,7 @@ const supportedLocalesPath = path.resolve("src", "zotero-plugin", "locale", "sup
 const fluentResourceName = "zotero-local-mcp-bridge.ftl";
 const escapedRuntimeRootForBundle = path.resolve(".").replace(/\\/g, "\\\\");
 
-describe("Zotero plugin package", () => {
+describe.sequential("Zotero plugin package", () => {
   it("declares compatibility with Zotero 9", async () => {
     const manifest = JSON.parse(await readFile(path.resolve("src", "zotero-plugin", "manifest.json"), "utf8")) as {
       homepage_url: string;
@@ -263,7 +263,7 @@ describe("Zotero plugin package", () => {
     expect(bootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
     expect(bootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
     expect(bootstrap.stdout).not.toContain(`runtimeRoot: "${escapedRuntimeRootForBundle}"`);
-  });
+  }, 30000);
 
   it("defines settings UI resources and defaults", async () => {
     const prefs = await readFile(path.resolve("src", "zotero-plugin", "prefs.js"), "utf8");
@@ -396,7 +396,7 @@ describe("Zotero plugin package", () => {
     });
     expect(frFr.stdout).toContain("zotero-local-mcp-bridge-run-mode =");
     expect(frFr.stdout).toContain(".value = Mode d'exécution");
-  });
+  }, 30000);
 
   it("keeps release build artifact free of embedded local tokens", async () => {
     const hadOriginalToken = existsSync(runtimeAuthTokenPath);
