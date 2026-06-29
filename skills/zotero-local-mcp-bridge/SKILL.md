@@ -35,6 +35,13 @@ Before changing Zotero state:
 4. Confirm the user is operating on the intended local user library or test profile.
 5. If Zotero is not reachable, ask the user to open Zotero and ensure the plugin is installed and enabled.
 
+If the current agent can read this skill but the tool list does not include `zotero_safety_get_profile_status` or other `zotero_*` MCP tools, do not continue Zotero operations. Explain that the MCP endpoint has not been registered as a tool source:
+
+- Codex / Claude Code: register `http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp` directly.
+- OpenCode / stdio-only clients: use `zotero-local-mcp-bridge-stdio-adapter` as the compatibility layer.
+
+The stdio adapter only forwards protocol traffic and is started by the agent session. It is not the Zotero plugin itself, does not start with Zotero, and does not access the Zotero database directly.
+
 Tool names are generated from command names as `zotero_` plus dot-separated and camelCase command segments converted to snake_case. Always use the tool list actually exposed by the MCP client instead of inventing names from memory.
 
 Examples:

@@ -23,6 +23,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:stdio-adapter": "tsc -p packages/stdio-adapter/tsconfig.json",
     "build:zotero-plugin": "node scripts/buildZoteroPlugin.mjs --mode=release",
     "build:zotero-plugin:release": "node scripts/buildZoteroPlugin.mjs --mode=release",
     "install:local": "node scripts/install.mjs",
@@ -43,5 +44,8 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.35.0",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
   }
 }

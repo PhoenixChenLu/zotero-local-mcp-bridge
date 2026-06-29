@@ -35,6 +35,13 @@ description: 通过 Zotero Local MCP Bridge 安全管理本地 Zotero 文库。�
 4. 确认用户正在操作预期的本地用户文库或测试配置文件。
 5. 如果无法连接 Zotero，要求用户打开 Zotero，并确认插件已安装且启用。
 
+如果当前智能体只能看到本 skill，但工具列表里没有 `zotero_safety_get_profile_status` 或其他 `zotero_*` MCP 工具，不要继续 Zotero 操作。说明用户尚未把 MCP endpoint 注册为工具源：
+
+- Codex / Claude Code：直接注册 `http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp`。
+- OpenCode / stdio-only 客户端：使用 `zotero-local-mcp-bridge-stdio-adapter` 作为兼容层。
+
+stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero 插件本体，不随 Zotero 启动，也不直接访问 Zotero 数据库。
+
 工具名由命令名生成：`zotero_` 加上把点分段和 camelCase 命令段转换为 snake_case 后的名称。始终使用 MCP 客户端实际暴露的工具列表，不要凭记忆编造工具名。
 
 示例：

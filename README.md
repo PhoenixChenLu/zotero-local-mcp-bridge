@@ -101,6 +101,8 @@ http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 
 There is no separate Node, Python, or sidecar MCP process to start. Starting Zotero starts the plugin endpoint. Closing Zotero stops it. The release build exposes MCP tools, not the old private command endpoint.
 
+Codex and Claude Code can connect to the Streamable HTTP MCP endpoint directly. OpenCode and other clients with stdio support but no Streamable HTTP support can use the standalone stdio adapter. The adapter runs on the agent side, stays outside the XPI, and never touches the Zotero database.
+
 ---
 
 ## 🚀 Quick Start
@@ -137,11 +139,44 @@ For first use, start with `readonly` or `askforapprove`. Use `yolo` only after y
 
 ### 4. Connect The MCP Client
 
-Configure your MCP-capable agent to connect through Streamable HTTP / HTTP JSON-RPC:
+Configure your MCP-capable agent to connect through Streamable HTTP / HTTP JSON-RPC.
+
+Codex:
+
+```toml
+[mcp_servers.zotero-local-mcp-bridge]
+url = "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp"
+startup_timeout_sec = 10
+tool_timeout_sec = 120
+```
+
+Claude Code:
+
+```bash
+claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
+```
+
+Generic HTTP MCP endpoint:
 
 ```text
 http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 ```
+
+stdio-only clients:
+
+```json
+{
+  "mcpServers": {
+    "zotero-local-mcp-bridge": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "zotero-local-mcp-bridge-stdio-adapter"]
+    }
+  }
+}
+```
+
+The stdio adapter is a compatibility layer started by the agent session. It forwards stdio MCP requests to the Zotero plugin HTTP MCP endpoint. It is not the Zotero plugin itself and does not start with Zotero.
 
 ### 5. Install The Matching Skill
 

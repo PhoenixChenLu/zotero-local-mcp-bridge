@@ -101,6 +101,8 @@ http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 
 不需要另外启动 Node、Python 或 sidecar MCP 进程。启动 Zotero 就会启动插件端点，关闭 Zotero 就会停止它。发布版本只暴露 MCP 工具，不再暴露旧的私有 command endpoint。
 
+对于 Codex 和 Claude Code 这类支持 Streamable HTTP MCP 的客户端，直接连接这个端点即可。对于 OpenCode 或其他支持 stdio 但不支持 Streamable HTTP 的客户端，可以使用独立的 stdio adapter；adapter 作为智能体侧兼容层运行，不放入 XPI，也不接触 Zotero 数据库。
+
 ---
 
 ## 🚀 快速开始
@@ -137,11 +139,44 @@ http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 
 ### 4. 连接 MCP 客户端
 
-把你的 MCP 智能体配置为通过 Streamable HTTP / HTTP JSON-RPC 连接：
+把你的 MCP 智能体配置为通过 Streamable HTTP / HTTP JSON-RPC 连接。
+
+Codex：
+
+```toml
+[mcp_servers.zotero-local-mcp-bridge]
+url = "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp"
+startup_timeout_sec = 10
+tool_timeout_sec = 120
+```
+
+Claude Code：
+
+```bash
+claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
+```
+
+通用 HTTP MCP endpoint：
 
 ```text
 http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 ```
+
+stdio-only 客户端：
+
+```json
+{
+  "mcpServers": {
+    "zotero-local-mcp-bridge": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "zotero-local-mcp-bridge-stdio-adapter"]
+    }
+  }
+}
+```
+
+stdio adapter 是兼容层，会在智能体会话中由智能体启动，并把 stdio MCP 请求转发到 Zotero 插件 HTTP MCP endpoint。它不是 Zotero 插件本体，也不会随 Zotero 启动。
 
 ### 5. 安装对应 skill
 

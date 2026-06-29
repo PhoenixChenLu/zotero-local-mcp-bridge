@@ -1,0 +1,27 @@
+{
+  "name": "zotero-local-mcp-bridge-stdio-adapter",
+  "version": "0.1.56",
+  "type": "module",
+  "description": "Stdio MCP adapter for Zotero Local MCP Bridge HTTP endpoint.",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PhoenixChenLu/zotero-local-mcp-bridge.git",
+    "directory": "packages/stdio-adapter"
+  },
+  "bin": {
+    "zotero-local-mcp-bridge-stdio": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  }
+}

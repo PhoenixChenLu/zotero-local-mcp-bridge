@@ -1,0 +1,128 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  callTool,
+  callZoteroHttpMcp,
+  defaultZoteroLocalMcpBridgeEndpoint,
+  isDirectRun,
+  listTools,
+  resolveEndpoint,
+  type AdapterOptions
+} from "../../../packages/stdio-adapter/src/index.js";
+
+describe("stdio adapter", () => {
+  it("resolves endpoint from args, env, and default", () => {
+    expect(resolveEndpoint(["--endpoint", "http://localhost:1/mcp"], {})).toBe("http://localhost:1/mcp");
+    expect(resolveEndpoint(["--endpoint=http://localhost:2/mcp"], {})).toBe("http://localhost:2/mcp");
+    expect(resolveEndpoint([], { ZOTERO_LOCAL_MCP_BRIDGE_ENDPOINT: "http://localhost:3/mcp" })).toBe(
+      "http://localhost:3/mcp"
+    );
+    expect(resolveEndpoint([], {})).toBe(defaultZoteroLocalMcpBridgeEndpoint);
+    expect(() => resolveEndpoint(["--endpoint"], {})).toThrow("--endpoint requires a URL");
+  });
+
+  it("detects direct CLI execution across real files and npm shims", () => {
+    const entryPath = "C:\\Users\\chenl\\App Data\\zotero adapter\\index.js";
+    expect(isDirectRun(new URL(`file:///${entryPath.replaceAll("\\", "/").replaceAll(" ", "%20")}`).href, entryPath)).toBe(
+      true
+    );
+    expect(isDirectRun("file:///other/index.js", "C:\\Users\\chenl\\AppData\\Roaming\\npm\\zotero-local-mcp-bridge-stdio.cmd")).toBe(
+      true
+    );
+    expect(isDirectRun("file:///other/index.js", undefined)).toBe(false);
+  });
+
+  it("forwards JSON-RPC requests to the Zotero HTTP MCP endpoint", async () => {
+    const requests: unknown[] = [];
+    const options: AdapterOptions = {
+      endpoint: "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp",
+      fetchImpl: async (_input, init) => {
+        requests.push(JSON.parse(String(init?.body)));
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: "x", result: { tools: [] } }), { status: 200 });
+      }
+    };
+
+    await expect(callZoteroHttpMcp(options, { jsonrpc: "2.0", id: "x", method: "tools/list" })).resolves.toEqual({
+      tools: []
+    });
+    expect(requests).toEqual([{ jsonrpc: "2.0", id: "x", method: "tools/list" }]);
+  });
+
+  it("maps list and call tool requests without changing tool payloads", async () => {
+    const requests: unknown[] = [];
+    const options: AdapterOptions = {
+      endpoint: "http://localhost/mcp",
+      fetchImpl: async (_input, init) => {
+        const body = JSON.parse(String(init?.body));
+        requests.push(body);
+        if (body.method === "tools/list") {
+          return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: { tools: [] } }), { status: 200 });
+        }
+        return new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: body.id,
+            result: {
+              content: [{ type: "text", text: "ok" }]
+            }
+          }),
+          { status: 200 }
+        );
+      }
+    };
+
+    await listTools(options, {
+      method: "tools/list",
+      params: {}
+    });
+    await callTool(options, {
+      method: "tools/call",
+      params: {
+        name: "zotero_safety_get_profile_status",
+        arguments: {}
+      }
+    });
+
+    expect(requests).toEqual([
+      {
+        jsonrpc: "2.0",
+        id: "adapter-tools-list",
+        method: "tools/list",
+        params: {}
+      },
+      {
+        jsonrpc: "2.0",
+        id: "adapter-tools-call",
+        method: "tools/call",
+        params: {
+          name: "zotero_safety_get_profile_status",
+          arguments: {}
+        }
+      }
+    ]);
+  });
+
+  it("returns clear errors when Zotero HTTP MCP is unavailable or returns MCP errors", async () => {
+    await expect(
+      callZoteroHttpMcp(
+        {
+          endpoint: "http://localhost/mcp",
+          fetchImpl: async () => {
+            throw new Error("ECONNREFUSED");
+          }
+        },
+        { jsonrpc: "2.0", id: "x", method: "tools/list" }
+      )
+    ).rejects.toThrow("Start Zotero Desktop and enable the plugin");
+
+    await expect(
+      callZoteroHttpMcp(
+        {
+          endpoint: "http://localhost/mcp",
+          fetchImpl: async () => new Response(JSON.stringify({ jsonrpc: "2.0", id: "x", error: { code: -32601, message: "Nope" } }), { status: 200 })
+        },
+        { jsonrpc: "2.0", id: "x", method: "tools/list" }
+      )
+    ).rejects.toThrow("MCP error -32601: Nope");
+  });
+});
