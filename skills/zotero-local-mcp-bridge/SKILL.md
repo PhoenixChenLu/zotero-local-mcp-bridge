@@ -325,11 +325,21 @@ Before real-profile writes:
 
 1. Run `safety.getProfileStatus`.
 2. Explain the current profile mode and target profile.
-3. Use `safety.unlockRealProfile` only if the user explicitly requests real-profile write access.
-4. Respect the unlock TTL.
-5. Lock the profile again with `safety.lockRealProfile` when the workflow is done or the user asks.
+3. If `profileMode` is `real-locked`, use `safety.unlockRealProfile` only if the user explicitly requests real-profile write access.
+4. `safety.unlockRealProfile` must use the `profileFingerprint` returned by `safety.getProfileStatus`.
+5. `confirmationText` must exactly equal:
+
+```text
+I understand and authorize temporary real-library write access
+```
+
+6. Default `ttlMinutes` to the plugin-returned or configured default. If an explicit value is needed, use `30` by default and never exceed the plugin's allowed maximum `120`.
+7. After unlocking, run `safety.getProfileStatus` again, confirm `isRealUnlocked` is true, and record `unlockExpiresAt`.
+8. Lock the profile again with `safety.lockRealProfile` when the workflow is done or the user asks.
 
 Do not silently unlock a real profile.
+
+If `safety.unlockRealProfile` returns `PROFILE_UNLOCK_CONFIRMATION_REQUIRED`, `REAL_PROFILE_UNLOCK_FINGERPRINT_REQUIRED`, `PROFILE_UNLOCK_FINGERPRINT_MISMATCH`, or TTL-related errors, read `requiredText`, `expectedProfileFingerprint`, `ttlMinutesDefault`, `ttlMinutesMin`, and `ttlMinutesMax` from the error object first. Do not guess confirmation text or inspect plugin source code to discover it.
 
 ## Attachment Rules
 

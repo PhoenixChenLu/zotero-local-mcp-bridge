@@ -627,10 +627,7 @@ async function handleCommandEndpointRequest(req) {
           var unlockResult = await executeSafetyUnlockRealProfile(payload.input || {});
           return jsonCommandResponse(200, commandName, requestId, unlockResult);
         } catch (error) {
-          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
-            code: error.code || "REAL_PROFILE_UNLOCK_FAILED",
-            message: error.message || "Failed to unlock real-profile write access"
-          });
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, commandErrorResponse(error, "REAL_PROFILE_UNLOCK_FAILED", "Failed to unlock real-profile write access"));
         }
       }
 
@@ -1704,16 +1701,28 @@ async function executeSafetyUnlockRealProfile(input) {
   var normalized = normalizeSafetyUnlockInput(input);
   var actualFingerprint = resolveProfileFingerprint();
   if (normalized.profileFingerprint !== actualFingerprint) {
-    throw commandError("PROFILE_UNLOCK_FINGERPRINT_MISMATCH", "Profile fingerprint does not match the current profile", 409);
+    throw realProfileUnlockError(
+      "PROFILE_UNLOCK_FINGERPRINT_MISMATCH",
+      "Profile fingerprint does not match the current profile",
+      409,
+      {
+        expectedProfileFingerprint: actualFingerprint,
+        providedProfileFingerprint: normalized.profileFingerprint
+      }
+    );
   }
 
   var profileMode = await getProfileMode();
   if (profileMode === "readonly") {
-    throw commandError("PROFILE_UNLOCK_FORBIDDEN", "Readonly mode cannot be unlocked for real-profile writes", 403);
+    throw realProfileUnlockError("PROFILE_UNLOCK_FORBIDDEN", "Readonly mode cannot be unlocked for real-profile writes", 403, {
+      profileMode: profileMode
+    });
   }
 
   if (profileMode === "test") {
-    throw commandError("PROFILE_UNLOCK_FORBIDDEN", "Test mode does not require real-profile unlock", 409);
+    throw realProfileUnlockError("PROFILE_UNLOCK_FORBIDDEN", "Test mode does not require real-profile unlock", 409, {
+      profileMode: profileMode
+    });
   }
 
   var ttlMinutes = normalized.ttlMinutes;
@@ -1759,25 +1768,32 @@ async function executeSafetyLockRealProfile() {
 
 function normalizeSafetyUnlockInput(input) {
   if (!input || typeof input !== "object") {
-    throw commandError("REAL_PROFILE_UNLOCK_INPUT_INVALID", "safety.unlockRealProfile input must be an object", 400);
+    throw realProfileUnlockError("REAL_PROFILE_UNLOCK_INPUT_INVALID", "safety.unlockRealProfile input must be an object", 400);
   }
 
   var profileFingerprint = trimString(input.profileFingerprint);
   if (!profileFingerprint) {
-    throw commandError("REAL_PROFILE_UNLOCK_FINGERPRINT_REQUIRED", "safety.unlockRealProfile requires profileFingerprint", 400);
+    throw realProfileUnlockError("REAL_PROFILE_UNLOCK_FINGERPRINT_REQUIRED", "safety.unlockRealProfile requires profileFingerprint", 400, {
+      expectedProfileFingerprint: resolveProfileFingerprint()
+    });
   }
 
   if (typeof input.confirmationText !== "string" || input.confirmationText !== REAL_PROFILE_UNLOCK_CONFIRMATION) {
-    throw commandError("PROFILE_UNLOCK_CONFIRMATION_REQUIRED", "safety.unlockRealProfile requires exact confirmation text", 400);
+    throw realProfileUnlockError("PROFILE_UNLOCK_CONFIRMATION_REQUIRED", "safety.unlockRealProfile requires exact confirmation text", 400, {
+      requiredField: "confirmationText",
+      requiredText: REAL_PROFILE_UNLOCK_CONFIRMATION
+    });
   }
 
   var ttlMinutes;
   if (input.ttlMinutes === undefined || input.ttlMinutes === null) {
     ttlMinutes = REAL_PROFILE_UNLOCK_DEFAULT_TTL_MINUTES;
   } else if (!Number.isInteger(input.ttlMinutes) || input.ttlMinutes < 1) {
-    throw commandError("REAL_PROFILE_UNLOCK_TTL_INVALID", "ttlMinutes must be a positive integer", 400);
+    throw realProfileUnlockError("REAL_PROFILE_UNLOCK_TTL_INVALID", "ttlMinutes must be a positive integer", 400, {
+      requiredField: "ttlMinutes"
+    });
   } else if (input.ttlMinutes > REAL_PROFILE_UNLOCK_MAX_TTL_MINUTES) {
-    throw commandError(
+    throw realProfileUnlockError(
       "REAL_PROFILE_UNLOCK_TTL_OUT_OF_RANGE",
       "ttlMinutes must be between 1 and " + REAL_PROFILE_UNLOCK_MAX_TTL_MINUTES,
       400
@@ -1791,6 +1807,24 @@ function normalizeSafetyUnlockInput(input) {
     confirmationText: input.confirmationText,
     ttlMinutes: ttlMinutes
   };
+}
+
+function realProfileUnlockError(code, message, status, details) {
+  return commandError(
+    code,
+    message,
+    status,
+    Object.assign(
+      {
+        commandName: "safety.unlockRealProfile",
+        requiredText: REAL_PROFILE_UNLOCK_CONFIRMATION,
+        ttlMinutesDefault: REAL_PROFILE_UNLOCK_DEFAULT_TTL_MINUTES,
+        ttlMinutesMin: 1,
+        ttlMinutesMax: REAL_PROFILE_UNLOCK_MAX_TTL_MINUTES
+      },
+      details || {}
+    )
+  );
 }
 
 function trimString(value) {
@@ -5488,11 +5522,29 @@ function randomId() {
   return Date.now().toString(36) + "_" + random;
 }
 
-function commandError(code, message, status) {
+function commandError(code, message, status, details) {
   var error = new Error(message);
   error.code = code;
   error.status = status;
+  if (details && typeof details === "object") {
+    error.details = stripUndefined(details);
+  }
   return error;
+}
+
+function commandErrorResponse(error, fallbackCode, fallbackMessage) {
+  var response = {
+    code: error && error.code ? error.code : fallbackCode,
+    message: error && error.message ? error.message : fallbackMessage
+  };
+
+  if (error && error.details && typeof error.details === "object") {
+    Object.keys(error.details).forEach(function (key) {
+      response[key] = error.details[key];
+    });
+  }
+
+  return response;
 }
 
 async function readBackupSettings() {

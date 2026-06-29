@@ -325,11 +325,21 @@ Zotero Settings -> Zotero Local MCP Bridge
 
 1. 运行 `safety.getProfileStatus`。
 2. 说明当前配置文件模式和目标配置文件。
-3. 只有用户明确请求真实配置文件写入权限时，才使用 `safety.unlockRealProfile`。
-4. 遵守 unlock TTL。
-5. 工作流完成或用户要求时，使用 `safety.lockRealProfile` 再次锁定。
+3. 如果 `profileMode` 是 `real-locked`，只有用户明确请求真实配置文件写入权限时，才使用 `safety.unlockRealProfile`。
+4. `safety.unlockRealProfile` 必须使用 `safety.getProfileStatus` 返回的 `profileFingerprint`。
+5. `confirmationText` 必须精确等于：
+
+```text
+I understand and authorize temporary real-library write access
+```
+
+6. `ttlMinutes` 默认使用插件返回或设置中的默认值；如果需要显式传入，默认用 `30`，最大不要超过插件允许的 `120`。
+7. 解锁后必须再次运行 `safety.getProfileStatus`，确认 `isRealUnlocked` 为 true，并记录 `unlockExpiresAt`。
+8. 工作流完成或用户要求时，使用 `safety.lockRealProfile` 再次锁定。
 
 不要静默解锁真实配置文件。
+
+如果 `safety.unlockRealProfile` 返回 `PROFILE_UNLOCK_CONFIRMATION_REQUIRED`、`REAL_PROFILE_UNLOCK_FINGERPRINT_REQUIRED`、`PROFILE_UNLOCK_FINGERPRINT_MISMATCH` 或 TTL 相关错误，优先读取错误对象中的 `requiredText`、`expectedProfileFingerprint`、`ttlMinutesDefault`、`ttlMinutesMin`、`ttlMinutesMax`，不要猜测确认文本，也不要通过读取插件源码寻找确认文本。
 
 ## 附件规则
 

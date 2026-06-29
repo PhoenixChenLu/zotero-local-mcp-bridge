@@ -143,6 +143,10 @@ describe("Zotero plugin package", () => {
     expect(bootstrap).toContain('REAL_PROFILE_UNLOCK_CONFIRMATION');
     expect(bootstrap).toContain('"PROFILE_UNLOCK_FINGERPRINT_MISMATCH"');
     expect(bootstrap).toContain('"PROFILE_UNLOCK_CONFIRMATION_REQUIRED"');
+    expect(bootstrap).toContain("function realProfileUnlockError");
+    expect(bootstrap).toContain('requiredText: REAL_PROFILE_UNLOCK_CONFIRMATION');
+    expect(bootstrap).toContain('expectedProfileFingerprint: resolveProfileFingerprint()');
+    expect(bootstrap).toContain("function commandErrorResponse");
     expect(bootstrap).toContain('isProfileUnlockActive(state, resolveProfileFingerprint())');
     expect(bootstrap).toContain('state.profileFingerprint !== profileFingerprint');
     expect(bootstrap).toContain('"COMMAND_CONTEXT_FAILED"');
