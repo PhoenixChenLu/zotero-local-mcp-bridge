@@ -30,7 +30,7 @@ Never use:
 Before changing Zotero state:
 
 1. Confirm the plugin-hosted MCP endpoint exposes Zotero tools.
-2. Prefer a health or status tool when available; otherwise use the documented MCP read/status tool.
+2. Prefer `zotero_command_catalog` to read the commands, input fields, read/write risk, and calling rules exposed by the currently installed plugin. Do not guess tool names or parameters from memory.
 3. Confirm the user is operating on the intended local user library.
 4. If Zotero is not reachable, ask the user to open Zotero and ensure the plugin is installed and enabled.
 
@@ -45,6 +45,7 @@ Tool names are generated from command names as `zotero_` plus dot-separated and 
 
 Examples:
 
+- `command.catalog` -> `zotero_command_catalog`
 - `collection.getTree` -> `zotero_collection_get_tree`
 - `item.search` -> `zotero_item_search`
 - `attachment.addFile` -> `zotero_attachment_add_file`
@@ -92,6 +93,7 @@ Use this table as the first reference for operation format. `R` means read-only.
 
 | Command | MCP tool | R/W | Input fields |
 |---|---|---:|---|
+| `command.catalog` | `zotero_command_catalog` | R | none |
 | `collection.create` | `zotero_collection_create` | W | `libraryScope`, `name`, `parentCollectionKey` |
 | `collection.rename` | `zotero_collection_rename` | W | `collectionKey`, `name` |
 | `collection.move` | `zotero_collection_move` | W | `collectionKey`, `parentCollectionKey` |
@@ -151,6 +153,7 @@ Read-only operations may be executed directly through MCP tools. Use them to ins
 
 Useful read groups:
 
+- Capability catalog: `command.catalog`
 - Collections: `collection.getTree`, `collection.getItems`
 - Items: `item.get`, `item.search`, `search.advanced`
 - Saved searches: `savedSearch.list`, `savedSearch.get`
@@ -160,6 +163,8 @@ Useful read groups:
 - Preferences and history: `attachment.renamePreferences.get`, `backup.settings.get`, `backup.snapshot.list`, `audit.list`, `duplicates.find`
 
 When a user names a title, collection, tag, or file loosely, first resolve it to Zotero keys with read tools. Do not guess keys.
+
+To update item metadata, use `item.updateFields` / `zotero_item_update_fields` and put Zotero fields in the `fields` object, for example `title`, `date`, `DOI`, `url`, `abstractNote`, `publicationTitle`, `publisher`, `volume`, `issue`, `pages`, `language`, `extra`. To update creators, use `item.updateCreators` / `zotero_item_update_creators`.
 
 ## Write Operations
 
@@ -344,6 +349,16 @@ Batch operations are capped by MCP/project settings, currently 50 objects. If a 
 - Undo plans returned for completed operations.
 
 Do not retry failed writes blindly. Re-read state first.
+
+## libraryScope Rules
+
+This project supports only the local Zotero user library. Whenever a tool accepts `libraryScope`, new calls must use:
+
+```text
+local-user
+```
+
+Do not use `user`, `group`, `web`, or any Zotero Web API scope. The plugin normalizes legacy `user` to `local-user` for compatibility, but agents should not send `user`.
 
 ## Response Pattern
 

@@ -30,7 +30,7 @@ description: 通过 Zotero Local MCP Bridge 安全管理本地 Zotero 文库。�
 修改 Zotero 状态之前：
 
 1. 确认插件自带 MCP 端点已暴露 Zotero 工具。
-2. 如果存在健康检查或状态工具，优先使用；否则使用文档化的 MCP 读取或状态工具。
+2. 优先调用 `zotero_command_catalog` 读取当前插件实际暴露的命令目录、输入字段、读写风险和调用规则；不要靠记忆猜工具名或参数。
 3. 确认用户正在操作预期的本地用户文库。
 4. 如果无法连接 Zotero，要求用户打开 Zotero，并确认插件已安装且启用。
 
@@ -45,6 +45,7 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 
 示例：
 
+- `command.catalog` -> `zotero_command_catalog`
 - `collection.getTree` -> `zotero_collection_get_tree`
 - `item.search` -> `zotero_item_search`
 - `attachment.addFile` -> `zotero_attachment_add_file`
@@ -92,6 +93,7 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 
 | 命令 | MCP 工具 | 读写 | 输入字段 |
 |---|---|---:|---|
+| `command.catalog` | `zotero_command_catalog` | R | 无 |
 | `collection.create` | `zotero_collection_create` | W | `libraryScope`, `name`, `parentCollectionKey` |
 | `collection.rename` | `zotero_collection_rename` | W | `collectionKey`, `name` |
 | `collection.move` | `zotero_collection_move` | W | `collectionKey`, `parentCollectionKey` |
@@ -151,6 +153,7 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 
 常用读取分组：
 
+- 能力目录：`command.catalog`
 - 分类：`collection.getTree`、`collection.getItems`
 - 条目：`item.get`、`item.search`、`search.advanced`
 - 保存搜索：`savedSearch.list`、`savedSearch.get`
@@ -160,6 +163,8 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 - 偏好和历史：`attachment.renamePreferences.get`、`backup.settings.get`、`backup.snapshot.list`、`audit.list`、`duplicates.find`
 
 当用户用标题、分类、标签或文件的模糊名称描述目标时，先用读取工具解析为 Zotero key。不要猜测 key。
+
+如果需要修改条目元数据，使用 `item.updateFields` / `zotero_item_update_fields`，字段放在 `fields` 对象里，例如 `title`、`date`、`DOI`、`url`、`abstractNote`、`publicationTitle`、`publisher`、`volume`、`issue`、`pages`、`language`、`extra`。修改作者列表使用 `item.updateCreators` / `zotero_item_update_creators`。
 
 ## 写入操作
 
@@ -344,6 +349,16 @@ Zotero Settings -> Zotero Local MCP Bridge
 - 已完成操作返回的撤销计划。
 
 不要盲目重试失败写入。先重新读取状态。
+
+## libraryScope 规则
+
+本项目只支持本地用户文库。凡是工具需要 `libraryScope`，新调用必须使用：
+
+```text
+local-user
+```
+
+不要使用 `user`、`group`、`web` 或 Zotero Web API 相关范围。插件会为了兼容旧调用把 `user` 归一化成 `local-user`，但 agent 不应主动发送 `user`。
 
 ## 回复模式
 

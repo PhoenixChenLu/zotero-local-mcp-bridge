@@ -170,6 +170,269 @@ var ZoteroLocalMcpBridgeCommandNames = [
   "audit.list"
 ];
 
+var ZoteroLocalMcpBridgeMcpCommandMetadata = {
+  "collection.create": {
+    fields: ["libraryScope", "name", "parentCollectionKey"],
+    required: ["name"],
+    description: "Create a Zotero collection or subcollection in the local user library. Use libraryScope=local-user; parentCollectionKey creates a subcollection."
+  },
+  "collection.rename": {
+    fields: ["collectionKey", "name"],
+    required: ["collectionKey", "name"],
+    description: "Rename an existing Zotero collection in the local user library."
+  },
+  "collection.move": {
+    fields: ["collectionKey", "parentCollectionKey"],
+    required: ["collectionKey"],
+    description: "Move a Zotero collection under another collection, or move it to the root when parentCollectionKey is omitted."
+  },
+  "collection.getTree": {
+    fields: ["libraryScope"],
+    required: [],
+    description: "Read the local user library collection tree. Use libraryScope=local-user."
+  },
+  "collection.getItems": {
+    fields: ["collectionKey"],
+    required: ["collectionKey"],
+    description: "Read items contained in a Zotero collection."
+  },
+  "collection.addItems": {
+    fields: ["collectionKey", "zoteroItemKeys"],
+    required: ["collectionKey", "zoteroItemKeys"],
+    description: "Add existing Zotero items to a collection."
+  },
+  "collection.removeItems": {
+    fields: ["collectionKey", "zoteroItemKeys"],
+    required: ["collectionKey", "zoteroItemKeys"],
+    description: "Remove Zotero items from a collection without deleting the items."
+  },
+  "collection.trash": {
+    fields: ["collectionKey", "trashDescendentItems"],
+    required: ["collectionKey"],
+    description: "Move a collection to Zotero trash. This is high risk but not a permanent delete."
+  },
+  "item.get": {
+    fields: ["zoteroItemKey"],
+    required: ["zoteroItemKey"],
+    description: "Read full Zotero item metadata, collections, tags, notes, and attachment keys."
+  },
+  "item.search": {
+    fields: ["query", "itemType", "collectionKey", "tag", "limit"],
+    required: [],
+    description: "Search local Zotero items by text, item type, collection, or tag."
+  },
+  "item.create": {
+    fields: ["libraryScope", "itemType", "fields", "creators", "collectionKeys", "tags"],
+    required: ["itemType"],
+    description: "Create a Zotero item with metadata fields, creators, collections, and tags in the local user library."
+  },
+  "item.updateFields": {
+    fields: ["zoteroItemKey", "fields"],
+    required: ["zoteroItemKey", "fields"],
+    description: "Update Zotero item metadata fields. Use fields such as title, date, DOI, url, abstractNote, publicationTitle, publisher, volume, issue, pages, language, extra."
+  },
+  "item.updateCreators": {
+    fields: ["zoteroItemKey", "creators"],
+    required: ["zoteroItemKey", "creators"],
+    description: "Replace the creator list for a Zotero item."
+  },
+  "item.setCollections": {
+    fields: ["zoteroItemKey", "collectionKeys"],
+    required: ["zoteroItemKey", "collectionKeys"],
+    description: "Set the complete collection membership for a Zotero item."
+  },
+  "item.updateTags": {
+    fields: ["zoteroItemKey", "addTags", "removeTags"],
+    required: ["zoteroItemKey"],
+    description: "Add and remove tags on a Zotero item."
+  },
+  "item.trash": {
+    fields: ["zoteroItemKeys"],
+    required: ["zoteroItemKeys"],
+    description: "Move Zotero items to trash. This is high risk but not a permanent delete."
+  },
+  "search.advanced": {
+    fields: ["conditions", "joinMode", "includeChildren", "includeDeleted", "limit"],
+    required: ["conditions"],
+    description: "Run a Zotero advanced search with condition objects."
+  },
+  "savedSearch.list": {
+    fields: [],
+    required: [],
+    description: "List saved searches in the local user library."
+  },
+  "savedSearch.get": {
+    fields: ["savedSearchKey"],
+    required: ["savedSearchKey"],
+    description: "Read a saved search definition by key."
+  },
+  "savedSearch.create": {
+    fields: ["name", "conditions", "joinMode"],
+    required: ["name", "conditions"],
+    description: "Create a Zotero saved search."
+  },
+  "savedSearch.update": {
+    fields: ["savedSearchKey", "name", "conditions", "joinMode"],
+    required: ["savedSearchKey"],
+    description: "Update a Zotero saved search definition."
+  },
+  "citation.format": {
+    fields: ["zoteroItemKeys", "style", "locale", "mode", "linkwrap"],
+    required: ["zoteroItemKeys", "style", "mode"],
+    description: "Format citations or bibliography output through Zotero citation formatting."
+  },
+  "import.bibtex": {
+    fields: ["content", "collectionKeys", "tags"],
+    required: ["content"],
+    description: "Import BibTeX content into the local Zotero library."
+  },
+  "import.ris": {
+    fields: ["content", "collectionKeys", "tags"],
+    required: ["content"],
+    description: "Import RIS content into the local Zotero library."
+  },
+  "import.cslJson": {
+    fields: ["content", "collectionKeys", "tags"],
+    required: ["content"],
+    description: "Import CSL JSON content into the local Zotero library."
+  },
+  "export.bibtex": {
+    fields: ["zoteroItemKeys"],
+    required: ["zoteroItemKeys"],
+    description: "Export selected Zotero items as BibTeX."
+  },
+  "export.ris": {
+    fields: ["zoteroItemKeys"],
+    required: ["zoteroItemKeys"],
+    description: "Export selected Zotero items as RIS."
+  },
+  "export.cslJson": {
+    fields: ["zoteroItemKeys"],
+    required: ["zoteroItemKeys"],
+    description: "Export selected Zotero items as CSL JSON."
+  },
+  "annotation.list": {
+    fields: ["attachmentKey", "includeTrashed"],
+    required: ["attachmentKey"],
+    description: "List PDF annotations for an attachment."
+  },
+  "annotation.create": {
+    fields: ["attachmentKey", "annotationType", "annotationText", "annotationComment", "annotationColor", "annotationPageLabel", "annotationSortIndex", "annotationPosition"],
+    required: ["attachmentKey", "annotationType", "annotationPosition"],
+    description: "Create a Zotero PDF annotation on an attachment."
+  },
+  "annotation.update": {
+    fields: ["annotationKey", "annotationText", "annotationComment", "annotationColor", "annotationPageLabel", "annotationSortIndex", "annotationPosition"],
+    required: ["annotationKey"],
+    description: "Update supported fields on a Zotero PDF annotation."
+  },
+  "note.createChild": {
+    fields: ["zoteroItemKey", "content", "contentFormat"],
+    required: ["zoteroItemKey", "content"],
+    description: "Create a child note under a Zotero item."
+  },
+  "attachment.get": {
+    fields: ["attachmentKey"],
+    required: ["attachmentKey"],
+    description: "Read attachment metadata and file information."
+  },
+  "attachment.getForItem": {
+    fields: ["zoteroItemKey"],
+    required: ["zoteroItemKey"],
+    description: "List attachments for a Zotero item."
+  },
+  "attachment.addFile": {
+    fields: ["zoteroItemKey", "filePath", "attachmentMode"],
+    required: ["zoteroItemKey", "filePath"],
+    description: "Attach a local file to an existing Zotero item. Supports copy or linked file mode."
+  },
+  "pdf.addAndRecognize": {
+    fields: ["filePath", "attachmentMode", "collectionKeys"],
+    required: ["filePath"],
+    description: "Import a PDF or EPUB and run Zotero's built-in metadata recognition to create the parent item when possible."
+  },
+  "attachment.recognizeMetadata": {
+    fields: ["attachmentKey"],
+    required: ["attachmentKey"],
+    description: "Run Zotero's built-in metadata recognition for an existing standalone PDF or EPUB attachment."
+  },
+  "attachment.moveToItem": {
+    fields: ["attachmentKey", "targetZoteroItemKey"],
+    required: ["attachmentKey", "targetZoteroItemKey"],
+    description: "Move an attachment under a target Zotero item."
+  },
+  "attachment.rename": {
+    fields: ["attachmentKey", "title", "renameFile"],
+    required: ["attachmentKey", "title"],
+    description: "Rename an attachment title and optionally the underlying file."
+  },
+  "attachment.runZoteroRename": {
+    fields: ["attachmentKey"],
+    required: ["attachmentKey"],
+    description: "Run Zotero's built-in attachment rename behavior for one attachment."
+  },
+  "attachment.undoAdded": {
+    fields: ["attachmentKey"],
+    required: ["attachmentKey"],
+    description: "Undo an attachment that was added by this bridge when an undo record is available."
+  },
+  "attachment.trash": {
+    fields: ["attachmentKeys"],
+    required: ["attachmentKeys"],
+    description: "Move attachments to Zotero trash. This is high risk but not a permanent delete."
+  },
+  "attachment.renamePreferences.get": {
+    fields: [],
+    required: [],
+    description: "Read Zotero attachment rename preferences."
+  },
+  "attachment.renamePreferences.set": {
+    fields: ["preferences"],
+    required: ["preferences"],
+    description: "Update Zotero attachment rename preferences."
+  },
+  "backup.settings.get": {
+    fields: [],
+    required: [],
+    description: "Read bridge backup and undo settings."
+  },
+  "backup.settings.set": {
+    fields: ["policy"],
+    required: ["policy"],
+    description: "Update bridge backup and undo policy."
+  },
+  "backup.snapshot.list": {
+    fields: ["limit"],
+    required: [],
+    description: "List bridge backup snapshots."
+  },
+  "backup.snapshot.restore": {
+    fields: ["backupId"],
+    required: ["backupId"],
+    description: "Restore a bridge backup snapshot. This is high risk."
+  },
+  "backup.snapshot.prune": {
+    fields: [],
+    required: [],
+    description: "Prune bridge backup snapshots according to policy. This is high risk."
+  },
+  "duplicates.find": {
+    fields: ["limit"],
+    required: [],
+    description: "Find duplicate Zotero items using Zotero's duplicate detection."
+  },
+  "duplicates.merge": {
+    fields: ["masterZoteroItemKey", "duplicateZoteroItemKeys"],
+    required: ["masterZoteroItemKey", "duplicateZoteroItemKeys"],
+    description: "Merge duplicate Zotero items into a selected master item. This is high risk."
+  },
+  "audit.list": {
+    fields: ["limit"],
+    required: [],
+    description: "List bridge audit events."
+  }
+};
+
 function log(message) {
   if (typeof Zotero !== "undefined" && Zotero.debug) {
     Zotero.debug(`Zotero Local MCP Bridge: ${message}`);
@@ -350,6 +613,20 @@ async function handleMcpToolCall(params, requestId) {
     throw commandError("MCP_TOOL_NAME_REQUIRED", "MCP tools/call requires params.name", 400);
   }
 
+  if (toolName === "zotero_command_catalog") {
+    var catalog = createMcpCommandCatalog();
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(catalog, null, 2)
+        }
+      ],
+      structuredContent: catalog,
+      isError: false
+    };
+  }
+
   var commandName = commandNameFromMcpToolName(toolName);
   if (!commandName) {
     throw commandError("MCP_TOOL_UNKNOWN", "Unknown Zotero Local MCP Bridge tool: " + toolName, 404);
@@ -358,12 +635,12 @@ async function handleMcpToolCall(params, requestId) {
   var args = params.arguments && typeof params.arguments === "object" ? params.arguments : {};
   var commandInput = args.input && typeof args.input === "object"
     ? args.input
-    : extractMcpCommandInput(args);
+    : extractMcpCommandInput(args, commandName);
   var commandPayload = {
     name: commandName,
     requestId: typeof requestId === "string" || typeof requestId === "number" ? "mcp_" + requestId : "mcp_request",
     input: commandInput,
-    mode: args.mode,
+    mode: isWriteCommandName(commandName) ? args.mode : undefined,
     confirmation: args.confirmation
   };
   var commandResponse = await executeInternalCommandPayload(commandPayload);
@@ -396,12 +673,12 @@ async function executeInternalCommandPayload(commandPayload) {
 }
 
 function createMcpToolDescriptors() {
-  return ZoteroLocalMcpBridgeCommandNames.map(function (commandName) {
+  var toolDescriptors = ZoteroLocalMcpBridgeCommandNames.map(function (commandName) {
     return {
       name: mcpToolNameFromCommandName(commandName),
       title: commandName,
       description: describeMcpTool(commandName),
-      inputSchema: createMcpToolInputSchema(),
+      inputSchema: createMcpToolInputSchema(commandName),
       annotations: {
         readOnlyHint: !isWriteCommandName(commandName),
         destructiveHint: isHighRiskMcpCommand(commandName),
@@ -410,39 +687,225 @@ function createMcpToolDescriptors() {
       }
     };
   });
+  toolDescriptors.unshift({
+    name: "zotero_command_catalog",
+    title: "command.catalog",
+    description: "Read-only capability catalog for Zotero Local MCP Bridge. Lists every Zotero MCP tool, command name, input fields, write risk, and calling rules. Use this before guessing a Zotero operation.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  });
+  return toolDescriptors;
 }
 
-function createMcpToolInputSchema() {
+function createMcpToolInputSchema(commandName) {
+  var metadata = getMcpCommandMetadata(commandName);
+  var properties = {
+    input: {
+      type: "object",
+      description: "Legacy wrapper for command input. Prefer passing the documented command fields directly at the top level.",
+      additionalProperties: true
+    },
+    mode: {
+      type: "string",
+      enum: ["dry-run", "execute"],
+      description: isWriteCommandName(commandName)
+        ? "Write mode. Omit or use dry-run first; execute requires confirmation.planId and confirmation.confirmationToken from the matching dry-run."
+        : "Read commands do not need mode."
+    },
+    confirmation: {
+      type: "object",
+      description: "Required only for execute. Use the planId and confirmationToken returned by the matching dry-run with unchanged input.",
+      properties: {
+        planId: { type: "string" },
+        confirmationToken: { type: "string" }
+      },
+      required: ["planId", "confirmationToken"],
+      additionalProperties: false
+    }
+  };
+
+  metadata.fields.forEach(function (fieldName) {
+    properties[fieldName] = createMcpFieldSchema(fieldName, commandName);
+  });
+
   return {
     type: "object",
-    properties: {
-      input: {
-        type: "object",
-        additionalProperties: true
-      },
-      mode: {
-        type: "string",
-        enum: ["dry-run", "execute"]
-      },
-      confirmation: {
-        type: "object",
-        properties: {
-          planId: { type: "string" },
-          confirmationToken: { type: "string" }
-        },
-        required: ["planId", "confirmationToken"],
-        additionalProperties: false
-      }
-    },
+    description: metadata.description,
+    properties: properties,
+    required: metadata.required,
     additionalProperties: true
   };
 }
 
 function describeMcpTool(commandName) {
-  if (isWriteCommandName(commandName)) {
-    return "Write command for Zotero Local MCP Bridge. Call without mode or with mode=dry-run first; execute requires the returned planId and confirmationToken.";
+  return getMcpCommandMetadata(commandName).description;
+}
+
+function getMcpCommandMetadata(commandName) {
+  var metadata = ZoteroLocalMcpBridgeMcpCommandMetadata[commandName] || {};
+  var fields = metadata.fields || [];
+  return {
+    fields: fields,
+    required: metadata.required || [],
+    description: metadata.description || buildDefaultMcpDescription(commandName)
+  };
+}
+
+function buildDefaultMcpDescription(commandName) {
+  var modeText = isWriteCommandName(commandName)
+    ? "Write command. Always call with mode=dry-run first; execute requires the returned confirmation."
+    : "Read-only command.";
+  return commandName + " - " + modeText + " Uses the Zotero plugin internal command table and local user library only.";
+}
+
+function createMcpFieldSchema(fieldName, commandName) {
+  if (fieldName === "libraryScope") {
+    return {
+      type: "string",
+      enum: ["local-user"],
+      default: "local-user",
+      description: "Local Zotero user library only. Use exactly local-user; the plugin also normalizes legacy user to local-user."
+    };
   }
-  return "Read command for Zotero Local MCP Bridge. Executes through the Zotero plugin internal command table.";
+  if (fieldName === "zoteroItemKey" || fieldName === "targetZoteroItemKey" || fieldName === "masterZoteroItemKey") {
+    return {
+      type: "string",
+      description: "Zotero item key in the local user library."
+    };
+  }
+  if (fieldName === "collectionKey" || fieldName === "parentCollectionKey" || fieldName === "savedSearchKey" || fieldName === "attachmentKey" || fieldName === "annotationKey" || fieldName === "backupId") {
+    return {
+      type: "string",
+      description: "Zotero key or bridge backup id for the target object."
+    };
+  }
+  if (fieldName === "zoteroItemKeys" || fieldName === "duplicateZoteroItemKeys" || fieldName === "attachmentKeys" || fieldName === "collectionKeys" || fieldName === "addTags" || fieldName === "removeTags" || fieldName === "tags") {
+    return {
+      type: "array",
+      items: { type: "string" },
+      description: "String array. Batch writes are limited to 50 related objects."
+    };
+  }
+  if (fieldName === "fields") {
+    return {
+      type: "object",
+      description: "Zotero item metadata field map. Common fields include title, date, DOI, url, abstractNote, publicationTitle, publisher, volume, issue, pages, language, extra.",
+      additionalProperties: {
+        type: ["string", "number", "boolean", "null"]
+      }
+    };
+  }
+  if (fieldName === "creators") {
+    return {
+      type: "array",
+      description: "Zotero creator objects, for example { creatorType, firstName, lastName } or { creatorType, name }.",
+      items: {
+        type: "object",
+        properties: {
+          creatorType: { type: "string" },
+          firstName: { type: "string" },
+          lastName: { type: "string" },
+          name: { type: "string" }
+        },
+        required: ["creatorType"],
+        additionalProperties: true
+      }
+    };
+  }
+  if (fieldName === "itemType") {
+    return {
+      type: "string",
+      description: "Zotero item type, such as journalArticle, book, bookSection, document, report, thesis, webpage."
+    };
+  }
+  if (fieldName === "attachmentMode") {
+    return {
+      type: "string",
+      enum: ["copy", "linked"],
+      description: "copy imports into Zotero storage; linked keeps a linked file path."
+    };
+  }
+  if (fieldName === "filePath") {
+    return {
+      type: "string",
+      description: "Absolute local file path accessible to Zotero Desktop."
+    };
+  }
+  if (fieldName === "conditions") {
+    return {
+      type: "array",
+      description: "Zotero search condition objects.",
+      items: {
+        type: "object",
+        additionalProperties: true
+      }
+    };
+  }
+  if (fieldName === "joinMode") {
+    return {
+      type: "string",
+      enum: ["all", "any"],
+      description: "Search condition join mode."
+    };
+  }
+  if (fieldName === "limit") {
+    return {
+      type: "integer",
+      minimum: 1,
+      maximum: 50,
+      description: "Maximum number of records to return. Current batch limit is 50."
+    };
+  }
+  if (fieldName === "includeChildren" || fieldName === "includeDeleted" || fieldName === "includeTrashed" || fieldName === "linkwrap" || fieldName === "renameFile" || fieldName === "trashDescendentItems") {
+    return {
+      type: "boolean",
+      description: "Boolean option for this command."
+    };
+  }
+  if (fieldName === "content") {
+    return {
+      type: "string",
+      description: "Import content or note HTML/Markdown content depending on the command."
+    };
+  }
+  if (fieldName === "contentFormat") {
+    return {
+      type: "string",
+      enum: ["html", "markdown", "text"],
+      description: "Child note content format."
+    };
+  }
+  if (fieldName === "preferences" || fieldName === "policy" || fieldName === "annotationPosition") {
+    return {
+      type: "object",
+      additionalProperties: true,
+      description: "Command-specific settings object."
+    };
+  }
+  if (fieldName.indexOf("annotation") === 0) {
+    return {
+      type: "string",
+      description: "PDF annotation field for Zotero annotation create/update."
+    };
+  }
+  if (fieldName === "style" || fieldName === "locale" || fieldName === "mode" || fieldName === "query" || fieldName === "tag" || fieldName === "itemType" || fieldName === "name" || fieldName === "title") {
+    return {
+      type: "string",
+      description: "String input for " + commandName + "."
+    };
+  }
+  return {
+    description: "Input field for " + commandName + "."
+  };
 }
 
 function mcpToolNameFromCommandName(commandName) {
@@ -459,10 +922,39 @@ function commandNameFromMcpToolName(toolName) {
   return "";
 }
 
-function extractMcpCommandInput(args) {
+function createMcpCommandCatalog() {
+  return {
+    server: {
+      name: "zotero-local-mcp-bridge",
+      version: ZoteroLocalMcpBridge.version,
+      libraryScope: "local-user",
+      scope: "Local Zotero user library only. No group library support and no Zotero Web API library writes."
+    },
+    callingRules: {
+      reads: "Read tools can be called directly.",
+      writes: "Write tools must be called with mode=dry-run first, then mode=execute with the returned confirmation.planId and confirmation.confirmationToken and unchanged input.",
+      libraryScope: "Use libraryScope=local-user. Legacy user is normalized to local-user, but new callers should not send user.",
+      metadataUpdate: "Use zotero_item_update_fields to update item metadata fields, and zotero_item_update_creators to update creators."
+    },
+    commands: ZoteroLocalMcpBridgeCommandNames.map(function (commandName) {
+      var metadata = getMcpCommandMetadata(commandName);
+      return {
+        commandName: commandName,
+        toolName: mcpToolNameFromCommandName(commandName),
+        description: metadata.description,
+        readOnly: !isWriteCommandName(commandName),
+        highRisk: isHighRiskMcpCommand(commandName),
+        inputFields: metadata.fields,
+        requiredFields: metadata.required
+      };
+    })
+  };
+}
+
+function extractMcpCommandInput(args, commandName) {
   var input = {};
   Object.keys(args).forEach(function (key) {
-    if (key !== "mode" && key !== "confirmation") {
+    if (key !== "confirmation" && (key !== "mode" || !isWriteCommandName(commandName))) {
       input[key] = args[key];
     }
   });
@@ -2841,16 +3333,14 @@ function normalizeCollectionCreateInput(input) {
     throw commandError("COMMAND_INPUT_INVALID", "collection.create input must be an object", 400);
   }
 
-  if (input.libraryScope !== "local-user") {
-    throw commandError("LIBRARY_SCOPE_UNSUPPORTED", "collection.create only supports local-user libraryScope", 400);
-  }
+  var libraryScope = normalizeLocalUserLibraryScope(input.libraryScope, "collection.create");
 
   if (typeof input.name !== "string" || input.name.trim().length === 0) {
     throw commandError("COLLECTION_NAME_REQUIRED", "collection.create requires a non-empty name", 400);
   }
 
   var normalized = {
-    libraryScope: "local-user",
+    libraryScope: libraryScope,
     name: input.name.trim()
   };
 
@@ -2869,6 +3359,13 @@ function normalizeCollectionCreateInput(input) {
   }
 
   return normalized;
+}
+
+function normalizeLocalUserLibraryScope(libraryScope, commandName) {
+  if (libraryScope === undefined || libraryScope === null || libraryScope === "" || libraryScope === "local-user" || libraryScope === "user") {
+    return "local-user";
+  }
+  throw commandError("LIBRARY_SCOPE_UNSUPPORTED", commandName + " only supports libraryScope local-user", 400);
 }
 
 function createCollectionRenameDryRun(input) {
@@ -3341,9 +3838,7 @@ function normalizeItemCreateInput(input) {
     throw commandError("COMMAND_INPUT_INVALID", "item.create input must be an object", 400);
   }
 
-  if (input.libraryScope !== "local-user") {
-    throw commandError("LIBRARY_SCOPE_UNSUPPORTED", "Only libraryScope local-user is supported", 400);
-  }
+  var libraryScope = normalizeLocalUserLibraryScope(input.libraryScope, "item.create");
 
   var itemType = normalizeItemType(input.itemType);
   var item = new Zotero.Item(itemType);
@@ -3357,7 +3852,7 @@ function normalizeItemCreateInput(input) {
   }
 
   return {
-    libraryScope: "local-user",
+    libraryScope: libraryScope,
     itemType: itemType,
     fields: fields,
     creators: creators,
