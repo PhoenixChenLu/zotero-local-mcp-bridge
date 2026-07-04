@@ -37,6 +37,8 @@ export type CommandName =
   | "attachment.get"
   | "attachment.getForItem"
   | "attachment.addFile"
+  | "pdf.addAndRecognize"
+  | "attachment.recognizeMetadata"
   | "attachment.moveToItem"
   | "attachment.rename"
   | "attachment.runZoteroRename"
@@ -97,6 +99,8 @@ export const COMMAND_DEFINITIONS = [
   { name: "attachment.get", write: false, inputFields: ["attachmentKey"] },
   { name: "attachment.getForItem", write: false, inputFields: ["zoteroItemKey"] },
   { name: "attachment.addFile", write: true, profileWrite: true, inputFields: ["zoteroItemKey", "filePath", "attachmentMode"] },
+  { name: "pdf.addAndRecognize", write: true, profileWrite: true, inputFields: ["filePath", "attachmentMode", "collectionKeys"] },
+  { name: "attachment.recognizeMetadata", write: true, profileWrite: true, inputFields: ["attachmentKey"] },
   { name: "attachment.moveToItem", write: true, profileWrite: true, inputFields: ["attachmentKey", "targetZoteroItemKey"] },
   { name: "attachment.rename", write: true, profileWrite: true, inputFields: ["attachmentKey", "title", "renameFile"] },
   { name: "attachment.runZoteroRename", write: true, profileWrite: true, inputFields: ["attachmentKey"] },

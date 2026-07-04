@@ -45,6 +45,8 @@ describe("shared command definitions", () => {
       "attachment.get",
       "attachment.getForItem",
       "attachment.addFile",
+      "pdf.addAndRecognize",
+      "attachment.recognizeMetadata",
       "attachment.moveToItem",
       "attachment.rename",
       "attachment.runZoteroRename",
@@ -83,6 +85,8 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("audit.list")).toBe(false);
     expect(isWriteCommand("collection.create")).toBe(true);
     expect(isWriteCommand("attachment.addFile")).toBe(true);
+    expect(isWriteCommand("pdf.addAndRecognize")).toBe(true);
+    expect(isWriteCommand("attachment.recognizeMetadata")).toBe(true);
     expect(isWriteCommand("attachment.undoAdded")).toBe(true);
     expect(isWriteCommand("attachment.renamePreferences.set")).toBe(true);
     expect(isWriteCommand("backup.snapshot.restore")).toBe(true);

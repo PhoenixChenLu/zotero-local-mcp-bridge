@@ -48,6 +48,8 @@ Examples:
 - `collection.getTree` -> `zotero_collection_get_tree`
 - `item.search` -> `zotero_item_search`
 - `attachment.addFile` -> `zotero_attachment_add_file`
+- `pdf.addAndRecognize` -> `zotero_pdf_add_and_recognize`
+- `attachment.recognizeMetadata` -> `zotero_attachment_recognize_metadata`
 - `backup.snapshot.list` -> `zotero_backup_snapshot_list`
 
 ## MCP Call Format
@@ -125,6 +127,8 @@ Use this table as the first reference for operation format. `R` means read-only.
 | `attachment.get` | `zotero_attachment_get` | R | `attachmentKey` |
 | `attachment.getForItem` | `zotero_attachment_get_for_item` | R | `zoteroItemKey` |
 | `attachment.addFile` | `zotero_attachment_add_file` | W | `zoteroItemKey`, `filePath`, `attachmentMode` |
+| `pdf.addAndRecognize` | `zotero_pdf_add_and_recognize` | W | `filePath`, `attachmentMode`, `collectionKeys` |
+| `attachment.recognizeMetadata` | `zotero_attachment_recognize_metadata` | W | `attachmentKey` |
 | `attachment.moveToItem` | `zotero_attachment_move_to_item` | W | `attachmentKey`, `targetZoteroItemKey` |
 | `attachment.rename` | `zotero_attachment_rename` | W | `attachmentKey`, `title`, `renameFile` |
 | `attachment.runZoteroRename` | `zotero_attachment_run_zotero_rename` | W | `attachmentKey` |
@@ -177,7 +181,7 @@ Writes include:
 - Saved searches: create, update
 - Annotations: create, update
 - Notes: create child note
-- Attachments: add file, move to item, rename, run Zotero rename, undo added, trash, set rename preferences
+- Attachments: add file, import PDF/EPUB and retrieve metadata, retrieve metadata for standalone PDF/EPUB, move to item, rename, run Zotero rename, undo added, trash, set rename preferences
 - Backup: set settings, restore snapshot, prune snapshots
 - Duplicates: merge
 
@@ -315,6 +319,8 @@ Before attachment writes:
 - Confirm the file path exists if the MCP client can inspect local files.
 - Prefer the configured default attachment mode unless the user explicitly chooses copy or linked file.
 - Preserve dry-run and confirmation for add, move, rename, and Zotero auto-rename.
+- For PDF/EPUB auto-recognition, prefer `pdf.addAndRecognize` to import the file and let Zotero create the parent item; for an existing standalone PDF/EPUB, use `attachment.recognizeMetadata`.
+- PDF/EPUB auto-recognition uses Zotero's built-in `RecognizeDocument` flow and may access the Zotero recognizer, DOI, ISBN, or arXiv lookup services. This is not Zotero Web API library writing and does not require a Zotero API key.
 - For linked files, warn that moving the original file path can break the attachment.
 
 Do not write audit logs or backups into Zotero profile, Zotero data directory, linked attachment root, or an attachment directory.

@@ -40,7 +40,7 @@ describe.sequential("Zotero plugin package", () => {
   it("registers only the plugin-hosted Zotero connector MCP endpoint", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.57"');
+    expect(bootstrap).toContain('version: "0.1.58"');
     expect(bootstrap).toContain("Zotero.PreferencePanes.register");
     expect(bootstrap).toContain('src: data.rootURI + "preferences.xhtml"');
     expect(bootstrap).toContain('scripts: [data.rootURI + "preferences.js"]');
@@ -122,6 +122,8 @@ describe.sequential("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "attachment.get"');
     expect(bootstrap).toContain('commandName === "attachment.getForItem"');
     expect(bootstrap).toContain('commandName === "attachment.addFile"');
+    expect(bootstrap).toContain('commandName === "pdf.addAndRecognize"');
+    expect(bootstrap).toContain('commandName === "attachment.recognizeMetadata"');
     expect(bootstrap).toContain('commandName === "attachment.moveToItem"');
     expect(bootstrap).toContain('commandName === "attachment.rename"');
     expect(bootstrap).toContain('commandName === "attachment.runZoteroRename"');
@@ -201,6 +203,12 @@ describe.sequential("Zotero plugin package", () => {
     expect(bootstrap).toContain('new Zotero.Item("note")');
     expect(bootstrap).toContain("Zotero.Attachments.importFromFile");
     expect(bootstrap).toContain("Zotero.Attachments.linkFromFile");
+    expect(bootstrap).toContain('".md"');
+    expect(bootstrap).toContain('".markdown"');
+    expect(bootstrap).toContain("Zotero.RecognizeDocument.recognizeItems");
+    expect(bootstrap).toContain("Zotero.RecognizeDocument.canRecognize");
+    expect(bootstrap).toContain('commandName === "pdf.addAndRecognize"');
+    expect(bootstrap).toContain('commandName === "attachment.recognizeMetadata"');
     expect(bootstrap).toContain("Zotero.Items.trashTx");
     expect(bootstrap).toContain("Zotero.Duplicates");
     expect(bootstrap).toContain("Zotero.Items.merge");

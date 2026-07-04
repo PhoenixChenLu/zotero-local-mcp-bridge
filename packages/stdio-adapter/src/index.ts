@@ -14,7 +14,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 export const defaultZoteroLocalMcpBridgeEndpoint = "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp";
-export const adapterVersion = "0.1.57";
+export const adapterVersion = "0.1.58";
 
 export interface AdapterOptions {
   endpoint: string;

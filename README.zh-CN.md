@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg"></a>
-  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.57-4c78a8.svg"></a>
+  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.58-4c78a8.svg"></a>
   <a href="https://www.zotero.org/"><img alt="Zotero" src="https://img.shields.io/badge/Zotero-9.x-cc2936.svg"></a>
   <a href="#工作机制"><img alt="MCP" src="https://img.shields.io/badge/MCP-plugin--hosted-2e7d32.svg"></a>
   <a href="#工作范围"><img alt="Local First" src="https://img.shields.io/badge/local--first-loopback--only-2e7d32.svg"></a>
@@ -16,7 +16,7 @@
   <a href="skills/zotero-local-mcp-bridge-zh-cn/SKILL.md"><img alt="Claude Code ready" src="https://img.shields.io/badge/Claude%20Code-ready-111827.svg"></a>
 </p>
 
-AGPL-3.0-or-later · 插件版本 0.1.57 · Zotero 9.x · 插件内置 MCP · 本地回环访问
+AGPL-3.0-or-later · 插件版本 0.1.58 · Zotero 9.x · 插件内置 MCP · 本地回环访问
 
 **简体中文** · [English](README.md)
 
@@ -33,7 +33,7 @@ Zotero Local MCP Bridge 让支持 MCP 的智能体通过 Zotero 本身管理本�
 | 范围 | 能力 |
 |---|---|
 | 📚 条目与分类 | 读取、搜索、创建、编辑条目；管理字段、作者、标签、笔记、分类和分类成员关系 |
-| 📎 附件 | 添加、移动、重命名、读取附件；调用 Zotero 内置附件自动重命名 |
+| 📎 附件 | 添加、移动、重命名、读取附件；导入 PDF/EPUB 并调用 Zotero 内置元数据识别和附件自动重命名 |
 | 📝 标注与引用 | 读取、创建和更新受支持的 PDF 标注；通过 Zotero 生成引用和参考文献 |
 | 🔁 导入导出 | 支持 BibTeX、RIS、CSL JSON 的导入和导出 |
 | 🔎 搜索 | 支持基础搜索、高级搜索、保存搜索读取和维护 |
@@ -230,6 +230,7 @@ claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/z
 | 列出我的 Zotero 分类树 | 只读查询，不触发写入确认 |
 | 在“当前项目”下新建“待读文献”子分类 | 先 dry-run，再请求批准 |
 | 给这个条目添加这个 PDF 附件 | 先解析条目和文件路径，再 dry-run 附件操作 |
+| 导入这个 PDF 并自动识别文献信息 | 先 dry-run，再调用 Zotero 内置识别流程创建父条目并按偏好重命名附件 |
 | 把选中条目导出为 BibTeX | 只读导出，不需要写入确认 |
 | 用指定样式生成参考文献 | 通过 Zotero citation formatter 输出 |
 

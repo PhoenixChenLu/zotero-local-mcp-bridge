@@ -6,7 +6,7 @@ Use a Zotero plugin-hosted MCP endpoint to let local agents manage a local Zoter
 
 <p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg"></a>
-  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.57-4c78a8.svg"></a>
+  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.58-4c78a8.svg"></a>
   <a href="https://www.zotero.org/"><img alt="Zotero" src="https://img.shields.io/badge/Zotero-9.x-cc2936.svg"></a>
   <a href="#how-it-works"><img alt="MCP" src="https://img.shields.io/badge/MCP-plugin--hosted-2e7d32.svg"></a>
   <a href="#scope"><img alt="Local First" src="https://img.shields.io/badge/local--first-loopback--only-2e7d32.svg"></a>
@@ -16,7 +16,7 @@ Use a Zotero plugin-hosted MCP endpoint to let local agents manage a local Zoter
   <a href="skills/zotero-local-mcp-bridge/SKILL.md"><img alt="Claude Code ready" src="https://img.shields.io/badge/Claude%20Code-ready-111827.svg"></a>
 </p>
 
-AGPL-3.0-or-later · Plugin version 0.1.57 · Zotero 9.x · Plugin-hosted MCP · Local loopback access
+AGPL-3.0-or-later · Plugin version 0.1.58 · Zotero 9.x · Plugin-hosted MCP · Local loopback access
 
 [简体中文](README.zh-CN.md) · **English**
 
@@ -33,7 +33,7 @@ Zotero Local MCP Bridge lets MCP-capable agents manage a local Zotero library th
 | Area | Capability |
 |---|---|
 | 📚 Items and collections | Read, search, create, and edit items; manage fields, creators, tags, notes, collections, and collection membership |
-| 📎 Attachments | Add, move, rename, and inspect attachments; call Zotero's built-in attachment rename logic |
+| 📎 Attachments | Add, move, rename, and inspect attachments; import PDF/EPUB files and call Zotero's built-in metadata recognition and attachment rename logic |
 | 📝 Annotations and citations | Read, create, and update supported PDF annotations; format citations and bibliographies through Zotero |
 | 🔁 Import and export | Import and export BibTeX, RIS, and CSL JSON |
 | 🔎 Search | Use basic search, advanced search, and saved search read/update workflows |
@@ -230,6 +230,7 @@ Tell the agent to use Zotero through Zotero Local MCP Bridge. When approval is r
 | List my Zotero collection tree | Read-only query, no write confirmation |
 | Create a "Reading Queue" subcollection under "Current Project" | Dry-run first, then ask for approval |
 | Add this PDF attachment to this item | Resolve the item and file path, then dry-run the attachment operation |
+| Import this PDF and retrieve metadata automatically | Dry-run first, then use Zotero's built-in recognition flow to create the parent item and rename the attachment according to preferences |
 | Export selected items as BibTeX | Read-only export, no write confirmation |
 | Format a bibliography with a chosen style | Use Zotero's citation formatter |
 

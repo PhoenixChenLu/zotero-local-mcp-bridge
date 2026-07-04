@@ -3,7 +3,7 @@
 
 var ZoteroLocalMcpBridge = {
   id: "zotero-local-mcp-bridge@example.com",
-  version: "0.1.57",
+  version: "0.1.58",
   mcpPath: "/zotero-local-mcp-bridge/mcp",
   authHeader: "x-zotero-local-mcp-bridge-token",
   expectedAuthToken: __ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__,
@@ -66,6 +66,8 @@ var ZoteroLocalMcpBridgeProfileWriteCommands = {
   "annotation.update": true,
   "note.createChild": true,
   "attachment.addFile": true,
+  "pdf.addAndRecognize": true,
+  "attachment.recognizeMetadata": true,
   "attachment.moveToItem": true,
   "attachment.rename": true,
   "attachment.runZoteroRename": true,
@@ -100,6 +102,8 @@ var ZoteroLocalMcpBridgeWriteCommands = {
   "annotation.update": true,
   "note.createChild": true,
   "attachment.addFile": true,
+  "pdf.addAndRecognize": true,
+  "attachment.recognizeMetadata": true,
   "attachment.moveToItem": true,
   "attachment.rename": true,
   "attachment.runZoteroRename": true,
@@ -146,6 +150,8 @@ var ZoteroLocalMcpBridgeCommandNames = [
   "attachment.get",
   "attachment.getForItem",
   "attachment.addFile",
+  "pdf.addAndRecognize",
+  "attachment.recognizeMetadata",
   "attachment.moveToItem",
   "attachment.rename",
   "attachment.runZoteroRename",
@@ -1311,6 +1317,62 @@ async function handleCommandEndpointRequest(req) {
         }
       }
 
+      if (commandName === "pdf.addAndRecognize") {
+        try {
+          if (payload.mode === "execute") {
+            var recognizedPdf = await executePdfAddAndRecognize(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              recognizedPdf,
+              undefined,
+              {
+                zoteroItemKeys: recognizedPdf.parentZoteroItemKey ? [recognizedPdf.parentZoteroItemKey] : [],
+                collectionKeys: recognizedPdf.collectionKeys || [],
+                attachmentKeys: recognizedPdf.attachmentKey ? [recognizedPdf.attachmentKey] : []
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, await createPdfAddAndRecognizeDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "PDF_ADD_AND_RECOGNIZE_FAILED",
+            message: error.message || "Failed to add and recognize Zotero PDF"
+          });
+        }
+      }
+
+      if (commandName === "attachment.recognizeMetadata") {
+        try {
+          if (payload.mode === "execute") {
+            var recognizedAttachment = await executeAttachmentRecognizeMetadata(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              recognizedAttachment,
+              undefined,
+              {
+                zoteroItemKeys: recognizedAttachment.parentZoteroItemKey ? [recognizedAttachment.parentZoteroItemKey] : [],
+                collectionKeys: recognizedAttachment.collectionKeys || [],
+                attachmentKeys: recognizedAttachment.attachmentKey ? [recognizedAttachment.attachmentKey] : []
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, await createAttachmentRecognizeMetadataDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ATTACHMENT_RECOGNIZE_METADATA_FAILED",
+            message: error.message || "Failed to retrieve Zotero attachment metadata"
+          });
+        }
+      }
+
       if (commandName === "attachment.moveToItem") {
         try {
           if (payload.mode === "execute") {
@@ -1805,7 +1867,7 @@ function createImportDryRun(commandName, input) {
     normalized,
     {
       zoteroItemKeys: [],
-      collectionKeys: normalized.collectionKeys,
+      collectionKeys: normalized.currentCollectionKeys,
       attachmentKeys: [],
       filePaths: [],
       tags: normalized.tags
@@ -3902,6 +3964,169 @@ async function executeAttachmentAddFile(input, confirmation) {
   };
 }
 
+async function createPdfAddAndRecognizeDryRun(input) {
+  var normalized = await normalizePdfAddAndRecognizeInput(input);
+  var warnings = [{
+    code: "ZOTERO_RECOGNIZER_NETWORK",
+    message: "Zotero metadata recognition may send the first pages of PDF text to Zotero's recognizer service and may use Zotero translators for DOI, ISBN, or arXiv lookups"
+  }];
+  if (normalized.attachmentMode === "linked") {
+    warnings.push({
+      code: "LINKED_FILE_PATH_RISK",
+      message: "Linked files remain outside Zotero storage; moving, renaming, or deleting the source file will break the attachment"
+    });
+  }
+
+  return createWriteDryRunPlan(
+    "pdf.addAndRecognize",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [],
+      collectionKeys: normalized.collectionKeys,
+      attachmentKeys: [],
+      filePaths: [normalized.filePath],
+      tags: []
+    },
+    warnings,
+    undefined,
+    {
+      action: "add-standalone-and-recognize",
+      filePath: normalized.filePath,
+      filename: normalized.filename,
+      attachmentMode: normalized.attachmentMode,
+      collectionKeys: normalized.collectionKeys
+    },
+    "low"
+  );
+}
+
+async function executePdfAddAndRecognize(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = await normalizePdfAddAndRecognizeInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var attachment = await createStandaloneRecognizableAttachment(normalized);
+  return executeRecognizeStandaloneAttachment(attachment, "pdf.addAndRecognize", {
+    filePath: normalized.filePath,
+    filename: normalized.filename,
+    attachmentMode: normalized.attachmentMode,
+    collectionKeys: normalized.collectionKeys
+  });
+}
+
+async function createAttachmentRecognizeMetadataDryRun(input) {
+  var normalized = await normalizeAttachmentRecognizeMetadataInput(input);
+  return createWriteDryRunPlan(
+    "attachment.recognizeMetadata",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [],
+      collectionKeys: normalized.collectionKeys,
+      attachmentKeys: [normalized.attachmentKey],
+      filePaths: normalized.currentFilePath ? [normalized.currentFilePath] : [],
+      tags: []
+    },
+    [{
+      code: "ZOTERO_RECOGNIZER_NETWORK",
+      message: "Zotero metadata recognition may send the first pages of PDF text to Zotero's recognizer service and may use Zotero translators for DOI, ISBN, or arXiv lookups"
+    }],
+    {
+      attachmentKey: normalized.attachmentKey,
+      title: normalized.currentTitle,
+      filename: normalized.currentFilename,
+      filePath: normalized.currentFilePath,
+      collectionKeys: normalized.currentCollectionKeys
+    },
+    {
+      action: "recognize-standalone-attachment",
+      attachmentKey: normalized.attachmentKey
+    },
+    "low"
+  );
+}
+
+async function executeAttachmentRecognizeMetadata(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = await normalizeAttachmentRecognizeMetadataInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var attachment = getLocalUserAttachment(normalized.attachmentKey);
+  return executeRecognizeStandaloneAttachment(attachment, "attachment.recognizeMetadata", {
+    attachmentKey: normalized.attachmentKey,
+    filePath: normalized.currentFilePath,
+    filename: normalized.currentFilename,
+    collectionKeys: normalized.currentCollectionKeys
+  });
+}
+
+async function createStandaloneRecognizableAttachment(normalized) {
+  var collectionIDs = normalized.collectionKeys.map(function (collectionKey) {
+    return getLocalUserCollection(collectionKey).id;
+  });
+  var options = {
+    file: normalized.filePath
+  };
+
+  if (normalized.attachmentMode === "linked") {
+    var linkedAttachment = await Zotero.Attachments.linkFromFile(options);
+    await setStandaloneAttachmentCollections(linkedAttachment, collectionIDs);
+    return linkedAttachment;
+  }
+  var importedAttachment = await Zotero.Attachments.importFromFile(options);
+  await setStandaloneAttachmentCollections(importedAttachment, collectionIDs);
+  return importedAttachment;
+}
+
+async function setStandaloneAttachmentCollections(attachment, collectionIDs) {
+  if (collectionIDs.length && attachment && typeof attachment.setCollections === "function") {
+    attachment.setCollections(collectionIDs);
+    await attachment.saveTx();
+  }
+}
+
+async function executeRecognizeStandaloneAttachment(attachment, operation, inputSnapshot) {
+  if (!Zotero.RecognizeDocument || typeof Zotero.RecognizeDocument.recognizeItems !== "function") {
+    throw commandError("RECOGNIZE_DOCUMENT_UNAVAILABLE", "This Zotero runtime does not expose Zotero.RecognizeDocument.recognizeItems", 500);
+  }
+  if (!Zotero.RecognizeDocument.canRecognize(attachment)) {
+    throw commandError("ATTACHMENT_RECOGNIZE_UNSUPPORTED", "Attachment must be a standalone PDF or EPUB file attachment", 400);
+  }
+
+  var beforeAttachment = await attachmentRecord(attachment);
+  await Zotero.RecognizeDocument.recognizeItems([attachment]);
+  var refreshedAttachment = Zotero.Items.get(attachment.id);
+  var afterAttachment = refreshedAttachment ? await attachmentRecord(refreshedAttachment) : beforeAttachment;
+  var parentItem = refreshedAttachment && refreshedAttachment.parentItemID ? Zotero.Items.get(refreshedAttachment.parentItemID) : undefined;
+
+  if (!parentItem || !parentItem.key) {
+    return {
+      operation: operation,
+      recognized: false,
+      reason: "no-match",
+      attachmentKey: beforeAttachment.attachmentKey,
+      filePath: afterAttachment.filePath || beforeAttachment.filePath,
+      filename: afterAttachment.filename || beforeAttachment.filename,
+      attachment: afterAttachment,
+      input: inputSnapshot
+    };
+  }
+
+  var parentDetails = readItemDetails({ zoteroItemKey: parentItem.key });
+  return {
+    operation: operation,
+    recognized: true,
+    parentZoteroItemKey: parentItem.key,
+    attachmentKey: afterAttachment.attachmentKey,
+    collectionKeys: parentDetails.collectionKeys || [],
+    filePath: afterAttachment.filePath || beforeAttachment.filePath,
+    filename: afterAttachment.filename || beforeAttachment.filename,
+    beforeAttachment: beforeAttachment,
+    attachment: afterAttachment,
+    parentItem: parentDetails,
+    input: inputSnapshot
+  };
+}
+
 function createAttachmentMoveDryRun(input) {
   var normalized = normalizeAttachmentMoveInput(input);
   return createWriteDryRunPlan(
@@ -4587,6 +4812,64 @@ async function normalizeAttachmentAddFileInput(input) {
   };
 }
 
+async function normalizePdfAddAndRecognizeInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "pdf.addAndRecognize input must be an object", 400);
+  }
+
+  if (typeof input.filePath !== "string" || input.filePath.trim().length === 0) {
+    throw commandError("PDF_FILE_PATH_REQUIRED", "pdf.addAndRecognize requires a non-empty filePath", 400);
+  }
+
+  var attachmentMode = input.attachmentMode || "copy";
+  if (attachmentMode !== "copy" && attachmentMode !== "linked") {
+    throw commandError("ATTACHMENT_MODE_INVALID", "attachmentMode must be copy or linked", 400);
+  }
+
+  var filePath = normalizeFilePath(input.filePath);
+  var filename = pathFilename(filePath);
+  validateRecognizableDocumentExtension(filename);
+  if (!(await fileExists(filePath))) {
+    throw commandError("PDF_FILE_NOT_FOUND", "Recognizable document source file was not found", 404);
+  }
+
+  var collectionKeys = normalizeCollectionKeyArray(input.collectionKeys || [], "collectionKeys");
+  return {
+    filePath: filePath,
+    filename: filename,
+    attachmentMode: attachmentMode,
+    collectionKeys: collectionKeys
+  };
+}
+
+async function normalizeAttachmentRecognizeMetadataInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "attachment.recognizeMetadata input must be an object", 400);
+  }
+
+  var attachment = normalizeAttachmentTarget(input.attachmentKey);
+  if (attachment.parentKey || attachment.parentItemID) {
+    throw commandError("ATTACHMENT_RECOGNIZE_PARENTED", "Only standalone attachments can retrieve metadata into a new parent item", 400);
+  }
+  if (!Zotero.RecognizeDocument || typeof Zotero.RecognizeDocument.canRecognize !== "function") {
+    throw commandError("RECOGNIZE_DOCUMENT_UNAVAILABLE", "This Zotero runtime does not expose Zotero.RecognizeDocument.canRecognize", 500);
+  }
+  if (!Zotero.RecognizeDocument.canRecognize(attachment)) {
+    throw commandError("ATTACHMENT_RECOGNIZE_UNSUPPORTED", "Attachment must be a standalone PDF or EPUB file attachment", 400);
+  }
+
+  var record = await attachmentRecord(attachment);
+  return {
+    attachmentKey: attachment.key,
+    currentTitle: record.title,
+    currentFilename: record.filename,
+    currentFilePath: record.filePath,
+    currentCollectionKeys: attachment.getCollections(true).map(function (collectionID) {
+      return Zotero.Collections.get(collectionID).key;
+    })
+  };
+}
+
 function normalizeFilePath(filePath) {
   return filePath.trim();
 }
@@ -4618,7 +4901,9 @@ function validateAttachmentExtension(filename) {
     ".tif",
     ".tiff",
     ".html",
-    ".htm"
+    ".htm",
+    ".md",
+    ".markdown"
   ];
   for (var i = 0; i < allowedExtensions.length; i += 1) {
     if (lower.endsWith(allowedExtensions[i])) {
@@ -4626,6 +4911,14 @@ function validateAttachmentExtension(filename) {
     }
   }
   throw commandError("ATTACHMENT_FILE_TYPE_UNSUPPORTED", "Attachment file extension is not supported in the first version", 400);
+}
+
+function validateRecognizableDocumentExtension(filename) {
+  var lower = filename.toLowerCase();
+  if (lower.endsWith(".pdf") || lower.endsWith(".epub")) {
+    return;
+  }
+  throw commandError("RECOGNIZABLE_FILE_TYPE_UNSUPPORTED", "Metadata recognition supports PDF and EPUB files", 400);
 }
 
 async function fileExists(filePath) {

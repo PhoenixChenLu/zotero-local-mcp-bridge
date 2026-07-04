@@ -48,6 +48,8 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 - `collection.getTree` -> `zotero_collection_get_tree`
 - `item.search` -> `zotero_item_search`
 - `attachment.addFile` -> `zotero_attachment_add_file`
+- `pdf.addAndRecognize` -> `zotero_pdf_add_and_recognize`
+- `attachment.recognizeMetadata` -> `zotero_attachment_recognize_metadata`
 - `backup.snapshot.list` -> `zotero_backup_snapshot_list`
 
 ## MCP 调用格式
@@ -125,6 +127,8 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 | `attachment.get` | `zotero_attachment_get` | R | `attachmentKey` |
 | `attachment.getForItem` | `zotero_attachment_get_for_item` | R | `zoteroItemKey` |
 | `attachment.addFile` | `zotero_attachment_add_file` | W | `zoteroItemKey`, `filePath`, `attachmentMode` |
+| `pdf.addAndRecognize` | `zotero_pdf_add_and_recognize` | W | `filePath`, `attachmentMode`, `collectionKeys` |
+| `attachment.recognizeMetadata` | `zotero_attachment_recognize_metadata` | W | `attachmentKey` |
 | `attachment.moveToItem` | `zotero_attachment_move_to_item` | W | `attachmentKey`, `targetZoteroItemKey` |
 | `attachment.rename` | `zotero_attachment_rename` | W | `attachmentKey`, `title`, `renameFile` |
 | `attachment.runZoteroRename` | `zotero_attachment_run_zotero_rename` | W | `attachmentKey` |
@@ -177,7 +181,7 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 - 保存搜索：创建、更新
 - 标注：创建、更新
 - 笔记：创建子笔记
-- 附件：添加文件、移动到条目、重命名、运行 Zotero 重命名、撤销已添加附件、移入 trash、设置重命名偏好
+- 附件：添加文件、导入 PDF/EPUB 并检索元数据、对 standalone PDF/EPUB 检索元数据、移动到条目、重命名、运行 Zotero 重命名、撤销已添加附件、移入 trash、设置重命名偏好
 - 备份：设置、恢复快照、清理快照
 - 重复项：合并
 
@@ -315,6 +319,8 @@ Zotero Settings -> Zotero Local MCP Bridge
 - 如果 MCP 客户端可以检查本地文件，确认文件路径存在。
 - 除非用户明确选择 copy 或 linked file，否则使用已配置的默认附件模式。
 - 对添加、移动、重命名和 Zotero 自动重命名保持 dry-run 和确认流程。
+- 对 PDF/EPUB 自动识别，优先使用 `pdf.addAndRecognize` 导入文件并让 Zotero 创建父条目；对已经存在的 standalone PDF/EPUB，使用 `attachment.recognizeMetadata`。
+- PDF/EPUB 自动识别会调用 Zotero 内置 `RecognizeDocument` 流程，可能联网使用 Zotero recognizer、DOI、ISBN 或 arXiv 查询；这不是 Zotero Web API 写库，也不需要 Zotero API key。
 - 对 linked files，提醒用户移动原始文件路径会导致附件失效。
 
 不要把审计日志或备份写入 Zotero 配置文件、Zotero 数据目录、linked attachment root 或附件目录。
