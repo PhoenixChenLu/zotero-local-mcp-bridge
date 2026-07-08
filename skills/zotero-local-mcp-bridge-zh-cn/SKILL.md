@@ -50,6 +50,7 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 - `item.search` -> `zotero_item_search`
 - `attachment.addFile` -> `zotero_attachment_add_file`
 - `pdf.addAndRecognize` -> `zotero_pdf_add_and_recognize`
+- `pdf.addAndRecognizeBatch` -> `zotero_pdf_add_and_recognize_batch`
 - `attachment.recognizeMetadata` -> `zotero_attachment_recognize_metadata`
 - `backup.snapshot.list` -> `zotero_backup_snapshot_list`
 
@@ -130,6 +131,7 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 | `attachment.getForItem` | `zotero_attachment_get_for_item` | R | `zoteroItemKey` |
 | `attachment.addFile` | `zotero_attachment_add_file` | W | `zoteroItemKey`, `filePath`, `attachmentMode` |
 | `pdf.addAndRecognize` | `zotero_pdf_add_and_recognize` | W | `filePath`, `attachmentMode`, `collectionKeys` |
+| `pdf.addAndRecognizeBatch` | `zotero_pdf_add_and_recognize_batch` | W | `filePaths`, `attachmentMode`, `collectionKeys` |
 | `attachment.recognizeMetadata` | `zotero_attachment_recognize_metadata` | W | `attachmentKey` |
 | `attachment.moveToItem` | `zotero_attachment_move_to_item` | W | `attachmentKey`, `targetZoteroItemKey` |
 | `attachment.rename` | `zotero_attachment_rename` | W | `attachmentKey`, `title`, `renameFile` |
@@ -324,7 +326,9 @@ Zotero Settings -> Zotero Local MCP Bridge
 - 如果 MCP 客户端可以检查本地文件，确认文件路径存在。
 - 除非用户明确选择 copy 或 linked file，否则使用已配置的默认附件模式。
 - 对添加、移动、重命名和 Zotero 自动重命名保持 dry-run 和确认流程。
-- 对 PDF/EPUB 自动识别，优先使用 `pdf.addAndRecognize` 导入文件并让 Zotero 创建父条目；对已经存在的 standalone PDF/EPUB，使用 `attachment.recognizeMetadata`。
+- 对单个 PDF/EPUB 自动识别，使用 `pdf.addAndRecognize` 导入文件并让 Zotero 创建父条目。
+- 对多个 PDF/EPUB 文件，优先使用 `pdf.addAndRecognizeBatch`，一次 dry-run、一次批准、一次 execute；不要对每个文件循环调用 `pdf.addAndRecognize`，除非批量命令不可用或用户明确要求逐个确认。
+- 对已经存在的 standalone PDF/EPUB，使用 `attachment.recognizeMetadata`。
 - PDF/EPUB 自动识别会调用 Zotero 内置 `RecognizeDocument` 流程，可能联网使用 Zotero recognizer、DOI、ISBN 或 arXiv 查询；这不是 Zotero Web API 写库，也不需要 Zotero API key。
 - 对 linked files，提醒用户移动原始文件路径会导致附件失效。
 

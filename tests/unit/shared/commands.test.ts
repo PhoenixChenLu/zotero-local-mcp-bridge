@@ -46,6 +46,7 @@ describe("shared command definitions", () => {
       "attachment.getForItem",
       "attachment.addFile",
       "pdf.addAndRecognize",
+      "pdf.addAndRecognizeBatch",
       "attachment.recognizeMetadata",
       "attachment.moveToItem",
       "attachment.rename",
@@ -86,6 +87,7 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("collection.create")).toBe(true);
     expect(isWriteCommand("attachment.addFile")).toBe(true);
     expect(isWriteCommand("pdf.addAndRecognize")).toBe(true);
+    expect(isWriteCommand("pdf.addAndRecognizeBatch")).toBe(true);
     expect(isWriteCommand("attachment.recognizeMetadata")).toBe(true);
     expect(isWriteCommand("attachment.undoAdded")).toBe(true);
     expect(isWriteCommand("attachment.renamePreferences.set")).toBe(true);

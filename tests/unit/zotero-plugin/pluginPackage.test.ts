@@ -133,6 +133,7 @@ describe.sequential("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "attachment.getForItem"');
     expect(bootstrap).toContain('commandName === "attachment.addFile"');
     expect(bootstrap).toContain('commandName === "pdf.addAndRecognize"');
+    expect(bootstrap).toContain('commandName === "pdf.addAndRecognizeBatch"');
     expect(bootstrap).toContain('commandName === "attachment.recognizeMetadata"');
     expect(bootstrap).toContain('commandName === "attachment.moveToItem"');
     expect(bootstrap).toContain('commandName === "attachment.rename"');
@@ -218,6 +219,12 @@ describe.sequential("Zotero plugin package", () => {
     expect(bootstrap).toContain("Zotero.RecognizeDocument.recognizeItems");
     expect(bootstrap).toContain("Zotero.RecognizeDocument.canRecognize");
     expect(bootstrap).toContain('commandName === "pdf.addAndRecognize"');
+    expect(bootstrap).toContain('commandName === "pdf.addAndRecognizeBatch"');
+    expect(bootstrap).toContain("createPdfAddAndRecognizeBatchDryRun");
+    expect(bootstrap).toContain("executePdfAddAndRecognizeBatch");
+    expect(bootstrap).toContain("normalizePdfAddAndRecognizeBatchInput");
+    expect(bootstrap).toContain('"pdf.addAndRecognizeBatch"');
+    expect(bootstrap).toContain('"filePaths"');
     expect(bootstrap).toContain('commandName === "attachment.recognizeMetadata"');
     expect(bootstrap).toContain("Zotero.Items.trashTx");
     expect(bootstrap).toContain("Zotero.Duplicates");

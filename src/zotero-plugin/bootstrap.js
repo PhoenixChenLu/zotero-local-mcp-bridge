@@ -67,6 +67,7 @@ var ZoteroLocalMcpBridgeProfileWriteCommands = {
   "note.createChild": true,
   "attachment.addFile": true,
   "pdf.addAndRecognize": true,
+  "pdf.addAndRecognizeBatch": true,
   "attachment.recognizeMetadata": true,
   "attachment.moveToItem": true,
   "attachment.rename": true,
@@ -103,6 +104,7 @@ var ZoteroLocalMcpBridgeWriteCommands = {
   "note.createChild": true,
   "attachment.addFile": true,
   "pdf.addAndRecognize": true,
+  "pdf.addAndRecognizeBatch": true,
   "attachment.recognizeMetadata": true,
   "attachment.moveToItem": true,
   "attachment.rename": true,
@@ -151,6 +153,7 @@ var ZoteroLocalMcpBridgeCommandNames = [
   "attachment.getForItem",
   "attachment.addFile",
   "pdf.addAndRecognize",
+  "pdf.addAndRecognizeBatch",
   "attachment.recognizeMetadata",
   "attachment.moveToItem",
   "attachment.rename",
@@ -350,6 +353,11 @@ var ZoteroLocalMcpBridgeMcpCommandMetadata = {
     fields: ["filePath", "attachmentMode", "collectionKeys"],
     required: ["filePath"],
     description: "Import a PDF or EPUB and run Zotero's built-in metadata recognition to create the parent item when possible."
+  },
+  "pdf.addAndRecognizeBatch": {
+    fields: ["filePaths", "attachmentMode", "collectionKeys"],
+    required: ["filePaths"],
+    description: "Import multiple PDF or EPUB files and run Zotero's built-in metadata recognition for each file with one dry-run and one execute. Batch size is limited to 50 files."
   },
   "attachment.recognizeMetadata": {
     fields: ["attachmentKey"],
@@ -788,7 +796,7 @@ function createMcpFieldSchema(fieldName, commandName) {
       description: "Zotero key or bridge backup id for the target object."
     };
   }
-  if (fieldName === "zoteroItemKeys" || fieldName === "duplicateZoteroItemKeys" || fieldName === "attachmentKeys" || fieldName === "collectionKeys" || fieldName === "addTags" || fieldName === "removeTags" || fieldName === "tags") {
+  if (fieldName === "zoteroItemKeys" || fieldName === "duplicateZoteroItemKeys" || fieldName === "attachmentKeys" || fieldName === "collectionKeys" || fieldName === "filePaths" || fieldName === "addTags" || fieldName === "removeTags" || fieldName === "tags") {
     return {
       type: "array",
       items: { type: "string" },
@@ -1833,6 +1841,34 @@ async function handleCommandEndpointRequest(req) {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "PDF_ADD_AND_RECOGNIZE_FAILED",
             message: error.message || "Failed to add and recognize Zotero PDF"
+          });
+        }
+      }
+
+      if (commandName === "pdf.addAndRecognizeBatch") {
+        try {
+          if (payload.mode === "execute") {
+            var recognizedPdfBatch = await executePdfAddAndRecognizeBatch(payload.input || {}, payload.confirmation);
+            return jsonCommandResponse(
+              200,
+              commandName,
+              requestId,
+              recognizedPdfBatch,
+              undefined,
+              {
+                zoteroItemKeys: recognizedPdfBatch.parentZoteroItemKeys || [],
+                collectionKeys: recognizedPdfBatch.collectionKeys || [],
+                attachmentKeys: recognizedPdfBatch.attachmentKeys || []
+              },
+              payload.confirmation.planId
+            );
+          }
+
+          return jsonCommandResponse(200, commandName, requestId, await createPdfAddAndRecognizeBatchDryRun(payload.input || {}));
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "PDF_ADD_AND_RECOGNIZE_BATCH_FAILED",
+            message: error.message || "Failed to add and recognize Zotero PDF batch"
           });
         }
       }
@@ -4509,6 +4545,105 @@ async function executePdfAddAndRecognize(input, confirmation) {
   });
 }
 
+async function createPdfAddAndRecognizeBatchDryRun(input) {
+  var normalized = await normalizePdfAddAndRecognizeBatchInput(input);
+  var warnings = [{
+    code: "ZOTERO_RECOGNIZER_NETWORK",
+    message: "Zotero metadata recognition may send the first pages of PDF text to Zotero's recognizer service and may use Zotero translators for DOI, ISBN, or arXiv lookups"
+  }];
+  if (normalized.attachmentMode === "linked") {
+    warnings.push({
+      code: "LINKED_FILE_PATH_RISK",
+      message: "Linked files remain outside Zotero storage; moving, renaming, or deleting the source file will break the attachment"
+    });
+  }
+
+  return createWriteDryRunPlan(
+    "pdf.addAndRecognizeBatch",
+    stripRuntimeFields(normalized),
+    {
+      zoteroItemKeys: [],
+      collectionKeys: normalized.collectionKeys,
+      attachmentKeys: [],
+      filePaths: normalized.filePaths,
+      tags: []
+    },
+    warnings,
+    undefined,
+    {
+      action: "add-standalone-and-recognize-batch",
+      count: normalized.files.length,
+      files: normalized.files.map(function (file) {
+        return {
+          filePath: file.filePath,
+          filename: file.filename
+        };
+      }),
+      attachmentMode: normalized.attachmentMode,
+      collectionKeys: normalized.collectionKeys
+    },
+    "low"
+  );
+}
+
+async function executePdfAddAndRecognizeBatch(input, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var normalized = await normalizePdfAddAndRecognizeBatchInput(input);
+  validateStoredConfirmation(stripRuntimeFields(normalized), confirmation);
+
+  var results = [];
+  var errors = [];
+  var parentZoteroItemKeys = [];
+  var attachmentKeys = [];
+  for (var i = 0; i < normalized.files.length; i += 1) {
+    var file = normalized.files[i];
+    try {
+      var attachment = await createStandaloneRecognizableAttachment({
+        filePath: file.filePath,
+        filename: file.filename,
+        attachmentMode: normalized.attachmentMode,
+        collectionKeys: normalized.collectionKeys
+      });
+      var recognized = await executeRecognizeStandaloneAttachment(attachment, "pdf.addAndRecognizeBatch", {
+        filePath: file.filePath,
+        filename: file.filename,
+        attachmentMode: normalized.attachmentMode,
+        collectionKeys: normalized.collectionKeys,
+        batchIndex: i
+      });
+      results.push(recognized);
+      if (recognized.parentZoteroItemKey) {
+        parentZoteroItemKeys.push(recognized.parentZoteroItemKey);
+      }
+      if (recognized.attachmentKey) {
+        attachmentKeys.push(recognized.attachmentKey);
+      }
+    } catch (error) {
+      errors.push({
+        index: i,
+        filePath: file.filePath,
+        filename: file.filename,
+        code: error && error.code ? error.code : "PDF_BATCH_ITEM_FAILED",
+        message: error && error.message ? error.message : "Failed to import and recognize this file"
+      });
+    }
+  }
+
+  return {
+    operation: "pdf.addAndRecognizeBatch",
+    requestedCount: normalized.files.length,
+    successCount: results.length,
+    errorCount: errors.length,
+    recognizedCount: results.filter(function (result) { return result.recognized === true; }).length,
+    noMatchCount: results.filter(function (result) { return result.recognized === false; }).length,
+    parentZoteroItemKeys: uniqueStrings(parentZoteroItemKeys),
+    attachmentKeys: uniqueStrings(attachmentKeys),
+    collectionKeys: normalized.collectionKeys,
+    results: results,
+    errors: errors
+  };
+}
+
 async function createAttachmentRecognizeMetadataDryRun(input) {
   var normalized = await normalizeAttachmentRecognizeMetadataInput(input);
   return createWriteDryRunPlan(
@@ -5332,6 +5467,60 @@ async function normalizePdfAddAndRecognizeInput(input) {
   return {
     filePath: filePath,
     filename: filename,
+    attachmentMode: attachmentMode,
+    collectionKeys: collectionKeys
+  };
+}
+
+async function normalizePdfAddAndRecognizeBatchInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "pdf.addAndRecognizeBatch input must be an object", 400);
+  }
+
+  if (!Array.isArray(input.filePaths)) {
+    throw commandError("PDF_FILE_PATHS_REQUIRED", "pdf.addAndRecognizeBatch requires filePaths array", 400);
+  }
+  if (input.filePaths.length === 0) {
+    throw commandError("PDF_FILE_PATHS_REQUIRED", "pdf.addAndRecognizeBatch requires at least one filePath", 400);
+  }
+  if (input.filePaths.length > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", "pdf.addAndRecognizeBatch file count exceeds limit 50", 400);
+  }
+
+  var attachmentMode = input.attachmentMode || "copy";
+  if (attachmentMode !== "copy" && attachmentMode !== "linked") {
+    throw commandError("ATTACHMENT_MODE_INVALID", "attachmentMode must be copy or linked", 400);
+  }
+
+  var files = [];
+  var seen = {};
+  for (var i = 0; i < input.filePaths.length; i += 1) {
+    if (typeof input.filePaths[i] !== "string" || input.filePaths[i].trim().length === 0) {
+      throw commandError("PDF_FILE_PATH_INVALID", "Each pdf.addAndRecognizeBatch filePath must be a non-empty string", 400);
+    }
+    var filePath = normalizeFilePath(input.filePaths[i]);
+    if (seen[filePath]) {
+      continue;
+    }
+    seen[filePath] = true;
+    var filename = pathFilename(filePath);
+    validateRecognizableDocumentExtension(filename);
+    if (!(await fileExists(filePath))) {
+      throw commandError("PDF_FILE_NOT_FOUND", "Recognizable document source file was not found: " + filePath, 404);
+    }
+    files.push({
+      filePath: filePath,
+      filename: filename
+    });
+  }
+  if (files.length === 0) {
+    throw commandError("PDF_FILE_PATHS_REQUIRED", "pdf.addAndRecognizeBatch requires at least one unique filePath", 400);
+  }
+
+  var collectionKeys = normalizeCollectionKeyArray(input.collectionKeys || [], "collectionKeys");
+  return {
+    filePaths: files.map(function (file) { return file.filePath; }),
+    files: files,
     attachmentMode: attachmentMode,
     collectionKeys: collectionKeys
   };

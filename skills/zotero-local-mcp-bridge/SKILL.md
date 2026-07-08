@@ -50,6 +50,7 @@ Examples:
 - `item.search` -> `zotero_item_search`
 - `attachment.addFile` -> `zotero_attachment_add_file`
 - `pdf.addAndRecognize` -> `zotero_pdf_add_and_recognize`
+- `pdf.addAndRecognizeBatch` -> `zotero_pdf_add_and_recognize_batch`
 - `attachment.recognizeMetadata` -> `zotero_attachment_recognize_metadata`
 - `backup.snapshot.list` -> `zotero_backup_snapshot_list`
 
@@ -130,6 +131,7 @@ Use this table as the first reference for operation format. `R` means read-only.
 | `attachment.getForItem` | `zotero_attachment_get_for_item` | R | `zoteroItemKey` |
 | `attachment.addFile` | `zotero_attachment_add_file` | W | `zoteroItemKey`, `filePath`, `attachmentMode` |
 | `pdf.addAndRecognize` | `zotero_pdf_add_and_recognize` | W | `filePath`, `attachmentMode`, `collectionKeys` |
+| `pdf.addAndRecognizeBatch` | `zotero_pdf_add_and_recognize_batch` | W | `filePaths`, `attachmentMode`, `collectionKeys` |
 | `attachment.recognizeMetadata` | `zotero_attachment_recognize_metadata` | W | `attachmentKey` |
 | `attachment.moveToItem` | `zotero_attachment_move_to_item` | W | `attachmentKey`, `targetZoteroItemKey` |
 | `attachment.rename` | `zotero_attachment_rename` | W | `attachmentKey`, `title`, `renameFile` |
@@ -324,7 +326,9 @@ Before attachment writes:
 - Confirm the file path exists if the MCP client can inspect local files.
 - Prefer the configured default attachment mode unless the user explicitly chooses copy or linked file.
 - Preserve dry-run and confirmation for add, move, rename, and Zotero auto-rename.
-- For PDF/EPUB auto-recognition, prefer `pdf.addAndRecognize` to import the file and let Zotero create the parent item; for an existing standalone PDF/EPUB, use `attachment.recognizeMetadata`.
+- For single PDF/EPUB auto-recognition, use `pdf.addAndRecognize` to import the file and let Zotero create the parent item.
+- For multiple PDF/EPUB files, prefer `pdf.addAndRecognizeBatch` so the agent performs one dry-run, one approval, and one execute. Do not loop over `pdf.addAndRecognize` for each file unless the batch tool is unavailable or the user explicitly wants per-file confirmation.
+- For an existing standalone PDF/EPUB, use `attachment.recognizeMetadata`.
 - PDF/EPUB auto-recognition uses Zotero's built-in `RecognizeDocument` flow and may access the Zotero recognizer, DOI, ISBN, or arXiv lookup services. This is not Zotero Web API library writing and does not require a Zotero API key.
 - For linked files, warn that moving the original file path can break the attachment.
 
