@@ -328,6 +328,7 @@ function createMatrixCases(f) {
     read("collection.getItems", "zotero_collection_get_items", { collectionKey: f.collection }),
     read("item.get", "zotero_item_get", { zoteroItemKey: f.itemA }),
     read("item.search", "zotero_item_search", { query: "Zotero Local MCP Bridge", itemType: "document", limit: 10 }),
+    read("item.findByDois", "zotero_item_find_by_dois", { dois: ["https://doi.org/10.0000/zotero-local-mcp-bridge-matrix-not-found"] }),
     read("search.advanced", "zotero_search_advanced", {
       conditions: [{ condition: "title", operator: "contains", value: "Zotero" }],
       joinMode: "all",

@@ -20,6 +20,7 @@ describe("shared command definitions", () => {
       "collection.removeItems",
       "item.get",
       "item.search",
+      "item.findByDois",
       "search.advanced",
       "savedSearch.list",
       "savedSearch.get",
@@ -71,6 +72,7 @@ describe("shared command definitions", () => {
     expect(isWriteCommand("collection.getTree")).toBe(false);
     expect(isWriteCommand("item.get")).toBe(false);
     expect(isWriteCommand("item.search")).toBe(false);
+    expect(isWriteCommand("item.findByDois")).toBe(false);
     expect(isWriteCommand("search.advanced")).toBe(false);
     expect(isWriteCommand("savedSearch.list")).toBe(false);
     expect(isWriteCommand("savedSearch.get")).toBe(false);

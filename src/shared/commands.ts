@@ -12,6 +12,7 @@ export type CommandName =
   | "collection.removeItems"
   | "item.get"
   | "item.search"
+  | "item.findByDois"
   | "search.advanced"
   | "savedSearch.list"
   | "savedSearch.get"
@@ -75,6 +76,7 @@ export const COMMAND_DEFINITIONS = [
   { name: "collection.removeItems", write: true, profileWrite: true, inputFields: ["collectionKey", "zoteroItemKeys"] },
   { name: "item.get", write: false, inputFields: ["zoteroItemKey"] },
   { name: "item.search", write: false, inputFields: ["query", "itemType", "collectionKey", "tag", "limit"] },
+  { name: "item.findByDois", write: false, inputFields: ["dois"] },
   { name: "search.advanced", write: false, inputFields: ["conditions", "joinMode", "includeChildren", "includeDeleted", "limit"] },
   { name: "savedSearch.list", write: false, inputFields: [] },
   { name: "savedSearch.get", write: false, inputFields: ["savedSearchKey"] },

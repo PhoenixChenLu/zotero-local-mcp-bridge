@@ -105,6 +105,7 @@ describe.sequential("Zotero plugin package", () => {
     expect(bootstrap).toContain('commandName === "collection.trash"');
     expect(bootstrap).toContain('commandName === "item.get"');
     expect(bootstrap).toContain('commandName === "item.search"');
+    expect(bootstrap).toContain('commandName === "item.findByDois"');
     expect(bootstrap).toContain('commandName === "search.advanced"');
     expect(bootstrap).toContain('commandName === "savedSearch.list"');
     expect(bootstrap).toContain('commandName === "savedSearch.get"');
@@ -181,6 +182,13 @@ describe.sequential("Zotero plugin package", () => {
     expect(bootstrap).toContain("BACKUP_SNAPSHOT_PRUNE_PATH_INVALID");
     expect(bootstrap).toContain("readItemDetails");
     expect(bootstrap).toContain("searchItems");
+    expect(bootstrap).toContain("findItemsByDois");
+    expect(bootstrap).toContain("normalizeDoiLookupInput");
+    expect(bootstrap).toContain("normalizeDoiValue");
+    expect(bootstrap).toContain('fields: ["dois"]');
+    expect(bootstrap).toContain('fieldName === "dois"');
+    expect(bootstrap).toContain("matchedItemKeys");
+    expect(bootstrap).toContain("unmatchedDois");
     expect(bootstrap).toContain("runAdvancedSearch");
     expect(bootstrap).toContain("new Zotero.Search()");
     expect(bootstrap).toContain("Zotero.Searches.getByLibraryAndKey");

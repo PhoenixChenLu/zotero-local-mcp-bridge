@@ -32,7 +32,7 @@ Zotero Local MCP Bridge lets MCP-capable agents manage a local Zotero library th
 
 | Area | Capability |
 |---|---|
-| 📚 Items and collections | Read, search, create, and edit items; manage fields, creators, tags, notes, collections, and collection membership |
+| 📚 Items and collections | Read, search, create, and edit items; batch-check whether DOI records already exist; batch-manage membership in top-level collections or subcollections |
 | 📎 Attachments | Add, move, rename, and inspect attachments; import single or multiple PDF/EPUB files and call Zotero's built-in metadata recognition and attachment rename logic |
 | 📝 Annotations and citations | Read, create, and update supported PDF annotations; format citations and bibliographies through Zotero |
 | 🔁 Import and export | Import and export BibTeX, RIS, and CSL JSON |
@@ -228,6 +228,8 @@ Tell the agent to use Zotero through Zotero Local MCP Bridge. When approval is r
 | Ask the agent to | Expected behavior |
 |---|---|
 | List my Zotero collection tree | Read-only query, no write confirmation |
+| Check which DOI values already exist in my library | Run one batch lookup and return matching items, reusable item keys, and unmatched DOI values |
+| Add these existing items to "Current Project / Reading Queue" | Use one dry-run, one approval when required, and one batch write while skipping existing members |
 | Create a "Reading Queue" subcollection under "Current Project" | Dry-run first, then ask for approval |
 | Add this PDF attachment to this item | Resolve the item and file path, then dry-run the attachment operation |
 | Import this PDF and retrieve metadata automatically | Dry-run first, then use Zotero's built-in recognition flow to create the parent item and rename the attachment according to preferences |

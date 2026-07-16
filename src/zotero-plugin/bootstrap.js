@@ -127,6 +127,7 @@ var ZoteroLocalMcpBridgeCommandNames = [
   "collection.removeItems",
   "item.get",
   "item.search",
+  "item.findByDois",
   "search.advanced",
   "savedSearch.list",
   "savedSearch.get",
@@ -202,7 +203,7 @@ var ZoteroLocalMcpBridgeMcpCommandMetadata = {
   "collection.addItems": {
     fields: ["collectionKey", "zoteroItemKeys"],
     required: ["collectionKey", "zoteroItemKeys"],
-    description: "Add existing Zotero items to a collection."
+    description: "Batch-add up to 50 existing Zotero items to a collection or subcollection. Already-present items are skipped. Pass matchedItemKeys from item.findByDois as zoteroItemKeys when adding DOI matches."
   },
   "collection.removeItems": {
     fields: ["collectionKey", "zoteroItemKeys"],
@@ -223,6 +224,11 @@ var ZoteroLocalMcpBridgeMcpCommandMetadata = {
     fields: ["query", "itemType", "collectionKey", "tag", "limit"],
     required: [],
     description: "Search local Zotero items by text, item type, collection, or tag."
+  },
+  "item.findByDois": {
+    fields: ["dois"],
+    required: ["dois"],
+    description: "Batch-check up to 50 DOI values against regular items in the local Zotero user library. Normalizes DOI URLs, doi: prefixes, whitespace, and case; returns every matching item, matchedItemKeys for collection.addItems, and unmatchedDois."
   },
   "item.create": {
     fields: ["libraryScope", "itemType", "fields", "creators", "collectionKeys", "tags"],
@@ -796,11 +802,13 @@ function createMcpFieldSchema(fieldName, commandName) {
       description: "Zotero key or bridge backup id for the target object."
     };
   }
-  if (fieldName === "zoteroItemKeys" || fieldName === "duplicateZoteroItemKeys" || fieldName === "attachmentKeys" || fieldName === "collectionKeys" || fieldName === "filePaths" || fieldName === "addTags" || fieldName === "removeTags" || fieldName === "tags") {
+  if (fieldName === "zoteroItemKeys" || fieldName === "duplicateZoteroItemKeys" || fieldName === "attachmentKeys" || fieldName === "collectionKeys" || fieldName === "filePaths" || fieldName === "dois" || fieldName === "addTags" || fieldName === "removeTags" || fieldName === "tags") {
     return {
       type: "array",
       items: { type: "string" },
-      description: "String array. Batch writes are limited to 50 related objects."
+      description: fieldName === "dois"
+        ? "DOI string array, limited to 50 values. Accepts bare DOI values, doi: prefixes, and doi.org URLs."
+        : "String array. Batch writes are limited to 50 related objects."
     };
   }
   if (fieldName === "fields") {
@@ -942,7 +950,8 @@ function createMcpCommandCatalog() {
       reads: "Read tools can be called directly.",
       writes: "Write tools must be called with mode=dry-run first, then mode=execute with the returned confirmation.planId and confirmation.confirmationToken and unchanged input.",
       libraryScope: "Use libraryScope=local-user. Legacy user is normalized to local-user, but new callers should not send user.",
-      metadataUpdate: "Use zotero_item_update_fields to update item metadata fields, and zotero_item_update_creators to update creators."
+      metadataUpdate: "Use zotero_item_update_fields to update item metadata fields, and zotero_item_update_creators to update creators.",
+      doiWorkflow: "Use zotero_item_find_by_dois for batch DOI existence checks, then pass matchedItemKeys to zotero_collection_add_items for one dry-run and one execute."
     },
     commands: ZoteroLocalMcpBridgeCommandNames.map(function (commandName) {
       var metadata = getMcpCommandMetadata(commandName);
@@ -1303,6 +1312,25 @@ async function handleCommandEndpointRequest(req) {
           return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
             code: error.code || "ITEM_SEARCH_FAILED",
             message: error.message || "Failed to search Zotero items"
+          });
+        }
+      }
+
+      if (commandName === "item.findByDois") {
+        try {
+          var doiLookup = await findItemsByDois(payload.input || {});
+          return jsonCommandResponse(
+            200,
+            commandName,
+            requestId,
+            doiLookup,
+            undefined,
+            { zoteroItemKeys: doiLookup.matchedItemKeys }
+          );
+        } catch (error) {
+          return jsonCommandResponse(error.status || 400, commandName, requestId, undefined, {
+            code: error.code || "ITEM_DOI_LOOKUP_FAILED",
+            message: error.message || "Failed to find Zotero items by DOI"
           });
         }
       }
@@ -2651,6 +2679,95 @@ async function searchItems(input) {
     limit: normalized.limit,
     items: results
   };
+}
+
+async function findItemsByDois(input) {
+  var normalized = normalizeDoiLookupInput(input);
+  var requested = {};
+  normalized.dois.forEach(function (doi) {
+    requested[doi] = [];
+  });
+
+  var allItems = await Zotero.Items.getAll(Zotero.Libraries.userLibraryID, true, false, false);
+  for (var i = 0; i < allItems.length; i += 1) {
+    var item = allItems[i];
+    if (!item || !item.isRegularItem || !item.isRegularItem()) {
+      continue;
+    }
+
+    var itemDoi = normalizeDoiValue(item.getField ? item.getField("DOI") : undefined);
+    if (itemDoi && requested[itemDoi]) {
+      requested[itemDoi].push(readItemDetails({ zoteroItemKey: item.key }));
+    }
+  }
+
+  var matches = [];
+  var matchedItems = [];
+  var matchedItemKeys = [];
+  var unmatchedDois = [];
+  normalized.dois.forEach(function (doi) {
+    var items = requested[doi];
+    if (items.length === 0) {
+      unmatchedDois.push(doi);
+      return;
+    }
+
+    matches.push({ doi: doi, items: items });
+    items.forEach(function (item) {
+      if (matchedItemKeys.indexOf(item.zoteroItemKey) === -1) {
+        matchedItemKeys.push(item.zoteroItemKey);
+        matchedItems.push(item);
+      }
+    });
+  });
+
+  return {
+    requestedCount: normalized.requestedCount,
+    uniqueDoiCount: normalized.dois.length,
+    matchedDoiCount: matches.length,
+    unmatchedDoiCount: unmatchedDois.length,
+    matches: matches,
+    matchedItems: matchedItems,
+    matchedItemKeys: matchedItemKeys,
+    unmatchedDois: unmatchedDois
+  };
+}
+
+function normalizeDoiLookupInput(input) {
+  if (!input || typeof input !== "object") {
+    throw commandError("COMMAND_INPUT_INVALID", "item.findByDois input must be an object", 400);
+  }
+  if (!Array.isArray(input.dois) || input.dois.length === 0) {
+    throw commandError("DOIS_REQUIRED", "item.findByDois requires a non-empty dois array", 400);
+  }
+  if (input.dois.length > 50) {
+    throw commandError("BATCH_LIMIT_EXCEEDED", "Batch size " + input.dois.length + " exceeds limit 50", 400);
+  }
+
+  var dois = [];
+  input.dois.forEach(function (value, index) {
+    var doi = normalizeDoiValue(value);
+    if (!doi || !/^10\.\d{4,9}\/.+/.test(doi)) {
+      throw commandError("DOI_INVALID", "dois[" + index + "] is not a valid DOI", 400);
+    }
+    if (dois.indexOf(doi) === -1) {
+      dois.push(doi);
+    }
+  });
+
+  return { requestedCount: input.dois.length, dois: dois };
+}
+
+function normalizeDoiValue(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value
+    .trim()
+    .replace(/^doi\s*:\s*/i, "")
+    .replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, "")
+    .trim()
+    .toLowerCase();
 }
 
 function normalizeItemSearchInput(input) {

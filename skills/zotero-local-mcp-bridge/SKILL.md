@@ -48,6 +48,7 @@ Examples:
 - `command.catalog` -> `zotero_command_catalog`
 - `collection.getTree` -> `zotero_collection_get_tree`
 - `item.search` -> `zotero_item_search`
+- `item.findByDois` -> `zotero_item_find_by_dois`
 - `attachment.addFile` -> `zotero_attachment_add_file`
 - `pdf.addAndRecognize` -> `zotero_pdf_add_and_recognize`
 - `pdf.addAndRecognizeBatch` -> `zotero_pdf_add_and_recognize_batch`
@@ -105,6 +106,7 @@ Use this table as the first reference for operation format. `R` means read-only.
 | `collection.trash` | `zotero_collection_trash` | W | `collectionKey`, `trashDescendentItems` |
 | `item.get` | `zotero_item_get` | R | `zoteroItemKey` |
 | `item.search` | `zotero_item_search` | R | `query`, `itemType`, `collectionKey`, `tag`, `limit` |
+| `item.findByDois` | `zotero_item_find_by_dois` | R | `dois` |
 | `item.create` | `zotero_item_create` | W | `libraryScope`, `itemType`, `fields`, `creators`, `collectionKeys`, `tags` |
 | `item.updateFields` | `zotero_item_update_fields` | W | `zoteroItemKey`, `fields` |
 | `item.updateCreators` | `zotero_item_update_creators` | W | `zoteroItemKey`, `creators` |
@@ -157,7 +159,7 @@ Useful read groups:
 
 - Capability catalog: `command.catalog`
 - Collections: `collection.getTree`, `collection.getItems`
-- Items: `item.get`, `item.search`, `search.advanced`
+- Items: `item.get`, `item.search`, `item.findByDois`, `search.advanced`
 - Saved searches: `savedSearch.list`, `savedSearch.get`
 - Citations and exports: `citation.format`, `export.bibtex`, `export.ris`, `export.cslJson`
 - Annotations: `annotation.list`
@@ -165,6 +167,10 @@ Useful read groups:
 - Preferences and history: `attachment.renamePreferences.get`, `backup.settings.get`, `backup.snapshot.list`, `audit.list`, `duplicates.find`
 
 When a user names a title, collection, tag, or file loosely, first resolve it to Zotero keys with read tools. Do not guess keys.
+
+For a batch DOI existence check, use `item.findByDois` / `zotero_item_find_by_dois` with at most 50 DOI values. Bare DOI values, `doi:` prefixes, and `doi.org` URLs are accepted; whitespace, prefixes, and case are normalized. `matches` groups all matching records by DOI, `matchedItems` contains the deduplicated full item records, `matchedItemKeys` is ready for a follow-up batch write, and `unmatchedDois` contains the normalized misses.
+
+To add DOI matches to a collection or subcollection, do not write one item at a time. Pass `matchedItemKeys` as `zoteroItemKeys` to `collection.addItems` / `zotero_collection_add_items`, with the target top-level collection or subcollection key as `collectionKey`. Use one dry-run, one approval when required, and one execute for the whole batch. Items already in the target collection are skipped.
 
 To update item metadata, use `item.updateFields` / `zotero_item_update_fields` and put Zotero fields in the `fields` object, for example `title`, `date`, `DOI`, `url`, `abstractNote`, `publicationTitle`, `publisher`, `volume`, `issue`, `pages`, `language`, `extra`. To update creators, use `item.updateCreators` / `zotero_item_update_creators`.
 

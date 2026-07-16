@@ -48,6 +48,7 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 - `command.catalog` -> `zotero_command_catalog`
 - `collection.getTree` -> `zotero_collection_get_tree`
 - `item.search` -> `zotero_item_search`
+- `item.findByDois` -> `zotero_item_find_by_dois`
 - `attachment.addFile` -> `zotero_attachment_add_file`
 - `pdf.addAndRecognize` -> `zotero_pdf_add_and_recognize`
 - `pdf.addAndRecognizeBatch` -> `zotero_pdf_add_and_recognize_batch`
@@ -105,6 +106,7 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 | `collection.trash` | `zotero_collection_trash` | W | `collectionKey`, `trashDescendentItems` |
 | `item.get` | `zotero_item_get` | R | `zoteroItemKey` |
 | `item.search` | `zotero_item_search` | R | `query`, `itemType`, `collectionKey`, `tag`, `limit` |
+| `item.findByDois` | `zotero_item_find_by_dois` | R | `dois` |
 | `item.create` | `zotero_item_create` | W | `libraryScope`, `itemType`, `fields`, `creators`, `collectionKeys`, `tags` |
 | `item.updateFields` | `zotero_item_update_fields` | W | `zoteroItemKey`, `fields` |
 | `item.updateCreators` | `zotero_item_update_creators` | W | `zoteroItemKey`, `creators` |
@@ -157,7 +159,7 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 
 - 能力目录：`command.catalog`
 - 分类：`collection.getTree`、`collection.getItems`
-- 条目：`item.get`、`item.search`、`search.advanced`
+- 条目：`item.get`、`item.search`、`item.findByDois`、`search.advanced`
 - 保存搜索：`savedSearch.list`、`savedSearch.get`
 - 引用和导出：`citation.format`、`export.bibtex`、`export.ris`、`export.cslJson`
 - 标注：`annotation.list`
@@ -165,6 +167,10 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 - 偏好和历史：`attachment.renamePreferences.get`、`backup.settings.get`、`backup.snapshot.list`、`audit.list`、`duplicates.find`
 
 当用户用标题、分类、标签或文件的模糊名称描述目标时，先用读取工具解析为 Zotero key。不要猜测 key。
+
+批量检查 DOI 是否已经存在于本地文库时，使用 `item.findByDois` / `zotero_item_find_by_dois`，一次最多传入 50 个 DOI。可以传裸 DOI、带 `doi:` 前缀的值或 `doi.org` URL；工具会统一处理空白、前缀和大小写。结果中的 `matches` 按 DOI 列出所有命中条目，`matchedItems` 是去重后的完整条目列表，`matchedItemKeys` 可直接用于后续批量写入，`unmatchedDois` 是未命中的规范化 DOI。
+
+把 DOI 命中的条目批量加入指定分类或子分类时，不要逐条执行。将 `matchedItemKeys` 作为 `zoteroItemKeys` 传给 `collection.addItems` / `zotero_collection_add_items`，并把目标顶层分类或子分类的 key 作为 `collectionKey`。整个批次只进行一次 dry-run、一次必要的批准和一次 execute；已经位于目标分类中的条目会被跳过。
 
 如果需要修改条目元数据，使用 `item.updateFields` / `zotero_item_update_fields`，字段放在 `fields` 对象里，例如 `title`、`date`、`DOI`、`url`、`abstractNote`、`publicationTitle`、`publisher`、`volume`、`issue`、`pages`、`language`、`extra`。修改作者列表使用 `item.updateCreators` / `zotero_item_update_creators`。
 
