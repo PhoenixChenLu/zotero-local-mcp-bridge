@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Zotero Local MCP Bridge",
-  "version": "0.1.58",
+  "version": "0.1.59",
   "description": "Local command bridge for controlled Zotero management through MCP clients.",
   "homepage_url": "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge",
   "applications": {

@@ -6,7 +6,7 @@ Use a Zotero plugin-hosted MCP endpoint to let local agents manage a local Zoter
 
 <p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg"></a>
-  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.58-4c78a8.svg"></a>
+  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.59-4c78a8.svg"></a>
   <a href="https://www.zotero.org/"><img alt="Zotero" src="https://img.shields.io/badge/Zotero-9.x-cc2936.svg"></a>
   <a href="#how-it-works"><img alt="MCP" src="https://img.shields.io/badge/MCP-plugin--hosted-2e7d32.svg"></a>
   <a href="#scope"><img alt="Local First" src="https://img.shields.io/badge/local--first-loopback--only-2e7d32.svg"></a>
@@ -16,7 +16,7 @@ Use a Zotero plugin-hosted MCP endpoint to let local agents manage a local Zoter
   <a href="skills/zotero-local-mcp-bridge/SKILL.md"><img alt="Claude Code ready" src="https://img.shields.io/badge/Claude%20Code-ready-111827.svg"></a>
 </p>
 
-AGPL-3.0-or-later · Plugin version 0.1.58 · Zotero 9.x · Plugin-hosted MCP · Local loopback access
+AGPL-3.0-or-later · Plugin version 0.1.59 · Zotero 9.x · Plugin-hosted MCP · Local loopback access
 
 [简体中文](README.zh-CN.md) · **English**
 

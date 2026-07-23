@@ -3,7 +3,7 @@
 
 var ZoteroLocalMcpBridge = {
   id: "zotero-local-mcp-bridge@example.com",
-  version: "0.1.58",
+  version: "0.1.59",
   mcpPath: "/zotero-local-mcp-bridge/mcp",
   authHeader: "x-zotero-local-mcp-bridge-token",
   expectedAuthToken: __ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__,
