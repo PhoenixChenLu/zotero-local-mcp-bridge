@@ -6,7 +6,7 @@ Use a Zotero plugin-hosted MCP endpoint to let local agents manage a local Zoter
 
 <p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg"></a>
-  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.59-4c78a8.svg"></a>
+  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.60-4c78a8.svg"></a>
   <a href="https://www.zotero.org/"><img alt="Zotero" src="https://img.shields.io/badge/Zotero-9.x-cc2936.svg"></a>
   <a href="#how-it-works"><img alt="MCP" src="https://img.shields.io/badge/MCP-plugin--hosted-2e7d32.svg"></a>
   <a href="#scope"><img alt="Local First" src="https://img.shields.io/badge/local--first-loopback--only-2e7d32.svg"></a>
@@ -16,7 +16,7 @@ Use a Zotero plugin-hosted MCP endpoint to let local agents manage a local Zoter
   <a href="skills/zotero-local-mcp-bridge/SKILL.md"><img alt="Claude Code ready" src="https://img.shields.io/badge/Claude%20Code-ready-111827.svg"></a>
 </p>
 
-AGPL-3.0-or-later · Plugin version 0.1.59 · Zotero 9.x · Plugin-hosted MCP · Local loopback access
+AGPL-3.0-or-later · Plugin version 0.1.60 · Zotero 9.x · Plugin-hosted MCP · Local loopback access
 
 [简体中文](README.zh-CN.md) · **English**
 
@@ -114,6 +114,7 @@ Download from [GitHub Releases](https://github.com/PhoenixChenLu/zotero-local-mc
 | File | Purpose |
 |---|---|
 | `zotero-local-mcp-bridge.xpi` | Zotero plugin |
+| `zotero-local-mcp-bridge-<version>.mcpb` | Claude Desktop MCP bundle for macOS and Windows |
 | English skill | For English-speaking agents |
 | Chinese skill | For Chinese-speaking agents |
 
@@ -139,7 +140,7 @@ For first use, start with `readonly` or `askforapprove`. Use `yolo` only after y
 
 ### 4. Connect The MCP Client
 
-There are two ways to connect. Prefer the stdio adapter because most agents support stdio MCP reliably. If your agent supports HTTP MCP directly, you can skip the npm package and connect to the Zotero plugin endpoint.
+Agents can connect through stdio or Streamable HTTP. Claude Desktop users on macOS or Windows can install the packaged MCPB adapter.
 
 #### Option A: stdio MCP
 
@@ -189,6 +190,16 @@ You can also use `npx` without a global install:
 
 The stdio adapter is a compatibility layer started by the agent session. It forwards stdio MCP requests to the Zotero plugin HTTP MCP endpoint. It is not the Zotero plugin itself and does not start with Zotero.
 
+Before editing an agent configuration, verify the installed plugin and MCP endpoint:
+
+```bash
+zotero-local-mcp-bridge-stdio doctor
+```
+
+The one-shot command checks MCP initialization and tool discovery, then prints the detected plugin version, tool count, and ready-to-copy Codex, Claude Code, and OpenCode configurations. It does not modify agent settings.
+
+See the [client compatibility matrix](docs/clients/compatibility.md) for Codex, Claude Code, OpenCode, Claude Desktop, and current ChatGPT limitations.
+
 #### Option B: HTTP MCP
 
 If your agent supports Streamable HTTP / HTTP MCP, you can skip the npm package and connect directly to the Zotero plugin endpoint:
@@ -212,6 +223,10 @@ Claude Code example:
 claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 ```
 
+#### Option C: Claude Desktop MCPB
+
+Install `zotero-local-mcp-bridge-<version>.mcpb` in Claude Desktop on macOS or Windows. The MCPB contains the stdio compatibility adapter, not the Zotero plugin; install the XPI first and keep Zotero open. See [Claude Desktop setup](docs/clients/claude-desktop.md).
+
 ### 5. Install The Matching Skill
 
 | Language | Skill |
@@ -220,6 +235,16 @@ claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/z
 | Chinese | [skills/zotero-local-mcp-bridge-zh-cn/SKILL.md](skills/zotero-local-mcp-bridge-zh-cn/SKILL.md) |
 
 Tell the agent to use Zotero through Zotero Local MCP Bridge. When approval is required, the agent should briefly describe the pending operation and wait for user approval.
+
+### 6. Run The First Read-Only Query
+
+Ask the agent:
+
+```text
+List my Zotero collection tree without making changes.
+```
+
+The agent should call `zotero_collection_get_tree` with `libraryScope=local-user`. This query does not require write approval.
 
 ---
 
@@ -256,6 +281,8 @@ The following operations need approval:
 ```
 
 The user can reply "approve all", or reply "approve 1 and 3, reject 2".
+
+If this project helps your workflow, consider [starring the repository](https://github.com/PhoenixChenLu/zotero-local-mcp-bridge) or opening a focused [issue](https://github.com/PhoenixChenLu/zotero-local-mcp-bridge/issues) with reproducible feedback.
 
 ---
 

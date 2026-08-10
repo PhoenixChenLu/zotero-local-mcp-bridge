@@ -9,7 +9,14 @@ on:
 
 jobs:
   validate:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - macos-latest
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +41,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Build stdio adapter and MCPB
+        run: npm run build:mcp-bundle
 
       - name: Build release XPI
         run: npm run build:zotero-plugin:release

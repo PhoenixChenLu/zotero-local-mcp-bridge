@@ -18,6 +18,12 @@ body:
       description: What should the bridge do?
     validations:
       required: true
+  - type: input
+    id: mcp-client
+    attributes:
+      label: MCP client
+      description: Which agent or desktop client should support this workflow?
+      placeholder: "Codex, Claude Code, OpenCode, Claude Desktop, any MCP client"
   - type: dropdown
     id: risk
     attributes:

@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg"></a>
-  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.59-4c78a8.svg"></a>
+  <a href="src/zotero-plugin/manifest.json"><img alt="Version" src="https://img.shields.io/badge/version-0.1.60-4c78a8.svg"></a>
   <a href="https://www.zotero.org/"><img alt="Zotero" src="https://img.shields.io/badge/Zotero-9.x-cc2936.svg"></a>
   <a href="#工作机制"><img alt="MCP" src="https://img.shields.io/badge/MCP-plugin--hosted-2e7d32.svg"></a>
   <a href="#工作范围"><img alt="Local First" src="https://img.shields.io/badge/local--first-loopback--only-2e7d32.svg"></a>
@@ -16,7 +16,7 @@
   <a href="skills/zotero-local-mcp-bridge-zh-cn/SKILL.md"><img alt="Claude Code ready" src="https://img.shields.io/badge/Claude%20Code-ready-111827.svg"></a>
 </p>
 
-AGPL-3.0-or-later · 插件版本 0.1.59 · Zotero 9.x · 插件内置 MCP · 本地回环访问
+AGPL-3.0-or-later · 插件版本 0.1.60 · Zotero 9.x · 插件内置 MCP · 本地回环访问
 
 **简体中文** · [English](README.md)
 
@@ -114,6 +114,7 @@ http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 | 文件 | 用途 |
 |---|---|
 | `zotero-local-mcp-bridge.xpi` | Zotero 插件 |
+| `zotero-local-mcp-bridge-<version>.mcpb` | 适用于 macOS 和 Windows 的 Claude Desktop MCP 安装包 |
 | 中文 skill | 给中文智能体使用 |
 | 英文 skill | 给英文智能体使用 |
 
@@ -139,7 +140,7 @@ http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 
 ### 4. 连接 MCP 客户端
 
-有两种接入方式。推荐优先使用 stdio adapter，因为大多数智能体都稳定支持 stdio MCP；如果你的智能体原生支持 HTTP MCP，也可以不安装 npm 包，直接连接 Zotero 插件端点。
+智能体可以通过 stdio 或 Streamable HTTP 接入。macOS 或 Windows 上的 Claude Desktop 用户还可以安装已经打包的 MCPB adapter。
 
 #### 方式 A：stdio MCP
 
@@ -189,6 +190,16 @@ tool_timeout_sec = 120
 
 stdio adapter 是兼容层，会在智能体会话中由智能体启动，并把 stdio MCP 请求转发到 Zotero 插件 HTTP MCP endpoint。它不是 Zotero 插件本体，也不会随 Zotero 启动。
 
+编辑智能体配置前，先验证已安装插件和 MCP endpoint：
+
+```bash
+zotero-local-mcp-bridge-stdio doctor
+```
+
+该一次性命令会检查 MCP 初始化和工具发现，然后输出检测到的插件版本、工具数量以及可复制的 Codex、Claude Code 和 OpenCode 配置。它不会修改智能体配置文件。
+
+Codex、Claude Code、OpenCode、Claude Desktop 的接入方式及当前 ChatGPT 限制见[客户端兼容性矩阵](docs/clients/compatibility.md)。
+
 #### 方式 B：HTTP MCP
 
 如果你的智能体支持 Streamable HTTP / HTTP MCP，可以不安装 npm 包，直接连接 Zotero 插件端点：
@@ -212,6 +223,10 @@ Claude Code 示例：
 claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp
 ```
 
+#### 方式 C：Claude Desktop MCPB
+
+在 macOS 或 Windows 的 Claude Desktop 中安装 `zotero-local-mcp-bridge-<version>.mcpb`。MCPB 只包含 stdio 兼容层，不包含 Zotero 插件；需要先安装 XPI，并在使用期间保持 Zotero 运行。详见 [Claude Desktop 接入说明](docs/clients/claude-desktop.md)。
+
 ### 5. 安装对应 skill
 
 | 语言 | skill |
@@ -220,6 +235,16 @@ claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/z
 | English | [skills/zotero-local-mcp-bridge/SKILL.md](skills/zotero-local-mcp-bridge/SKILL.md) |
 
 告诉智能体通过 Zotero Local MCP Bridge 使用 Zotero。需要批准时，智能体应只用简短语句说明即将执行的操作，并等待用户批准。
+
+### 6. 执行第一个只读查询
+
+向智能体提出：
+
+```text
+列出我的 Zotero 分类树，不要进行任何修改。
+```
+
+智能体应使用 `libraryScope=local-user` 调用 `zotero_collection_get_tree`。该查询不需要写入批准。
 
 ---
 
@@ -256,6 +281,8 @@ claude mcp add --transport http zotero-local-mcp-bridge http://127.0.0.1:23119/z
 ```
 
 可回复“全部批准执行”，或回复“批准 1 和 3，拒绝 2”。
+
+如果本项目对你的工作有帮助，可以[为仓库添加 Star](https://github.com/PhoenixChenLu/zotero-local-mcp-bridge)，或提交包含可复现信息的[问题反馈](https://github.com/PhoenixChenLu/zotero-local-mcp-bridge/issues)。
 
 ---
 

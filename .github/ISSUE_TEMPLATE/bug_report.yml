@@ -32,16 +32,31 @@ body:
       placeholder: "version number"
     validations:
       required: true
-  - type: dropdown
-    id: profile-type
+  - type: input
+    id: mcp-client
     attributes:
-      label: Profile type
+      label: MCP client
+      description: Name and version of the agent or desktop client.
+      placeholder: "Codex, Claude Code, OpenCode, Claude Desktop"
+    validations:
+      required: true
+  - type: dropdown
+    id: connection-type
+    attributes:
+      label: Connection type
       options:
-        - Clean profile
-        - Real profile
+        - Streamable HTTP
+        - stdio adapter
+        - Claude Desktop MCPB
         - Not sure
     validations:
       required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: doctor result
+      description: Run `zotero-local-mcp-bridge-stdio doctor` while Zotero is open. Remove private paths before posting.
+      render: text
   - type: textarea
     id: steps
     attributes:
@@ -53,5 +68,5 @@ body:
     id: logs
     attributes:
       label: Relevant output
-      description: Remove tokens, private library data, and local private paths before posting.
+      description: Remove tokens, confirmation data, private library data, full local paths, and document content before posting.
       render: text
