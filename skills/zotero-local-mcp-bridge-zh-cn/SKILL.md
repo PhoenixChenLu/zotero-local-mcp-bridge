@@ -1,6 +1,6 @@
 ---
 name: zotero-local-mcp-bridge-zh-cn
-description: 通过 Zotero Local MCP Bridge 安全管理本地 Zotero 文库。适用于智能体需要通过 MCP 工具读取、搜索、创建、更新、导入导出、标注、添加附件、管理分类、条目、标签、笔记、查看审计日志或执行备份、撤销工作流的场景。此技能要求使用插件自带 MCP 工具层，并禁止 Zotero Web API 写入、直接写 zotero.sqlite、任意 Zotero JavaScript eval 和直接调用插件私有命令 HTTP 接口。
+description: 通过 Zotero Local MCP Bridge 安全管理本地 Zotero 文库。适用于智能体需要通过 MCP 工具读取、搜索、创建、更新、导入导出、标注、添加附件、管理分类、条目、标签、笔记、组织文献综述、查看审计日志或执行备份、撤销工作流的场景。此技能要求使用插件自带 MCP 工具层，并禁止 Zotero Web API 写入、直接写 zotero.sqlite、任意 Zotero JavaScript eval 和直接调用插件私有命令 HTTP 接口。
 ---
 
 # Zotero Local MCP Bridge
@@ -347,6 +347,21 @@ Zotero Settings -> Zotero Local MCP Bridge
 - 使用 `citation.format` 生成 citation 或 bibliography。
 - annotation 写入前使用 `annotation.list`，避免重复或错位 annotation。
 - 不要删除 annotations，除非未来命令明确支持。
+
+## 文献综述工作流
+
+当用户要求整理、筛选、归档或综合文献时，按照下面的顺序协调 Zotero 操作：
+
+1. 读取 `command.catalog`，解析目标项目分类或子分类。
+2. 由研究层检索并核验候选记录；Zotero MCP 负责管理本地文库，不代替文献检索引擎。
+3. 使用 `item.findByDois` 一次批量检查最多 50 个 DOI。
+4. 把 `matchedItemKeys` 交给 `collection.addItems`，整个批次只执行一次 dry-run、一次必要批准和一次 execute。
+5. 将核验后的缺失记录按 BibTeX、RIS 或 CSL JSON 分批导入。
+6. 需要识别时，使用 `pdf.addAndRecognizeBatch` 批量导入本地 PDF/EPUB。
+7. 创建笔记或标注前核验元数据和附件。不能把存在附件等同于已经阅读全文。
+8. 格式化或导出引用，最后读取 `audit.list`，分别报告已完成、已跳过、未命中和失败记录。
+
+把智能体推理和 Zotero 事实严格分开。不得伪造 DOI、条目、文件可用性、阅读状态、标注或引用结果。具体工具顺序见 [examples/literature-review.md](examples/literature-review.md)，职责边界见[公开工作流说明](../../docs/workflows/literature-review.md)。
 
 ## 批量行为
 

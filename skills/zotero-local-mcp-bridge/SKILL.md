@@ -1,6 +1,6 @@
 ---
 name: zotero-local-mcp-bridge
-description: Safely manage a local Zotero library through the Zotero Local MCP Bridge. Use when an agent needs to read, search, create, update, import/export, annotate, attach files, manage collections/items/tags/notes, inspect audit logs, or run backup/undo workflows in Zotero via MCP tools. This skill requires the plugin-hosted MCP tool layer and forbids Zotero Web API writes, direct zotero.sqlite writes, arbitrary Zotero JavaScript eval, and direct plugin command HTTP calls.
+description: Safely manage a local Zotero library through the Zotero Local MCP Bridge. Use when an agent needs to read, search, create, update, import/export, annotate, attach files, manage collections/items/tags/notes, organize a literature review, inspect audit logs, or run backup/undo workflows in Zotero via MCP tools. This skill requires the plugin-hosted MCP tool layer and forbids Zotero Web API writes, direct zotero.sqlite writes, arbitrary Zotero JavaScript eval, and direct plugin command HTTP calls.
 ---
 
 # Zotero Local MCP Bridge
@@ -347,6 +347,21 @@ Do not write audit logs or backups into Zotero profile, Zotero data directory, l
 - Use `citation.format` for citation or bibliography output.
 - Use `annotation.list` before annotation writes to avoid duplicate or misplaced annotations.
 - Do not delete annotations unless a future command explicitly supports it.
+
+## Literature Review Workflow
+
+When the user asks to organize, screen, archive, or synthesize literature, coordinate Zotero operations in this order:
+
+1. Read `command.catalog` and resolve the target project collection or subcollection.
+2. Let the research layer search and validate candidate records; Zotero MCP is the local library manager, not the literature-search engine.
+3. Batch-check up to 50 DOI values with `item.findByDois`.
+4. Add `matchedItemKeys` with `collection.addItems` using one dry-run, one required approval, and one execute for the whole batch.
+5. Import validated unmatched records in BibTeX, RIS, or CSL JSON batches.
+6. Import local PDF/EPUB files with `pdf.addAndRecognizeBatch` when recognition is needed.
+7. Verify metadata and attachments before creating notes or annotations. Do not treat an attached file as proof that its full text was read.
+8. Format or export citations, then read `audit.list` and report completed, skipped, unmatched, and failed records separately.
+
+Keep agent reasoning separate from Zotero facts. Never fabricate DOI values, records, file availability, reading status, annotations, or citation output. Read [examples/literature-review.md](examples/literature-review.md) for the concrete tool sequence and [the public workflow reference](../../docs/workflows/literature-review.md) for responsibility boundaries.
 
 ## Batch Behavior
 
