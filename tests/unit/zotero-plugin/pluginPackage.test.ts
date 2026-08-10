@@ -14,6 +14,18 @@ const supportedLocalesPath = path.resolve("src", "zotero-plugin", "locale", "sup
 const fluentResourceName = "zotero-local-mcp-bridge.ftl";
 const escapedRuntimeRootForBundle = path.resolve(".").replace(/\\/g, "\\\\");
 
+async function listArchiveEntries(archivePath: string): Promise<string> {
+  const command = process.platform === "win32" ? "tar" : "unzip";
+  const args = process.platform === "win32" ? ["-tf", archivePath] : ["-Z1", archivePath];
+  return (await execFileAsync(command, args, { windowsHide: true })).stdout;
+}
+
+async function readArchiveEntry(archivePath: string, entryPath: string): Promise<string> {
+  const command = process.platform === "win32" ? "tar" : "unzip";
+  const args = process.platform === "win32" ? ["-xOf", archivePath, entryPath] : ["-p", archivePath, entryPath];
+  return (await execFileAsync(command, args, { windowsHide: true })).stdout;
+}
+
 describe.sequential("Zotero plugin package", () => {
   it("declares compatibility with Zotero 9", async () => {
     const manifest = JSON.parse(await readFile(path.resolve("src", "zotero-plugin", "manifest.json"), "utf8")) as {
@@ -294,7 +306,7 @@ describe.sequential("Zotero plugin package", () => {
 
     expect(existsSync(xpiPath)).toBe(true);
 
-    const { stdout } = await execFileAsync("tar", ["-tf", xpiPath], { windowsHide: true });
+    const stdout = await listArchiveEntries(xpiPath);
     expect(stdout).toContain("manifest.json");
     expect(stdout).toContain("bootstrap.js");
     expect(stdout).toContain("prefs.js");
@@ -304,10 +316,10 @@ describe.sequential("Zotero plugin package", () => {
     expect(stdout).toContain(`locale/en-US/${fluentResourceName}`);
     expect(stdout).toContain(`locale/zh-CN/${fluentResourceName}`);
 
-    const bootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
-    expect(bootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
-    expect(bootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
-    expect(bootstrap.stdout).not.toContain(`runtimeRoot: "${escapedRuntimeRootForBundle}"`);
+    const bootstrap = await readArchiveEntry(xpiPath, "bootstrap.js");
+    expect(bootstrap).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
+    expect(bootstrap).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
+    expect(bootstrap).not.toContain(`runtimeRoot: "${escapedRuntimeRootForBundle}"`);
   }, 30000);
 
   it("defines settings UI resources and defaults", async () => {
@@ -444,23 +456,19 @@ describe.sequential("Zotero plugin package", () => {
     expect(buildScript).not.toContain("fallbackLocale");
 
     await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });
-    const { stdout } = await execFileAsync("tar", ["-tf", xpiPath], { windowsHide: true });
+    const stdout = await listArchiveEntries(xpiPath);
     for (const locale of supportedLocales) {
       expect(stdout).toContain(`locale/${locale}/${fluentResourceName}`);
     }
 
-    const zhCn = await execFileAsync("tar", ["-xOf", xpiPath, `locale/zh-CN/${fluentResourceName}`], {
-      windowsHide: true
-    });
-    expect(zhCn.stdout).toContain("zotero-local-mcp-bridge-title = Zotero Local MCP Bridge");
-    expect(zhCn.stdout).toContain("zotero-local-mcp-bridge-run-mode =");
-    expect(zhCn.stdout).toContain(".value = 运行模式");
+    const zhCn = await readArchiveEntry(xpiPath, `locale/zh-CN/${fluentResourceName}`);
+    expect(zhCn).toContain("zotero-local-mcp-bridge-title = Zotero Local MCP Bridge");
+    expect(zhCn).toContain("zotero-local-mcp-bridge-run-mode =");
+    expect(zhCn).toContain(".value = 运行模式");
 
-    const frFr = await execFileAsync("tar", ["-xOf", xpiPath, `locale/fr-FR/${fluentResourceName}`], {
-      windowsHide: true
-    });
-    expect(frFr.stdout).toContain("zotero-local-mcp-bridge-run-mode =");
-    expect(frFr.stdout).toContain(".value = Mode d'exécution");
+    const frFr = await readArchiveEntry(xpiPath, `locale/fr-FR/${fluentResourceName}`);
+    expect(frFr).toContain("zotero-local-mcp-bridge-run-mode =");
+    expect(frFr).toContain(".value = Mode d'exécution");
   }, 30000);
 
   it("keeps release build artifact free of embedded local tokens", async () => {
@@ -474,31 +482,31 @@ describe.sequential("Zotero plugin package", () => {
       await writeFile(runtimeAuthTokenPath, `${tokenForTestBuild}\n`, "utf8");
 
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });
-      const releaseBootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
-      const releasePreferences = await execFileAsync("tar", ["-xOf", xpiPath, "preferences.js"], { windowsHide: true });
-      expect(releaseBootstrap.stdout).toContain("expectedAuthToken: null");
-      expect(releaseBootstrap.stdout).toContain("runtimeRoot: null");
-      expect(releaseBootstrap.stdout).not.toContain(tokenForTestBuild);
-      expect(releaseBootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
-      expect(releaseBootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
-      expect(releasePreferences.stdout).toContain("var injectedRuntimeRoot = null");
-      expect(releasePreferences.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
+      const releaseBootstrap = await readArchiveEntry(xpiPath, "bootstrap.js");
+      const releasePreferences = await readArchiveEntry(xpiPath, "preferences.js");
+      expect(releaseBootstrap).toContain("expectedAuthToken: null");
+      expect(releaseBootstrap).toContain("runtimeRoot: null");
+      expect(releaseBootstrap).not.toContain(tokenForTestBuild);
+      expect(releaseBootstrap).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
+      expect(releaseBootstrap).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
+      expect(releasePreferences).toContain("var injectedRuntimeRoot = null");
+      expect(releasePreferences).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
 
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs", "--test"], { windowsHide: true });
-      const testBootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
-      const testPreferences = await execFileAsync("tar", ["-xOf", xpiPath, "preferences.js"], { windowsHide: true });
-      expect(testBootstrap.stdout).toContain(`expectedAuthToken: "${tokenForTestBuild}"`);
-      expect(testBootstrap.stdout).toContain(`runtimeRoot: "${escapedRuntimeRootForBundle}"`);
-      expect(testBootstrap.stdout).not.toContain("expectedAuthToken: null");
-      expect(testBootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
-      expect(testBootstrap.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
-      expect(testPreferences.stdout).toContain(`var injectedRuntimeRoot = "${escapedRuntimeRootForBundle}"`);
-      expect(testPreferences.stdout).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
+      const testBootstrap = await readArchiveEntry(xpiPath, "bootstrap.js");
+      const testPreferences = await readArchiveEntry(xpiPath, "preferences.js");
+      expect(testBootstrap).toContain(`expectedAuthToken: "${tokenForTestBuild}"`);
+      expect(testBootstrap).toContain(`runtimeRoot: "${escapedRuntimeRootForBundle}"`);
+      expect(testBootstrap).not.toContain("expectedAuthToken: null");
+      expect(testBootstrap).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__");
+      expect(testBootstrap).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
+      expect(testPreferences).toContain(`var injectedRuntimeRoot = "${escapedRuntimeRootForBundle}"`);
+      expect(testPreferences).not.toContain("__ZOTERO_LOCAL_MCP_BRIDGE_RUNTIME_ROOT__");
 
       await execFileAsync(process.execPath, ["scripts/buildZoteroPlugin.mjs"], { windowsHide: true });
-      const rebuiltReleaseBootstrap = await execFileAsync("tar", ["-xOf", xpiPath, "bootstrap.js"], { windowsHide: true });
-      expect(rebuiltReleaseBootstrap.stdout).toContain("expectedAuthToken: null");
-      expect(rebuiltReleaseBootstrap.stdout).not.toContain(tokenForTestBuild);
+      const rebuiltReleaseBootstrap = await readArchiveEntry(xpiPath, "bootstrap.js");
+      expect(rebuiltReleaseBootstrap).toContain("expectedAuthToken: null");
+      expect(rebuiltReleaseBootstrap).not.toContain(tokenForTestBuild);
     } finally {
       if (originalToken !== undefined) {
         await mkdir(path.dirname(runtimeAuthTokenPath), { recursive: true });
