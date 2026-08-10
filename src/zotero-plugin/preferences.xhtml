@@ -93,4 +93,26 @@
       </hbox>
     </vbox>
   </groupbox>
+
+  <groupbox id="zcb-safety-center">
+    <hbox align="center" class="zcb-section-heading">
+      <label flex="1"><html:h2 data-l10n-id="zotero-local-mcp-bridge-safety-center-title"/></label>
+      <button id="zcb-safety-refresh" data-l10n-id="zotero-local-mcp-bridge-safety-refresh"/>
+    </hbox>
+    <description data-l10n-id="zotero-local-mcp-bridge-safety-center-description"/>
+    <description id="zcb-safety-error" class="zcb-safety-error" hidden="true"/>
+
+    <label class="zcb-safety-subheading" data-l10n-id="zotero-local-mcp-bridge-pending-plans"/>
+    <vbox id="zcb-pending-plans" class="zcb-safety-list"/>
+    <description id="zcb-pending-plans-empty" data-l10n-id="zotero-local-mcp-bridge-no-pending-plans"/>
+
+    <label class="zcb-safety-subheading" data-l10n-id="zotero-local-mcp-bridge-recent-activity"/>
+    <vbox id="zcb-audit-events" class="zcb-safety-list"/>
+    <description id="zcb-audit-events-empty" data-l10n-id="zotero-local-mcp-bridge-no-recent-activity"/>
+
+    <label class="zcb-safety-subheading" data-l10n-id="zotero-local-mcp-bridge-undo-available"/>
+    <description id="zcb-backup-summary" class="zcb-safety-entry-detail"/>
+    <vbox id="zcb-undo-entries" class="zcb-safety-list"/>
+    <description id="zcb-undo-entries-empty" data-l10n-id="zotero-local-mcp-bridge-no-undo-entries"/>
+  </groupbox>
 </vbox>

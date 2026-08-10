@@ -3,7 +3,7 @@
 
 var ZoteroLocalMcpBridge = {
   id: "zotero-local-mcp-bridge@example.com",
-  version: "0.1.59",
+  version: "0.1.60",
   mcpPath: "/zotero-local-mcp-bridge/mcp",
   authHeader: "x-zotero-local-mcp-bridge-token",
   expectedAuthToken: __ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__,
@@ -460,6 +460,7 @@ function install() {
 function startup(data) {
   ZoteroLocalMcpBridge.started = true;
   persistRuntimeRootPreference();
+  registerSafetyCenterService();
   registerPreferencePane(data || {});
   registerMcpEndpoint();
   log("started");
@@ -475,6 +476,7 @@ function onMainWindowUnload({ window }) {
 
 function shutdown() {
   unregisterEndpoints();
+  unregisterSafetyCenterService();
   ZoteroLocalMcpBridge.started = false;
   log("stopped");
 }
@@ -1094,6 +1096,9 @@ async function handleCommandEndpointRequest(req) {
         try {
           assertOperationWritePermission(operationMode, commandName);
           assertProfileWritePermission(profileMode, testProfileMarkerPresent, commandName);
+          if (payload.mode === "execute") {
+            assertConfirmationOperation(commandName, payload.confirmation);
+          }
         } catch (error) {
           return jsonCommandResponse(error.status || 403, commandName, requestId, undefined, {
             code: error.code || "WRITE_FORBIDDEN",
@@ -3410,7 +3415,14 @@ function createWriteDryRunPlan(operation, normalizedInput, resolvedTargets, warn
   ZoteroLocalMcpBridge.confirmations[planId] = {
     inputHash: inputHash,
     confirmationToken: confirmationToken,
-    expiresAt: expiresAt
+    expiresAt: expiresAt,
+    operation: operation,
+    normalizedInput: normalizedInput,
+    resolvedTargets: resolvedTargets,
+    warnings: warnings || [],
+    riskLevel: resolvedRiskLevel,
+    requiresBackup: true,
+    agentApproval: createAgentApprovalPolicy(operationMode, operation, resolvedRiskLevel)
   };
 
   return {
@@ -3458,6 +3470,137 @@ function createAgentApprovalPolicy(operationMode, operation, riskLevel) {
       ? "Agent must ask the user before execute and pass the returned planId and confirmationToken unchanged."
       : "Agent may continue to execute after dry-run according to its own policy, but execute still requires planId and confirmationToken."
   };
+}
+
+function registerSafetyCenterService() {
+  if (typeof Zotero === "undefined") {
+    return;
+  }
+  Zotero.ZoteroLocalMcpBridgeSafetyCenter = {
+    getSnapshot: readSafetyCenterSnapshot,
+    rejectPendingPlan: rejectSafetyCenterPlan
+  };
+}
+
+function unregisterSafetyCenterService() {
+  if (typeof Zotero !== "undefined" && Zotero.ZoteroLocalMcpBridgeSafetyCenter) {
+    delete Zotero.ZoteroLocalMcpBridgeSafetyCenter;
+  }
+}
+
+function removeExpiredSafetyCenterPlans() {
+  Object.keys(ZoteroLocalMcpBridge.confirmations).forEach(function (planId) {
+    var stored = ZoteroLocalMcpBridge.confirmations[planId];
+    if (!stored || new Date(stored.expiresAt).getTime() < Date.now()) {
+      delete ZoteroLocalMcpBridge.confirmations[planId];
+    }
+  });
+}
+
+function summarizeSafetyTargets(targets) {
+  var value = targets || {};
+  return {
+    zoteroItemCount: Array.isArray(value.zoteroItemKeys) ? value.zoteroItemKeys.length : 0,
+    collectionCount: Array.isArray(value.collectionKeys) ? value.collectionKeys.length : 0,
+    attachmentCount: Array.isArray(value.attachmentKeys) ? value.attachmentKeys.length : 0,
+    fileCount: Array.isArray(value.filePaths) ? value.filePaths.length : 0,
+    tagCount: Array.isArray(value.tags) ? value.tags.length : 0
+  };
+}
+
+function sanitizeSafetyWarning(warning) {
+  if (typeof warning === "string") {
+    return { message: warning };
+  }
+  return {
+    code: warning && warning.code,
+    message: warning && warning.message ? warning.message : "Warning"
+  };
+}
+
+function sanitizeSafetyAuditEvent(event) {
+  return {
+    timestamp: event.timestamp,
+    commandName: event.commandName,
+    status: event.status,
+    requestId: event.requestId,
+    planId: event.planId,
+    errorCode: event.error && event.error.code,
+    affected: summarizeSafetyTargets(event.affected)
+  };
+}
+
+async function readSafetyCenterSnapshot() {
+  removeExpiredSafetyCenterPlans();
+  var pendingPlans = Object.keys(ZoteroLocalMcpBridge.confirmations).map(function (planId) {
+    var stored = ZoteroLocalMcpBridge.confirmations[planId];
+    return {
+      planId: planId,
+      operation: stored.operation,
+      riskLevel: stored.riskLevel,
+      expiresAt: stored.expiresAt,
+      requiresBackup: stored.requiresBackup,
+      targets: summarizeSafetyTargets(stored.resolvedTargets),
+      warnings: (stored.warnings || []).map(sanitizeSafetyWarning)
+    };
+  }).sort(function (left, right) {
+    return Date.parse(left.expiresAt) - Date.parse(right.expiresAt);
+  });
+
+  var auditEvents = [];
+  var auditError;
+  try {
+    var audit = await readAuditList({ limit: 20 });
+    auditEvents = audit.events.slice().reverse().map(sanitizeSafetyAuditEvent);
+  } catch (error) {
+    auditError = error.message || String(error);
+  }
+
+  var backupPolicy;
+  var snapshots = [];
+  var backupError;
+  try {
+    var settings = await readBackupSettings();
+    var backupList = await readBackupSnapshotList({ limit: 50 });
+    backupPolicy = settings.policy;
+    snapshots = backupList.snapshots.filter(function (snapshot) {
+      return snapshot.manifestReadable;
+    }).map(function (snapshot) {
+      return {
+        backupId: snapshot.backupId,
+        commandName: snapshot.commandName,
+        createdAt: snapshot.createdAt,
+        attachmentKey: snapshot.attachmentKey,
+        filename: snapshot.filename,
+        bytes: Number(snapshot.bytes) || 0,
+        reversible: !!snapshot.attachmentKey
+      };
+    });
+  } catch (error) {
+    backupError = error.message || String(error);
+  }
+
+  return {
+    pendingPlans: pendingPlans,
+    auditEvents: auditEvents,
+    auditError: auditError,
+    backup: {
+      policy: backupPolicy,
+      snapshotCount: snapshots.length,
+      totalBytes: snapshots.reduce(function (total, snapshot) { return total + snapshot.bytes; }, 0),
+      undoEntries: snapshots,
+      error: backupError
+    }
+  };
+}
+
+function rejectSafetyCenterPlan(planId) {
+  removeExpiredSafetyCenterPlans();
+  if (!ZoteroLocalMcpBridge.confirmations[planId]) {
+    throw commandError("PLAN_NOT_FOUND", "Dry-run plan was not found or has expired", 404);
+  }
+  delete ZoteroLocalMcpBridge.confirmations[planId];
+  return { planId: planId, rejected: true };
 }
 
 async function executeCollectionCreate(input, confirmation) {
@@ -6298,6 +6441,21 @@ function validateStoredConfirmation(input, confirmation) {
   delete ZoteroLocalMcpBridge.confirmations[confirmation.planId];
 }
 
+function assertConfirmationOperation(commandName, confirmation) {
+  assertConfirmationPresent(confirmation);
+  var stored = ZoteroLocalMcpBridge.confirmations[confirmation.planId];
+  if (!stored) {
+    throw commandError("PLAN_NOT_FOUND", "Dry-run plan was not found", 404);
+  }
+  if (stored.operation !== commandName) {
+    throw commandError(
+      "PLAN_OPERATION_MISMATCH",
+      "Dry-run plan belongs to a different command",
+      409
+    );
+  }
+}
+
 function assertConfirmationPresent(confirmation) {
   if (!confirmation || typeof confirmation !== "object") {
     throw commandError("CONFIRMATION_REQUIRED", "Write execute requires dry-run confirmation", 400);
@@ -6501,9 +6659,22 @@ function cloneBackupPolicy(policy) {
 }
 
 function isLikelyWindowsPlatform() {
+  if (typeof Zotero === "object" && typeof Zotero.isWin === "boolean" && Zotero.isWin) {
+    return true;
+  }
+  if (typeof navigator === "object" && typeof navigator.platform === "string" && /^win/i.test(navigator.platform)) {
+    return true;
+  }
+  return !!getEnvironmentValue("APPDATA") || !!getEnvironmentValue("LOCALAPPDATA");
+}
+
+function isLikelyMacPlatform() {
+  if (typeof Zotero === "object" && typeof Zotero.isMac === "boolean" && Zotero.isMac) {
+    return true;
+  }
   return typeof navigator === "object" &&
     typeof navigator.platform === "string" &&
-    /^win/i.test(navigator.platform);
+    /^mac/i.test(navigator.platform);
 }
 
 function resolveBridgeRuntimeRoot() {
@@ -6535,7 +6706,7 @@ function resolveBridgeDefaultAppDataRoot() {
     return PathUtils.join(appData || localAppData || home || "", "zotero-local-mcp-bridge");
   }
 
-  if (typeof navigator === "object" && typeof navigator.platform === "string" && /^mac/i.test(navigator.platform)) {
+  if (isLikelyMacPlatform()) {
     return PathUtils.join(home || "", "Library", "Application Support", "zotero-local-mcp-bridge");
   }
 

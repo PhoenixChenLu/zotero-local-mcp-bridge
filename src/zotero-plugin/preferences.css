@@ -60,3 +60,39 @@
   max-width: 440px;
   white-space: normal;
 }
+
+.zotero-local-mcp-bridge-preferences .zcb-section-heading {
+  gap: 10px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-safety-subheading {
+  font-weight: 600;
+  margin: 16px 0 6px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-safety-list {
+  gap: 6px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-safety-entry {
+  border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  padding: 7px 0;
+  gap: 8px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-safety-entry-main {
+  min-width: 0;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-safety-entry-detail {
+  opacity: 0.72;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-safety-actions {
+  gap: 6px;
+}
+
+.zotero-local-mcp-bridge-preferences .zcb-safety-error {
+  color: var(--fill-error, #c33);
+  white-space: normal;
+}

@@ -319,6 +319,150 @@
     refreshPathFields();
   }
 
+  function getSafetyCenterService() {
+    if (!Zotero.ZoteroLocalMcpBridgeSafetyCenter) {
+      throw new Error("Zotero Local MCP Bridge Safety Center service is unavailable");
+    }
+    return Zotero.ZoteroLocalMcpBridgeSafetyCenter;
+  }
+
+  function clearChildren(element) {
+    while (element.firstChild) {
+      element.firstChild.remove();
+    }
+  }
+
+  function createXulElement(name, className) {
+    var element = document.createXULElement
+      ? document.createXULElement(name)
+      : document.createElement(name);
+    if (className) {
+      element.setAttribute("class", className);
+    }
+    return element;
+  }
+
+  function createValueLabel(value, className) {
+    var label = createXulElement("label", className);
+    label.setAttribute("value", value || "");
+    label.setAttribute("crop", "end");
+    label.setAttribute("tooltiptext", value || "");
+    return label;
+  }
+
+  function setLocalizedId(element, id) {
+    element.setAttribute("data-l10n-id", id);
+    if (document.l10n && document.l10n.translateElements) {
+      document.l10n.translateElements([element]);
+    }
+  }
+
+  function formatSafetyTargets(targets) {
+    return [
+      "items " + targets.zoteroItemCount,
+      "collections " + targets.collectionCount,
+      "attachments " + targets.attachmentCount,
+      "files " + targets.fileCount,
+      "tags " + targets.tagCount
+    ].join(" · ");
+  }
+
+  function formatBytes(bytes) {
+    if (!bytes) {
+      return "0 B";
+    }
+    var units = ["B", "KB", "MB", "GB"];
+    var value = Number(bytes);
+    var unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex += 1;
+    }
+    return value.toFixed(unitIndex === 0 ? 0 : 1) + " " + units[unitIndex];
+  }
+
+  function addSafetyAction(button, action) {
+    button.addEventListener("command", function () {
+      if (button.getAttribute("data-zcb-busy") === "true") {
+        return;
+      }
+      button.setAttribute("data-zcb-busy", "true");
+      Promise.resolve(action()).then(loadSafetyCenter).catch(showSafetyCenterError).finally(function () {
+        button.removeAttribute("data-zcb-busy");
+      });
+    });
+  }
+
+  function renderPendingPlans(plans) {
+    var container = getElement("zcb-pending-plans");
+    clearChildren(container);
+    getElement("zcb-pending-plans-empty").hidden = plans.length > 0;
+    plans.forEach(function (plan) {
+      var row = createXulElement("hbox", "zcb-safety-entry");
+      row.setAttribute("align", "center");
+      var main = createXulElement("vbox", "zcb-safety-entry-main");
+      main.setAttribute("flex", "1");
+      main.appendChild(createValueLabel(plan.operation + " · " + plan.riskLevel + " · " + new Date(plan.expiresAt).toLocaleString()));
+      main.appendChild(createValueLabel(formatSafetyTargets(plan.targets) + " · warnings " + plan.warnings.length, "zcb-safety-entry-detail"));
+      row.appendChild(main);
+
+      var actions = createXulElement("hbox", "zcb-safety-actions");
+      var reject = createXulElement("button");
+      setLocalizedId(reject, "zotero-local-mcp-bridge-reject");
+      addSafetyAction(reject, function () {
+        return getSafetyCenterService().rejectPendingPlan(plan.planId);
+      });
+      actions.appendChild(reject);
+      row.appendChild(actions);
+      container.appendChild(row);
+    });
+  }
+
+  function renderAuditEvents(events) {
+    var container = getElement("zcb-audit-events");
+    clearChildren(container);
+    getElement("zcb-audit-events-empty").hidden = events.length > 0;
+    events.forEach(function (event) {
+      var row = createXulElement("vbox", "zcb-safety-entry");
+      row.appendChild(createValueLabel(event.commandName + " · " + event.status + " · " + new Date(event.timestamp).toLocaleString()));
+      row.appendChild(createValueLabel(formatSafetyTargets(event.affected), "zcb-safety-entry-detail"));
+      container.appendChild(row);
+    });
+  }
+
+  function renderUndoEntries(backup) {
+    var entries = backup.undoEntries || [];
+    var container = getElement("zcb-undo-entries");
+    clearChildren(container);
+    getElement("zcb-backup-summary").setAttribute("value", backup.snapshotCount + " · " + formatBytes(backup.totalBytes));
+    getElement("zcb-undo-entries-empty").hidden = entries.length > 0;
+    entries.forEach(function (entry) {
+      var row = createXulElement("vbox", "zcb-safety-entry");
+      row.appendChild(createValueLabel((entry.filename || entry.backupId) + " · " + formatBytes(entry.bytes)));
+      row.appendChild(createValueLabel(entry.commandName + " · " + new Date(entry.createdAt).toLocaleString(), "zcb-safety-entry-detail"));
+      container.appendChild(row);
+    });
+  }
+
+  function showSafetyCenterError(error) {
+    var element = getElement("zcb-safety-error");
+    element.setAttribute("value", error && error.message ? error.message : String(error));
+    element.hidden = false;
+    reportError(error);
+  }
+
+  async function loadSafetyCenter() {
+    var errorElement = getElement("zcb-safety-error");
+    errorElement.hidden = true;
+    var snapshot = await getSafetyCenterService().getSnapshot();
+    renderPendingPlans(snapshot.pendingPlans || []);
+    renderAuditEvents(snapshot.auditEvents || []);
+    renderUndoEntries(snapshot.backup || { undoEntries: [] });
+    if (snapshot.auditError || (snapshot.backup && snapshot.backup.error)) {
+      showSafetyCenterError(new Error(snapshot.auditError || snapshot.backup.error));
+    }
+  }
+
   function init() {
     var root = getElement("zotero-local-mcp-bridge-preferences");
     if (root.getAttribute("data-zcb-initialized") === "true") {
@@ -340,6 +484,7 @@
 
     addCommandListener("zcb-operation-mode", function (element) {
       setPref("operationMode", element.value);
+      loadSafetyCenter().catch(showSafetyCenterError);
     });
     addTooltipHelpListener("zcb-run-mode-help", "zcb-run-mode-tooltip");
     addCommandListener("zcb-file-backup-enabled", function (element) {
@@ -374,6 +519,8 @@
     addAsyncCommandListener("zcb-backup-path-choose", function () {
       return chooseDirectory("backupRoot", "zcb-backup-path", "Choose Zotero Local MCP Bridge Backup Directory");
     });
+    addAsyncCommandListener("zcb-safety-refresh", loadSafetyCenter);
+    loadSafetyCenter().catch(showSafetyCenterError);
   }
 
   function scheduleInit(attempt) {
@@ -398,7 +545,8 @@
     },
     chooseBackupRoot: function () {
       return chooseDirectory("backupRoot", "zcb-backup-path", "Choose Zotero Local MCP Bridge Backup Directory");
-    }
+    },
+    loadSafetyCenter: loadSafetyCenter
   };
 
   scheduleInit(0);

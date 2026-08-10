@@ -40,7 +40,7 @@ describe.sequential("Zotero plugin package", () => {
   it("registers only the plugin-hosted Zotero connector MCP endpoint", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.59"');
+    expect(bootstrap).toContain('version: "0.1.60"');
     expect(bootstrap).toContain("Zotero.PreferencePanes.register");
     expect(bootstrap).toContain('src: data.rootURI + "preferences.xhtml"');
     expect(bootstrap).toContain('scripts: [data.rootURI + "preferences.js"]');
@@ -59,6 +59,15 @@ describe.sequential("Zotero plugin package", () => {
     expect(bootstrap).toContain('"OPERATION_MODE_READONLY"');
     expect(bootstrap).toContain("operationMode: operationMode");
     expect(bootstrap).toContain("function createAgentApprovalPolicy");
+    expect(bootstrap).toContain("function assertConfirmationOperation");
+    expect(bootstrap).toContain("assertConfirmationOperation(commandName, payload.confirmation)");
+    expect(bootstrap).toContain('"PLAN_OPERATION_MISMATCH"');
+    expect(bootstrap).toContain("function readSafetyCenterSnapshot");
+    expect(bootstrap).not.toContain("function approveSafetyCenterPlan");
+    expect(bootstrap).toContain("function rejectSafetyCenterPlan");
+    expect(bootstrap).toContain("Zotero.ZoteroLocalMcpBridgeSafetyCenter");
+    expect(bootstrap).toContain("normalizedInput: normalizedInput");
+    expect(bootstrap).toContain("resolvedTargets: resolvedTargets");
     expect(bootstrap).toContain('layer: "agent"');
     expect(bootstrap).toContain('operationMode === "askforapprove"');
     expect(bootstrap).toContain('requiredText = "CONFIRM"');
@@ -243,6 +252,9 @@ describe.sequential("Zotero plugin package", () => {
     expect(bootstrap).toContain('return PathUtils.join(appData || localAppData || home || "", "zotero-local-mcp-bridge");');
     expect(bootstrap).toContain("var localAppData = getEnvironmentValue(\"LOCALAPPDATA\");");
     expect(bootstrap).toContain('var appData = getEnvironmentValue("APPDATA");');
+    expect(bootstrap).toContain('typeof Zotero.isWin === "boolean"');
+    expect(bootstrap).toContain('typeof Zotero.isMac === "boolean"');
+    expect(bootstrap).toContain('return !!getEnvironmentValue("APPDATA") || !!getEnvironmentValue("LOCALAPPDATA")');
     expect(bootstrap).toContain("renameAttachmentFile");
     expect(bootstrap).toContain("shouldAutoRenameAttachment");
     expect(bootstrap).toContain("getFileBaseNameFromItem");
@@ -337,6 +349,12 @@ describe.sequential("Zotero plugin package", () => {
     expect(preferences).toContain('id="zcb-runtime-root-choose"');
     expect(preferences).toContain('id="zcb-audit-path-choose"');
     expect(preferences).toContain('id="zcb-backup-path-choose"');
+    expect(preferences).toContain('id="zcb-safety-center"');
+    expect(preferences).toContain('id="zcb-safety-refresh"');
+    expect(preferences).toContain('id="zcb-pending-plans"');
+    expect(preferences).toContain('id="zcb-audit-events"');
+    expect(preferences).toContain('id="zcb-undo-entries"');
+    expect(preferences).toContain('id="zcb-backup-summary"');
     expect(preferences).toContain('class="directory-path zcb-path-control"');
     expect(preferences).not.toContain('class="zcb-folder-icon"');
     expect(preferences).not.toContain("ZoteroLocalMcpBridgePreferences.chooseRuntimeRoot()");
@@ -373,6 +391,13 @@ describe.sequential("Zotero plugin package", () => {
     expect(script).toContain("Components.interfaces.nsIFilePicker.modeGetFolder");
     expect(script).toContain('ChromeUtils.importESModule("chrome://zotero/content/modules/filePicker.mjs")');
     expect(script).toContain("globalThis.ZoteroLocalMcpBridgePreferences");
+    expect(script).toContain("function loadSafetyCenter");
+    expect(script).toContain("function renderPendingPlans");
+    expect(script).toContain("function renderAuditEvents");
+    expect(script).toContain("function renderUndoEntries");
+    expect(script).not.toContain("approvePendingPlan");
+    expect(script).toContain("rejectPendingPlan");
+    expect(script).not.toContain("plan.agentApproval.requiredText");
     expect(script).not.toContain("DOMContentLoaded");
     expect(script).toContain('setPref("operationMode"');
     expect(script).toContain("function getBackupMaxLocalGb");
@@ -402,6 +427,13 @@ describe.sequential("Zotero plugin package", () => {
       const localeSource = await readFile(localeSourcePath, "utf8");
       expect(localeSource).toContain("zotero-local-mcp-bridge-run-mode =");
       expect(localeSource).toContain("zotero-local-mcp-bridge-choose-directory =");
+      expect(localeSource).toContain("zotero-local-mcp-bridge-safety-center-title =");
+      expect(localeSource).toContain("zotero-local-mcp-bridge-safety-refresh =");
+      expect(localeSource).toContain("zotero-local-mcp-bridge-pending-plans =");
+      expect(localeSource).toContain("zotero-local-mcp-bridge-recent-activity =");
+      expect(localeSource).toContain("zotero-local-mcp-bridge-undo-available =");
+      expect(localeSource).not.toContain("zotero-local-mcp-bridge-approve =");
+      expect(localeSource).toContain("zotero-local-mcp-bridge-reject =");
       if (locale !== "en-US") {
         expect(localeSource).not.toBe(enUs);
       }

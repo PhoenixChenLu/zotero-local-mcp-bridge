@@ -1,5 +1,5 @@
 export const pluginId = "zotero-local-mcp-bridge@example.com";
-export const pluginVersion = "0.1.59";
+export const pluginVersion = "0.1.60";
 
 export const defaultHttpBinding = {
   host: "127.0.0.1",
