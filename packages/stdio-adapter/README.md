@@ -4,6 +4,16 @@ This package exposes a stdio MCP server that forwards MCP requests to the Zotero
 
 It is intended for MCP clients that do not support Streamable HTTP directly.
 
+## Diagnose the connection
+
+Start Zotero Desktop, enable the Zotero Local MCP Bridge plugin, and run:
+
+```bash
+zotero-local-mcp-bridge-stdio doctor
+```
+
+The command exits after checking the HTTP endpoint, MCP initialization, and tool discovery. A successful report includes the plugin version, MCP protocol version, tool count, and ready-to-copy configuration for Codex, Claude Code, and OpenCode. It does not modify agent configuration files.
+
 ## Default endpoint
 
 ```text

@@ -1,0 +1,46 @@
+{
+  "manifest_version": "0.3",
+  "name": "zotero-local-mcp-bridge",
+  "display_name": "Zotero Local MCP Bridge",
+  "version": "0.1.60",
+  "description": "Connect Claude Desktop to the local Zotero Local MCP Bridge plugin endpoint.",
+  "long_description": "A local stdio compatibility bundle for the MCP endpoint hosted inside the Zotero Local MCP Bridge plugin. Zotero Desktop and the Zotero plugin must be installed separately.",
+  "author": {
+    "name": "PhoenixChenLu",
+    "url": "https://github.com/PhoenixChenLu"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge.git"
+  },
+  "homepage": "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge",
+  "documentation": "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge#quick-start",
+  "support": "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge/issues",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "zotero",
+    "mcp",
+    "research",
+    "local-first"
+  ],
+  "tools_generated": true,
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js"
+      ]
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32"
+    ],
+    "runtimes": {
+      "node": ">=22.0.0"
+    }
+  }
+}
