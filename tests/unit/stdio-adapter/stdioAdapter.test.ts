@@ -1,3 +1,6 @@
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -141,10 +144,8 @@ describe("stdio adapter", () => {
   });
 
   it("detects direct CLI execution across real files and npm shims", () => {
-    const entryPath = "C:\\Users\\Researcher\\App Data\\zotero adapter\\index.js";
-    expect(isDirectRun(new URL(`file:///${entryPath.replaceAll("\\", "/").replaceAll(" ", "%20")}`).href, entryPath)).toBe(
-      true
-    );
+    const entryPath = path.resolve("runtime", "temp", "zotero adapter", "index.js");
+    expect(isDirectRun(pathToFileURL(entryPath).href, entryPath)).toBe(true);
     expect(isDirectRun("file:///other/index.js", "C:\\Users\\Researcher\\AppData\\Roaming\\npm\\zotero-local-mcp-bridge-stdio.cmd")).toBe(
       true
     );

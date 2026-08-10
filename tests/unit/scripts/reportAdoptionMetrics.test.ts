@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -15,6 +17,11 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe("reportAdoptionMetrics", () => {
+  it("remains importable on Windows CRLF checkouts", async () => {
+    const source = await readFile(new URL("../../../scripts/reportAdoptionMetrics.mjs", import.meta.url), "utf8");
+    expect(source.startsWith("#!")).toBe(false);
+  });
+
   it("collects GitHub repository data and counts only XPI downloads as plugin downloads", async () => {
     const fetchImpl: typeof fetch = async (input) => {
       const url = String(input);

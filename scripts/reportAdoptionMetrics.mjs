@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import { pathToFileURL } from "node:url";
 
 const DEFAULT_REPOSITORY = "PhoenixChenLu/zotero-local-mcp-bridge";
