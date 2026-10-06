@@ -7,6 +7,7 @@
 - Normalizes removed or deprecated Zotero search conditions to their Zotero 10 equivalents.
 - Fixes attachment duplicate detection so same-name files are distinguished by normalized path and content hash, and wires the duplicate-check preference into runtime behavior.
 - Preserves case-sensitive attachment paths on macOS and Linux to avoid false duplicate matches.
+- Generates automatic-update metadata from the current plugin manifest during release builds.
 
 ## Upgrade notes
 
@@ -27,7 +28,7 @@ The MCPB contains the Claude Desktop stdio compatibility layer, not the Zotero X
 
 ## Verification
 
-- Unit tests: 94 passed.
+- Unit tests: 95 passed.
 - TypeScript typecheck, ESLint, release asset build, and Git diff whitespace validation passed locally.
 - Windows `doctor` reached Zotero 10.0.3 through MCP 2025-06-18 and discovered all 55 tools.
 - Zotero 10.0.3 live testing passed for endpoint startup, read operations, legacy search-condition migration, dry-run planning, controlled collection creation, and recoverable collection trashing.

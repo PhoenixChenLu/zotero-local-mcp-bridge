@@ -38,10 +38,15 @@ export async function buildReleaseAssets(options = {}) {
   const version = adapterPackage.version;
   const distDir = path.join(projectRoot, "dist");
   const assetNames = createReleaseAssetNames(version);
+  const pluginManifest = JSON.parse(await readFile(path.join(projectRoot, "src", "zotero-plugin", "manifest.json"), "utf8"));
+  if (pluginManifest.version !== version) {
+    throw new Error("Plugin and adapter versions must match for release assets");
+  }
 
   await execNode(projectRoot, "scripts/buildZoteroPlugin.mjs", "--mode=release");
   await execNpm(projectRoot, "run", "build:stdio-adapter");
   await buildMcpBundle({ projectRoot });
+  await writeFile(path.join(distDir, "updates.json"), JSON.stringify(createUpdateManifest(pluginManifest), null, 2) + "\n", "utf8");
 
   const tarballPath = path.join(distDir, assetNames[3]);
   await rm(tarballPath, { force: true });
@@ -65,6 +70,26 @@ export async function buildReleaseAssets(options = {}) {
   const checksumPath = path.join(distDir, `checksums-v${version}.txt`);
   await writeFile(checksumPath, await createSha256Manifest(assets), "utf8");
   return { version, assets, checksumPath };
+}
+
+export function createUpdateManifest(manifest) {
+  const zotero = manifest.applications.zotero;
+  return {
+    addons: {
+      [zotero.id]: {
+        updates: [{
+          version: manifest.version,
+          update_link: `${manifest.homepage_url}/releases/download/v${manifest.version}/zotero-local-mcp-bridge.xpi`,
+          applications: {
+            zotero: {
+              strict_min_version: zotero.strict_min_version,
+              strict_max_version: zotero.strict_max_version
+            }
+          }
+        }]
+      }
+    }
+  };
 }
 
 async function execNode(projectRoot, ...args) {
