@@ -14,7 +14,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 export const defaultZoteroLocalMcpBridgeEndpoint = "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp";
-export const adapterVersion = "0.1.60";
+export const adapterVersion = "0.1.61";
 
 export interface AdapterOptions {
   endpoint: string;
@@ -137,7 +137,8 @@ export async function callZoteroHttpMcp<T>(options: AdapterOptions, payload: Jso
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "accept": "application/json"
+        "accept": "application/json",
+        "Zotero-Allowed-Request": "1"
       },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(options.timeoutMs ?? 10_000)

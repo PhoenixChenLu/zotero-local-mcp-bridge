@@ -11,14 +11,14 @@ import {
 
 describe("release asset builder", () => {
   it("defines the complete public release set", () => {
-    expect(createReleaseAssetNames("0.1.60")).toEqual([
+    expect(createReleaseAssetNames("0.1.61")).toEqual([
       "zotero-local-mcp-bridge.xpi",
       "updates.json",
-      "zotero-local-mcp-bridge-0.1.60.mcpb",
-      "zotero-local-mcp-bridge-stdio-adapter-0.1.60.tgz",
-      "zotero-local-mcp-bridge-skill-en-v0.1.60.zip",
-      "zotero-local-mcp-bridge-skill-zh-cn-v0.1.60.zip",
-      "release-notes-v0.1.60.md"
+      "zotero-local-mcp-bridge-0.1.61.mcpb",
+      "zotero-local-mcp-bridge-stdio-adapter-0.1.61.tgz",
+      "zotero-local-mcp-bridge-skill-en-v0.1.61.zip",
+      "zotero-local-mcp-bridge-skill-zh-cn-v0.1.61.zip",
+      "release-notes-v0.1.61.md"
     ]);
   });
 

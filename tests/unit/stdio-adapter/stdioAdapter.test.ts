@@ -154,10 +154,12 @@ describe("stdio adapter", () => {
 
   it("forwards JSON-RPC requests to the Zotero HTTP MCP endpoint", async () => {
     const requests: unknown[] = [];
+    const headers: HeadersInit[] = [];
     const options: AdapterOptions = {
       endpoint: "http://127.0.0.1:23119/zotero-local-mcp-bridge/mcp",
       fetchImpl: async (_input, init) => {
         requests.push(JSON.parse(String(init?.body)));
+        headers.push(init?.headers || {});
         return new Response(JSON.stringify({ jsonrpc: "2.0", id: "x", result: { tools: [] } }), { status: 200 });
       }
     };
@@ -166,6 +168,7 @@ describe("stdio adapter", () => {
       tools: []
     });
     expect(requests).toEqual([{ jsonrpc: "2.0", id: "x", method: "tools/list" }]);
+    expect(new Headers(headers[0]).get("Zotero-Allowed-Request")).toBe("1");
   });
 
   it("maps list and call tool requests without changing tool payloads", async () => {

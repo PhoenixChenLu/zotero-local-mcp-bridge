@@ -151,6 +151,8 @@ Use this table as the first reference for operation format. `R` means read-only.
 | `duplicates.merge` | `zotero_duplicates_merge` | W | `masterZoteroItemKey`, `duplicateZoteroItemKeys` |
 | `audit.list` | `zotero_audit_list` | R | `limit` |
 
+For Zotero 10 searches, use `fulltextContent` instead of the removed `fulltextWord` condition. The bridge normalizes legacy `fulltextWord` and `childNote` inputs for compatibility, but agents should generate current Zotero 10 conditions directly.
+
 ## Read Operations
 
 Read-only operations may be executed directly through MCP tools. Use them to inspect state before writing.

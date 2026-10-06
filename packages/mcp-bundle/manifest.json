@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "zotero-local-mcp-bridge",
   "display_name": "Zotero Local MCP Bridge",
-  "version": "0.1.60",
+  "version": "0.1.61",
   "description": "Connect Claude Desktop to the local Zotero Local MCP Bridge plugin endpoint.",
   "long_description": "A local stdio compatibility bundle for the MCP endpoint hosted inside the Zotero Local MCP Bridge plugin. Zotero Desktop and the Zotero plugin must be installed separately.",
   "author": {

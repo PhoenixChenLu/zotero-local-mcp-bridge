@@ -2,18 +2,17 @@
 
 ## Highlights
 
-- Adds a read-only Safety Center to Zotero settings for reviewing or cancelling pending dry-run plans and inspecting recent write activity, backups, and available undo snapshots.
-- Adds `zotero-local-mcp-bridge-stdio doctor` for endpoint, protocol, plugin-version, and tool-discovery diagnostics.
-- Adds a Claude Desktop MCPB package and configuration guides for Codex, Claude Code, OpenCode, and Claude Desktop.
-- Adds an English and Chinese literature-review workflow to the bundled Skills.
-- Binds every execute request to the command that created its dry-run plan, preventing confirmation reuse across commands.
-- Improves public issue, pull-request, funding, release, and cross-platform CI metadata.
+- Extends the supported version range to Zotero 10.0.x, verified on Windows with Zotero 10.0.3.
+- Adds the Zotero 10 local HTTP safety header to stdio adapter requests.
+- Normalizes removed or deprecated Zotero search conditions to their Zotero 10 equivalents.
+- Fixes attachment duplicate detection so same-name files are distinguished by normalized path and content hash, and wires the duplicate-check preference into runtime behavior.
+- Preserves case-sensitive attachment paths on macOS and Linux to avoid false duplicate matches.
 
 ## Upgrade notes
 
-- Reinstall `zotero-local-mcp-bridge.xpi` and restart Zotero to use the Safety Center and command-binding hardening.
-- Update the npm stdio adapter to `<version>` to use `doctor`.
-- Replace an existing Skill installation with the matching English or Chinese Skill archive to use the literature-review workflow.
+- Reinstall `zotero-local-mcp-bridge.xpi` and restart Zotero to enable the plugin on Zotero 10.
+- Update the npm stdio adapter to `<version>` for the Zotero 10 local HTTP request header.
+- Replace an existing Skill installation with the matching English or Chinese Skill archive for updated search-condition guidance.
 - Claude Desktop users may install the MCPB, but must still install the Zotero XPI separately.
 
 ## Release assets
@@ -28,8 +27,9 @@ The MCPB contains the Claude Desktop stdio compatibility layer, not the Zotero X
 
 ## Verification
 
-- Unit tests: 86 passed.
+- Unit tests: 94 passed.
 - TypeScript typecheck, ESLint, release asset build, and Git diff whitespace validation passed locally.
-- Windows `doctor` reached Zotero 9.0.5 through MCP 2025-06-18 and discovered 55 tools.
-- Zotero 9.0.5 live testing passed for Safety Center status/reject behavior, readonly blocking, agent-side ask-for-approval execution, command-bound plans, AppData paths, and audit records. The final 0.1.60 XPI was reinstalled successfully; the user waived an additional manual UI pass after the approval action was removed.
+- Windows `doctor` reached Zotero 10.0.3 through MCP 2025-06-18 and discovered all 55 tools.
+- Zotero 10.0.3 live testing passed for endpoint startup, read operations, legacy search-condition migration, dry-run planning, controlled collection creation, and recoverable collection trashing.
+- The reported same-name Markdown attachment scenario passed live dry-run validation: different files return `add`, while the existing attachment path returns `skip`.
 - Windows, macOS, and Linux CI must pass before publication. Claude Desktop MCPB installation and live Zotero validation on macOS/Linux remain pending and are not claimed as verified.

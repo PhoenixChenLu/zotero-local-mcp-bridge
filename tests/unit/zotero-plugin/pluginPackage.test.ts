@@ -27,7 +27,7 @@ async function readArchiveEntry(archivePath: string, entryPath: string): Promise
 }
 
 describe.sequential("Zotero plugin package", () => {
-  it("declares compatibility with Zotero 9", async () => {
+  it("declares compatibility with Zotero 10", async () => {
     const manifest = JSON.parse(await readFile(path.resolve("src", "zotero-plugin", "manifest.json"), "utf8")) as {
       homepage_url: string;
       applications: {
@@ -46,13 +46,13 @@ describe.sequential("Zotero plugin package", () => {
       "https://github.com/PhoenixChenLu/zotero-local-mcp-bridge/releases/latest/download/updates.json"
     );
     expect(manifest.applications.zotero.strict_min_version).toBe("7.0");
-    expect(manifest.applications.zotero.strict_max_version).toBe("9.*");
+    expect(manifest.applications.zotero.strict_max_version).toBe("10.0.*");
   });
 
   it("registers only the plugin-hosted Zotero connector MCP endpoint", async () => {
     const bootstrap = await readFile(path.resolve("src", "zotero-plugin", "bootstrap.js"), "utf8");
 
-    expect(bootstrap).toContain('version: "0.1.60"');
+    expect(bootstrap).toContain('version: "0.1.61"');
     expect(bootstrap).toContain("Zotero.PreferencePanes.register");
     expect(bootstrap).toContain('src: data.rootURI + "preferences.xhtml"');
     expect(bootstrap).toContain('scripts: [data.rootURI + "preferences.js"]');
@@ -212,6 +212,11 @@ describe.sequential("Zotero plugin package", () => {
     expect(bootstrap).toContain("unmatchedDois");
     expect(bootstrap).toContain("runAdvancedSearch");
     expect(bootstrap).toContain("new Zotero.Search()");
+    expect(bootstrap).toContain('conditionName === "fulltextWord" ? "fulltextContent"');
+    expect(bootstrap).toContain('conditionName === "childNote" ? "note"');
+    expect(bootstrap).toContain('conditionName === "childNote"');
+    expect(bootstrap).toContain('condition: "resultLevel"');
+    expect(bootstrap).toContain('operator: "item"');
     expect(bootstrap).toContain("Zotero.Searches.getByLibraryAndKey");
     expect(bootstrap).toContain("Zotero.Cite.makeFormattedBibliographyOrCitationList");
     expect(bootstrap).toContain("executeImportWithTranslator");

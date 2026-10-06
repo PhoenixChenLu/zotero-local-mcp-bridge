@@ -3,7 +3,7 @@
 
 var ZoteroLocalMcpBridge = {
   id: "zotero-local-mcp-bridge@example.com",
-  version: "0.1.60",
+  version: "0.1.61",
   mcpPath: "/zotero-local-mcp-bridge/mcp",
   authHeader: "x-zotero-local-mcp-bridge-token",
   expectedAuthToken: __ZOTERO_LOCAL_MCP_BRIDGE_AUTH_TOKEN__,
@@ -24,6 +24,7 @@ var BRIDGE_RUNTIME_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.runtime
 var BRIDGE_AUDIT_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.auditRoot";
 var BRIDGE_BACKUP_ROOT_PREFERENCE = "extensions.zotero-local-mcp-bridge.backupRoot";
 var BRIDGE_OPERATION_MODE_PREFERENCE = "extensions.zotero-local-mcp-bridge.operationMode";
+var BRIDGE_ATTACHMENT_DUPLICATE_CHECK_PREFERENCE = "extensions.zotero-local-mcp-bridge.attachmentDuplicateCheckEnabled";
 var BRIDGE_OPERATION_MODE_DEFAULT = "readonly";
 var BRIDGE_OPERATION_MODES = {
   readonly: true,
@@ -3066,16 +3067,31 @@ function normalizeSearchConditions(conditions) {
   if (conditions.length > 50) {
     throw commandError("BATCH_LIMIT_EXCEEDED", "Search conditions exceed limit 50", 400);
   }
-  return conditions.map(function (condition) {
+  var hasLegacyChildNote = false;
+  var normalizedConditions = conditions.map(function (condition) {
     if (!condition || typeof condition !== "object") {
       throw commandError("SEARCH_CONDITION_INVALID", "Each search condition must be an object", 400);
     }
+    var conditionName = normalizeRequiredString(condition.condition, "condition");
+    if (conditionName === "childNote") {
+      hasLegacyChildNote = true;
+    }
     return {
-      condition: normalizeRequiredString(condition.condition, "condition"),
+      condition: conditionName === "fulltextWord" ? "fulltextContent" : conditionName === "childNote" ? "note" : conditionName,
       operator: normalizeRequiredString(condition.operator, "operator"),
       value: condition.value === undefined || condition.value === null ? undefined : String(condition.value)
     };
   });
+  if (hasLegacyChildNote && !normalizedConditions.some(function (condition) {
+    return condition.condition === "resultLevel";
+  })) {
+    normalizedConditions.unshift({
+      condition: "resultLevel",
+      operator: "item",
+      value: undefined
+    });
+  }
+  return normalizedConditions;
 }
 
 function normalizeJoinMode(joinMode) {
@@ -5698,7 +5714,7 @@ async function normalizeAttachmentAddFileInput(input) {
     filePath: filePath,
     filename: filename,
     attachmentMode: attachmentMode,
-    duplicateAttachmentKeys: await findDuplicateAttachments(parentItem, filePath, filename, attachmentMode)
+    duplicateAttachmentKeys: await findDuplicateAttachments(parentItem, filePath)
   };
 }
 
@@ -5818,6 +5834,21 @@ function normalizeFilePath(filePath) {
   return filePath.trim();
 }
 
+function normalizeFilePathForComparison(filePath) {
+  var normalized = normalizeFilePath(filePath);
+  if (typeof PathUtils !== "undefined" && PathUtils.normalize) {
+    try {
+      normalized = PathUtils.normalize(normalized);
+    } catch (error) {
+      // Fall back to separator normalization below.
+    }
+  }
+  if (Zotero.isWin) {
+    normalized = normalized.replace(/\\/g, "/").toLowerCase();
+  }
+  return normalized;
+}
+
 function pathFilename(filePath) {
   if (typeof PathUtils !== "undefined" && PathUtils.filename) {
     return PathUtils.filename(filePath);
@@ -5873,8 +5904,15 @@ async function fileExists(filePath) {
   return file && file.exists();
 }
 
-async function findDuplicateAttachments(parentItem, filePath, filename, attachmentMode) {
+async function findDuplicateAttachments(parentItem, filePath) {
+  if (getPreferenceValue(BRIDGE_ATTACHMENT_DUPLICATE_CHECK_PREFERENCE) === false) {
+    return [];
+  }
+
   var duplicateKeys = [];
+  var normalizedSourcePath = normalizeFilePathForComparison(filePath);
+  var sourceHash;
+  var sourceHashLoaded = false;
   var attachmentIDs = parentItem.getAttachments(false);
   for (var i = 0; i < attachmentIDs.length; i += 1) {
     var attachment = Zotero.Items.get(attachmentIDs[i]);
@@ -5882,20 +5920,30 @@ async function findDuplicateAttachments(parentItem, filePath, filename, attachme
       continue;
     }
 
-    if (attachment.attachmentFilename === filename) {
-      duplicateKeys.push(attachment.key);
-      continue;
-    }
-
-    if (attachmentMode === "linked") {
-      try {
-        var existingPath = await attachment.getFilePathAsync();
-        if (existingPath && normalizeFilePath(existingPath).toLowerCase() === filePath.toLowerCase()) {
-          duplicateKeys.push(attachment.key);
-        }
-      } catch (error) {
-        // Ignore unreadable attachment paths during duplicate detection.
+    try {
+      var existingPath = await attachment.getFilePathAsync();
+      if (!existingPath) {
+        continue;
       }
+      if (normalizeFilePathForComparison(existingPath) === normalizedSourcePath) {
+        duplicateKeys.push(attachment.key);
+        continue;
+      }
+
+      if (!sourceHashLoaded) {
+        sourceHash = await Zotero.Utilities.Internal.md5Async(filePath);
+        sourceHashLoaded = true;
+      }
+      if (!sourceHash) {
+        continue;
+      }
+
+      var existingHash = await Zotero.Utilities.Internal.md5Async(existingPath);
+      if (existingHash && existingHash === sourceHash) {
+        duplicateKeys.push(attachment.key);
+      }
+    } catch (error) {
+      // Ignore unreadable attachment paths and hash failures during duplicate detection.
     }
   }
   return uniqueStrings(duplicateKeys);

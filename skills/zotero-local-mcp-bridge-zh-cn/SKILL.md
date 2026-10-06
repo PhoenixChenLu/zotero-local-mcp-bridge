@@ -151,6 +151,8 @@ stdio adapter 只做协议转发，由智能体会话启动；它不是 Zotero �
 | `duplicates.merge` | `zotero_duplicates_merge` | W | `masterZoteroItemKey`, `duplicateZoteroItemKeys` |
 | `audit.list` | `zotero_audit_list` | R | `limit` |
 
+在 Zotero 10 中执行搜索时，使用 `fulltextContent`，不要再使用已经移除的 `fulltextWord` 条件。Bridge 会兼容规范化旧的 `fulltextWord` 和 `childNote` 输入，但智能体应当直接生成 Zotero 10 当前使用的条件。
+
 ## 读取操作
 
 只读操作可以直接通过 MCP 工具执行。写入前应使用它们检查状态。

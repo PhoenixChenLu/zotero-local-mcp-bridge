@@ -55,6 +55,6 @@ describe("buildMcpBundle", () => {
 
   it("keeps the source manifest synchronized with the generated manifest", async () => {
     const sourceManifest = JSON.parse(await readFile("packages/mcp-bundle/manifest.json", "utf8"));
-    expect(sourceManifest).toEqual(createMcpBundleManifest("0.1.60"));
+    expect(sourceManifest).toEqual(createMcpBundleManifest("0.1.61"));
   });
 });
